@@ -13,28 +13,25 @@ export function SocketProvider({ children }) {
   useEffect(() => {
     let socketInstance;
 
-    const initSocket = () => {
+    const initSocket = async () => {
       try {
         console.log('Inicializando cliente Socket.io...');
         
-        // Usa a URL da Vercel em produção ou localhost em desenvolvimento
         const socketUrl = process.env.NODE_ENV === 'production' 
-          ? 'https://planningbrothers.vercel.app'
+          ? window.location.origin
           : 'http://localhost:3000';
         
+        console.log('Conectando ao servidor:', socketUrl);
+        
         socketInstance = io(socketUrl, {
-          path: '/api/socketio',
-          addTrailingSlash: false,
           reconnection: true,
           reconnectionAttempts: 5,
           reconnectionDelay: 1000,
-          transports: ['websocket', 'polling'],
-          forceNew: true,
-          timeout: 10000
+          transports: ['websocket', 'polling']
         });
 
         socketInstance.on('connect', () => {
-          console.log('Cliente Socket.io conectado');
+          console.log('Cliente Socket.io conectado com ID:', socketInstance.id);
           setSocket(socketInstance);
           setError(null);
         });
@@ -45,24 +42,33 @@ export function SocketProvider({ children }) {
         });
 
         socketInstance.on('disconnect', (reason) => {
-          console.log('Cliente Socket.io desconectado:', reason);
+          console.log('Cliente Socket.io desconectado. Motivo:', reason);
           if (reason === 'io server disconnect') {
+            // O servidor forçou a desconexão
+            console.log('Tentando reconectar...');
             socketInstance.connect();
           }
         });
 
-        socketInstance.on('reconnect', (attemptNumber) => {
-          console.log('Reconectado ao Socket.io após', attemptNumber, 'tentativas');
-          setError(null);
-        });
-
-        socketInstance.on('reconnect_attempt', (attemptNumber) => {
-          console.log('Tentativa de reconexão', attemptNumber);
-        });
-
         socketInstance.on('error', (error) => {
           console.error('Erro no Socket.io:', error);
-          setError('Ocorreu um erro na conexão. Tente recarregar a página.');
+        });
+
+        // Eventos específicos da sala
+        socketInstance.on('participants-updated', (data) => {
+          console.log('Participantes atualizados:', data);
+        });
+
+        socketInstance.on('vote-updated', (data) => {
+          console.log('Votos atualizados:', data);
+        });
+
+        socketInstance.on('votes-revealed', (data) => {
+          console.log('Votos revelados:', data);
+        });
+
+        socketInstance.on('voting-restarted', (data) => {
+          console.log('Votação reiniciada:', data);
         });
 
       } catch (error) {

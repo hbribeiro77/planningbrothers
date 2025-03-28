@@ -6,6 +6,7 @@ export default function Mesa({
   participantes = [], 
   revelarVotos = false,
   onRevelarVotos = () => {}, // Nova prop para receber a função de revelar votos
+  onNovaRodada = () => {} // Adicionando a prop que estava faltando
 }) {
   // Distribui os participantes acima e abaixo da mesa, horizontalmente
   const posicionarParticipantes = () => {
@@ -207,7 +208,7 @@ export default function Mesa({
           </Box>
           
           {/* Botão de revelar votos como elemento independente sobreposto à mesa */}
-          {!revelarVotos && moderador && votosRealizados > 0 && (
+          {!revelarVotos && votosRealizados > 0 && (
             <Box
               style={{
                 position: 'absolute',

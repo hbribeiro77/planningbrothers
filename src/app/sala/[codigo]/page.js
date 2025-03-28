@@ -14,7 +14,8 @@ import {
   Paper,
   Badge,
   Loader,
-  Center
+  Center,
+  Box
 } from '@mantine/core';
 import { IconCopy, IconCheck } from '@tabler/icons-react';
 import { useSocket } from '@/contexts/SocketContext';
@@ -60,10 +61,10 @@ export default function SalaPage() {
     });
 
     // Receber votos
-    socket.on('votoRecebido', ({ usuario, voto }) => {
+    socket.on('votoRecebido', ({ usuario, voto, jaVotou }) => {
       setParticipantes(prev => prev.map(p => 
         p.nome === usuario.nome 
-          ? { ...p, jaVotou: true, valorVotado: voto }
+          ? { ...p, jaVotou, valorVotado: voto }
           : p
       ));
     });
@@ -112,7 +113,10 @@ export default function SalaPage() {
   const handleCancelarVoto = () => {
     if (!socket || modoObservador) return;
     
-    socket.emit('cancelarVoto', { codigo: codigoSala });
+    socket.emit('cancelarVoto', { 
+      codigo: codigoSala,
+      usuario: { nome: nomeUsuario }
+    });
     setMeuVoto(null);
   };
 
@@ -156,26 +160,35 @@ export default function SalaPage() {
   // Resto do código de renderização...
   return (
     <Container size="lg" py="xl">
-      <Group justify="space-between" mb="xl">
+      <Group justify="flex-start" align="center" mb="xl" gap="xs">
         <Title order={1}>Sala {codigoSala}</Title>
-        <Group>
-          <CopyButton value={salaURL}>
-            {({ copied, copy }) => (
-              <Tooltip label={copied ? 'Link copiado!' : 'Copiar link da sala'}>
-                <ActionIcon color={copied ? 'teal' : 'blue'} onClick={copy}>
-                  {copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
-                </ActionIcon>
-              </Tooltip>
-            )}
-          </CopyButton>
-          <Button
-            variant={modoObservador ? 'light' : 'filled'}
-            onClick={toggleModoObservador}
-          >
-            {modoObservador ? 'Sair do Modo Observador' : 'Modo Observador'}
-          </Button>
-        </Group>
+        <CopyButton value={salaURL}>
+          {({ copied, copy }) => (
+            <Tooltip label={copied ? 'Link copiado!' : 'Copiar link da sala'}>
+              <ActionIcon color={copied ? 'teal' : 'blue'} onClick={copy}>
+                {copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
+              </ActionIcon>
+            </Tooltip>
+          )}
+        </CopyButton>
+        <Button
+          variant={modoObservador ? 'light' : 'filled'}
+          onClick={toggleModoObservador}
+        >
+          {modoObservador ? 'Sair do Modo Observador' : 'Modo Observador'}
+        </Button>
       </Group>
+
+      {/* Botão de Nova Rodada - sempre presente mas só visível quando necessário */}
+      <Box mb="xl" style={{ display: 'flex', justifyContent: 'center', visibility: revelarVotos ? 'visible' : 'hidden' }}>
+        <Button 
+          color="blue" 
+          size="sm"
+          onClick={handleNovaRodada}
+        >
+          Nova Rodada
+        </Button>
+      </Box>
 
       <Paper shadow="sm" p="md" mb="xl">
         <Mesa 

@@ -3,11 +3,6 @@
   "buildCommand": "next build",
   "devCommand": "next dev",
   "framework": "nextjs",
-  "functions": {
-    "api/socket.js": {
-      "maxDuration": 60
-    }
-  },
   "headers": [
     {
       "source": "/api/socket",

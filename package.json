@@ -3,25 +3,23 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node src/server.js",
     "build": "next build",
-    "start": "next start",
+    "start": "NODE_ENV=production node src/server.js",
     "lint": "next lint"
   },
   "dependencies": {
-    "@mantine/core": "^7.17.3",
-    "@mantine/hooks": "^7.17.3",
-    "@tabler/icons-react": "^3.31.0",
-    "next": "15.2.4",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "@mantine/core": "^7.5.3",
+    "@mantine/hooks": "^7.5.3",
+    "@tabler/icons-react": "^2.47.0",
+    "next": "14.1.0",
+    "react": "^18",
+    "react-dom": "^18",
+    "socket.io": "^4.7.4",
+    "socket.io-client": "^4.7.4"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "eslint": "^9",
-    "eslint-config-next": "15.2.4",
-    "postcss": "^8.5.3",
-    "postcss-preset-mantine": "^1.17.0",
-    "postcss-simple-vars": "^7.0.1"
+    "eslint": "^8",
+    "eslint-config-next": "14.1.0"
   }
 }

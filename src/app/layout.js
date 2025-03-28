@@ -1,33 +1,34 @@
-import '@mantine/core/styles.css';
+import "@mantine/core/styles.css";
 import "./globals.css";
 import { Geist, Geist_Mono } from "next/font/google";
-import { MantineProvider, ColorSchemeScript } from '@mantine/core';
+import { ColorSchemeScript } from '@mantine/core';
+import { Providers } from '@/components/Providers';
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+  subsets: ['latin'],
+  variable: '--font-geist-sans',
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  subsets: ['latin'],
+  variable: '--font-geist-mono',
 });
 
 export const metadata = {
-  title: "Planning Brothers - Planning Poker",
-  description: "Aplicação de Planning Poker colaborativa",
+  title: 'Planning Brothers',
+  description: 'Aplicação para Planning Poker em equipes ágeis',
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="pt-BR" data-mantine-color-scheme="light" style={{ overflow: 'hidden' }}>
       <head>
-        <ColorSchemeScript defaultColorScheme="light" />
+        <ColorSchemeScript />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`} style={{ overflow: 'hidden' }}>
-        <MantineProvider defaultColorScheme="light">
+        <Providers>
           {children}
-        </MantineProvider>
+        </Providers>
       </body>
     </html>
   );

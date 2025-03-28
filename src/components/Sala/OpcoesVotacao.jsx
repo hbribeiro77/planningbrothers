@@ -5,18 +5,15 @@ import { useState, useEffect } from 'react';
 export default function OpcoesVotacao({ 
   onVotar, 
   onCancelarVoto, 
-  votoConfirmado = null, 
-  revelarVotos = false 
+  meuVoto = null
 }) {
   const [valorSelecionado, setValorSelecionado] = useState(null);
   const opcoesDeVoto = ['1', '2', '3', '4', '5', '?'];
   
-  // Atualiza o valor selecionado quando o voto confirmado mudar
+  // Atualiza o valor selecionado quando o voto mudar
   useEffect(() => {
-    // Se votoConfirmado existir, seleciona a carta correspondente
-    // Se for null, limpa a seleção
-    setValorSelecionado(votoConfirmado);
-  }, [votoConfirmado]);
+    setValorSelecionado(meuVoto);
+  }, [meuVoto]);
   
   const handleSelecao = (valor) => {
     // Se clicar na mesma carta que já está selecionada, cancela o voto

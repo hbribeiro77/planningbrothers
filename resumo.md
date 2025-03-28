@@ -18,6 +18,7 @@ A aplicação permite:
 - **UI**: Mantine v7
 - **Ícones**: Tabler Icons
 - **Estilização**: CSS-in-JS via Mantine
+- **Comunicação em Tempo Real**: Socket.io
 
 ## Estrutura do Projeto
 
@@ -30,12 +31,15 @@ src/
 │   └── sala/[codigo]/page.js # Página da sala de Planning Poker
 ├── components/              # Componentes reutilizáveis
 │   ├── Carta/               # Componentes relacionados às cartas
-│   │   └── Participante.jsx # Card que representa um participante
-│   │   └── Votacao.jsx      # Carta de voto (não incluída no commit)
+│   │   ├── Participante.jsx # Card que representa um participante
+│   │   └── Votacao.jsx      # Carta de voto
 │   ├── Mesa/                # Componentes da mesa de Planning Poker
 │   │   └── Mesa.jsx         # Mesa central onde os votos são exibidos
 │   └── Sala/                # Componentes específicos da sala
 │       └── OpcoesVotacao.jsx # Opções de voto do usuário
+├── contexts/                # Contextos React
+│   └── SocketContext.js     # Gerenciamento do Socket.io
+└── server.js                # Servidor personalizado com Socket.io
 ```
 
 ## Principais Componentes
@@ -72,6 +76,20 @@ Exibe as opções de votação para o usuário:
 - Permite selecionar e cancelar o voto
 - Esconde-se quando o usuário está no modo observador
 
+### `SocketContext.js`
+Gerencia a conexão com o servidor Socket.io:
+- Inicialização e reconexão automática
+- Tratamento de erros
+- Estados de conexão
+- Eventos de sala e votação
+
+### `server.js`
+Servidor personalizado que integra Next.js com Socket.io:
+- Gerenciamento de salas e participantes
+- Eventos de votação e revelação
+- Modo observador
+- Limpeza de recursos ao desconectar
+
 ## Fluxo de Dados
 
 1. O usuário entra com nome e código da sala
@@ -93,12 +111,31 @@ Exibe as opções de votação para o usuário:
 - Elementos se redimensionam proporcionalmente
 - Distribuição adequada dos participantes em torno da mesa
 
+### Comunicação em Tempo Real
+- Atualizações instantâneas de votos e participantes
+- Reconexão automática em caso de perda de conexão
+- Tratamento robusto de erros e estados de conexão
+
 ## Como Executar o Projeto
 
 1. Clone o repositório
 2. Instale as dependências: `npm install`
 3. Execute o servidor de desenvolvimento: `npm run dev`
-4. Acesse `http://localhost:3000` no navegador
+4. Acesse http://localhost:3000 no navegador
+
+## Notas de Desenvolvimento
+
+### Socket.io
+- Servidor personalizado para melhor integração com Next.js
+- Gerenciamento de estado de conexão e reconexão
+- Eventos específicos para cada ação na sala
+- Limpeza adequada de recursos e listeners
+
+### Estados e Props
+- Gerenciamento centralizado de estados na sala
+- Props bem definidas entre componentes
+- Tratamento de estados de carregamento e erro
+- Feedback visual para ações do usuário
 
 ## Estado Atual e Limitações
 

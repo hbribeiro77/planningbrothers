@@ -17,7 +17,12 @@ export function SocketProvider({ children }) {
       try {
         console.log('Inicializando cliente Socket.io...');
         
-        socketInstance = io('http://localhost:3000', {
+        // Usa a URL da Vercel em produção ou localhost em desenvolvimento
+        const socketUrl = process.env.NODE_ENV === 'production' 
+          ? 'https://planningbrothers.vercel.app'
+          : 'http://localhost:3000';
+        
+        socketInstance = io(socketUrl, {
           path: '/api/socketio',
           addTrailingSlash: false,
           reconnection: true,

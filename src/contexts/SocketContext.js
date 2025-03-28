@@ -23,12 +23,18 @@ export function SocketProvider({ children }) {
         
         console.log('Conectando ao servidor:', socketUrl);
         
-        socketInstance = io(socketUrl, {
+        const socketConfig = {
           reconnection: true,
           reconnectionAttempts: 5,
           reconnectionDelay: 1000,
           transports: ['websocket', 'polling']
-        });
+        };
+
+        if (process.env.NODE_ENV === 'production') {
+          socketConfig.path = '/api/socket';
+        }
+        
+        socketInstance = io(socketUrl, socketConfig);
 
         socketInstance.on('connect', () => {
           console.log('Cliente Socket.io conectado com ID:', socketInstance.id);

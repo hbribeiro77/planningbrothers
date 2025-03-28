@@ -28,7 +28,9 @@ export function SocketProvider({ children }) {
           reconnection: true,
           reconnectionAttempts: 5,
           reconnectionDelay: 1000,
-          transports: ['websocket', 'polling']
+          transports: ['websocket', 'polling'],
+          forceNew: true,
+          timeout: 10000
         });
 
         socketInstance.on('connect', () => {

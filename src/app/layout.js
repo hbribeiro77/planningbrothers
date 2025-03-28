@@ -1,18 +1,10 @@
+import { Inter } from 'next/font/google';
 import "@mantine/core/styles.css";
 import "./globals.css";
-import { Geist, Geist_Mono } from "next/font/google";
-import { ColorSchemeScript } from '@mantine/core';
+import { ColorSchemeScript, MantineProvider } from '@mantine/core';
 import { Providers } from '@/components/Providers';
 
-const geistSans = Geist({
-  subsets: ['latin'],
-  variable: '--font-geist-sans',
-});
-
-const geistMono = Geist_Mono({
-  subsets: ['latin'],
-  variable: '--font-geist-mono',
-});
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
   title: 'Planning Brothers',
@@ -25,10 +17,12 @@ export default function RootLayout({ children }) {
       <head>
         <ColorSchemeScript />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable}`} style={{ overflow: 'hidden' }}>
-        <Providers>
-          {children}
-        </Providers>
+      <body className={inter.className} style={{ overflow: 'hidden' }}>
+        <MantineProvider>
+          <Providers>
+            {children}
+          </Providers>
+        </MantineProvider>
       </body>
     </html>
   );

@@ -1,3 +1,21 @@
+# Planning Brothers
+
+Aplicação para facilitar Planning Poker em equipes ágeis.
+
+## Funcionalidades
+
+- Criação de salas para Planning Poker
+- Modo observador para stakeholders
+- Votação em tempo real usando WebSocket
+- Interface limpa e intuitiva
+
+## Como usar
+
+1. Digite seu nome
+2. Crie uma nova sala ou entre em uma sala existente usando o código
+3. Compartilhe o código da sala com sua equipe
+4. Comece a votar!
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

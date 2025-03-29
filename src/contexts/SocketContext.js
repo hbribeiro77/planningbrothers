@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Container, Center, Loader, Text } from '@mantine/core';
-import { supabase } from '../lib/supabase';
 import io from 'socket.io-client';
 
 const SocketContext = createContext(null);
@@ -14,64 +13,32 @@ export function SocketProvider({ children }) {
   useEffect(() => {
     const initConnection = async () => {
       try {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Inicializando Socket.io...');
-          const socketInstance = io('http://localhost:3000', {
-            reconnection: true,
-            reconnectionAttempts: 5,
-            reconnectionDelay: 1000,
-            transports: ['websocket', 'polling']
-          });
+        console.log('Inicializando Socket.io...');
+        const socketInstance = io('http://localhost:3000', {
+          reconnection: true,
+          reconnectionAttempts: 5,
+          reconnectionDelay: 1000,
+          transports: ['websocket', 'polling']
+        });
 
-          socketInstance.on('connect', () => {
-            console.log('Cliente Socket.io conectado com ID:', socketInstance.id);
-            setSocket(socketInstance);
-            setError(null);
-          });
+        socketInstance.on('connect', () => {
+          console.log('Cliente Socket.io conectado com ID:', socketInstance.id);
+          setSocket(socketInstance);
+          setError(null);
+        });
 
-          socketInstance.on('connect_error', (err) => {
-            console.error('Erro de conexão Socket.io:', err);
-            setError('Erro ao conectar com o servidor. Tente recarregar a página.');
-          });
+        socketInstance.on('connect_error', (err) => {
+          console.error('Erro de conexão Socket.io:', err);
+          setError('Erro ao conectar com o servidor. Tente recarregar a página.');
+        });
 
-          socketInstance.on('disconnect', (reason) => {
-            console.log('Cliente Socket.io desconectado. Motivo:', reason);
-          });
+        socketInstance.on('disconnect', (reason) => {
+          console.log('Cliente Socket.io desconectado. Motivo:', reason);
+        });
 
-          return () => {
-            socketInstance.disconnect();
-          };
-        } else {
-          console.log('Inicializando Supabase Realtime...');
-          const channel = supabase.channel('planning-room', {
-            config: {
-              broadcast: { self: true }
-            }
-          });
-
-          channel
-            .on('broadcast', { event: 'vote' }, ({ payload }) => {
-              console.log('Voto recebido:', payload);
-            })
-            .on('broadcast', { event: 'reveal' }, ({ payload }) => {
-              console.log('Votos revelados:', payload);
-            })
-            .on('broadcast', { event: 'restart' }, ({ payload }) => {
-              console.log('Votação reiniciada:', payload);
-            });
-
-          await channel.subscribe(async (status) => {
-            if (status === 'SUBSCRIBED') {
-              console.log('Conectado ao Supabase Realtime');
-              setSocket(channel);
-              setError(null);
-            }
-          });
-
-          return () => {
-            channel.unsubscribe();
-          };
-        }
+        return () => {
+          socketInstance.disconnect();
+        };
       } catch (error) {
         console.error('Erro ao inicializar conexão:', error);
         setError('Erro ao conectar com o servidor. Tente recarregar a página.');

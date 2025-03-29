@@ -1,153 +1,90 @@
-# Planning Brothers - Aplicação de Planning Poker
+# Resumo do Projeto Planning Poker
 
 ## Visão Geral
+Aplicação web para facilitar sessões de Planning Poker em equipes ágeis, permitindo votação em tempo real através de WebSocket.
 
-Planning Brothers é uma aplicação web para a realização de sessões de Planning Poker em equipes ágeis. O Planning Poker é uma técnica de estimativa usada em metodologias ágeis, onde os membros da equipe avaliam o esforço necessário para implementar user stories usando cartas com valores numéricos.
-
-A aplicação permite:
-- Participar de uma sala de Planning Poker com vários membros
-- Votar em histórias usando cartas numeradas de 1 a 5 e "?"
-- Revelar os votos de todos os participantes simultaneamente
-- Ver estatísticas como média, moda e nível de consenso
-- Alternar entre modo participante e modo observador
-- Iniciar novas rodadas de votação
-
-## Tecnologias Utilizadas
-
-- **Frontend**: React, Next.js 14+
-- **UI**: Mantine v7
-- **Ícones**: Tabler Icons
-- **Estilização**: CSS-in-JS via Mantine
+## Tecnologias Principais
+- **Frontend**: Next.js 14, React, Mantine UI, Tailwind CSS
+- **Backend**: Node.js com Express e Socket.io
 - **Comunicação em Tempo Real**: Socket.io
 
 ## Estrutura do Projeto
-
 ```
-src/
-├── app/                     # Estrutura de páginas Next.js
-│   ├── globals.css          # Estilos globais
-│   ├── layout.js            # Layout principal da aplicação
-│   ├── page.js              # Página inicial (formulário de entrada)
-│   └── sala/[codigo]/page.js # Página da sala de Planning Poker
-├── components/              # Componentes reutilizáveis
-│   ├── Carta/               # Componentes relacionados às cartas
-│   │   ├── Participante.jsx # Card que representa um participante
-│   │   └── Votacao.jsx      # Carta de voto
-│   ├── Mesa/                # Componentes da mesa de Planning Poker
-│   │   └── Mesa.jsx         # Mesa central onde os votos são exibidos
-│   └── Sala/                # Componentes específicos da sala
-│       └── OpcoesVotacao.jsx # Opções de voto do usuário
-├── contexts/                # Contextos React
-│   └── SocketContext.js     # Gerenciamento do Socket.io
-└── server.js                # Servidor personalizado com Socket.io
+planningbrothers/
+├── src/
+│   ├── app/                    # Páginas e rotas Next.js
+│   │   ├── sala/              # Páginas relacionadas à sala
+│   │   └── layout.js          # Layout principal
+│   ├── components/            # Componentes React
+│   │   ├── Mesa/             # Componentes da mesa de Planning Poker
+│   │   └── ...               # Outros componentes
+│   ├── contexts/             # Contextos React
+│   │   └── SocketContext.js  # Gerenciamento do Socket.io
+│   ├── hooks/                # Hooks personalizados
+│   │   └── useSalaSocket.js  # Lógica de eventos da sala
+│   ├── constants/            # Constantes e configurações
+│   │   └── socketEvents.js   # Eventos do Socket.io
+│   └── server-dev.js         # Servidor de desenvolvimento
+├── public/                   # Arquivos estáticos
+└── package.json             # Dependências e scripts
 ```
 
-## Principais Componentes
+## Funcionalidades Principais
+1. **Criação de Salas**
+   - Geração de código único para cada sala
+   - Interface intuitiva para criar/entrar em salas
 
-### `page.js` (Página Inicial)
-Formulário simples que solicita o nome do usuário e código da sala antes de entrar na sessão de Planning Poker.
+2. **Votação em Tempo Real**
+   - Sistema de votação usando Socket.io
+   - Atualização instantânea dos votos
+   - Revelação de votos controlada
 
-### `sala/[codigo]/page.js`
-Componente principal que gerencia o estado da aplicação:
-- Lista de participantes e seus votos
-- Estado de revelação dos votos
-- Voto do usuário atual
-- Modo observador
-- Funções para votar, cancelar voto, revelar votos e iniciar nova rodada
-
-### `Mesa/Mesa.jsx`
-Renderiza a mesa central com:
-- Distribuição de participantes em volta da mesa
-- Tabela de resultados quando os votos são revelados
-- Estatísticas (média, moda, consenso)
-- Botão para revelar votos
-
-### `Carta/Participante.jsx`
-Representa um participante na mesa:
-- Exibe o nome do participante
-- Indica se já votou ou não
-- Mostra o valor votado (quando revelado)
-- Identifica moderadores com um badge "M"
-- Identifica observadores com um badge "O" e um ícone de olho
-
-### `Sala/OpcoesVotacao.jsx`
-Exibe as opções de votação para o usuário:
-- Cartas com valores de 1 a 5 e "?"
-- Permite selecionar e cancelar o voto
-- Esconde-se quando o usuário está no modo observador
-
-### `SocketContext.js`
-Gerencia a conexão com o servidor Socket.io:
-- Inicialização e reconexão automática
-- Tratamento de erros
-- Estados de conexão
-- Eventos de sala e votação
-
-### `server.js`
-Servidor personalizado que integra Next.js com Socket.io:
-- Gerenciamento de salas e participantes
-- Eventos de votação e revelação
-- Modo observador
-- Limpeza de recursos ao desconectar
+3. **Interface do Usuário**
+   - Design responsivo com Mantine UI
+   - Feedback visual das ações
+   - Modo observador para stakeholders
 
 ## Fluxo de Dados
+1. **Conexão**
+   - Cliente conecta ao servidor Socket.io
+   - Gerenciamento de reconexão automática
 
-1. O usuário entra com nome e código da sala
-2. A página da sala é carregada com os participantes iniciais
-3. Os participantes votam clicando nas cartas
-4. O moderador revela os votos quando todos votaram
-5. Estatísticas são calculadas e exibidas na mesa
-6. O moderador pode iniciar uma nova rodada
+2. **Eventos da Sala**
+   - Entrada/saída de participantes
+   - Votação e cancelamento de votos
+   - Revelação de votos
+   - Atualização de status
 
-## Funcionalidades Especiais
+3. **Estado da Aplicação**
+   - Gerenciamento via Context API
+   - Persistência de estado durante a sessão
 
-### Modo Observador
-- Permite que usuários observem a sessão sem participar da votação
-- Ativado/desativado através do botão "Modo Observador"
-- Participantes em modo observador são identificados visualmente
+## Como Executar
+1. Instalar dependências:
+```bash
+npm install
+```
 
-### Layout Responsivo
-- Interface se adapta a diferentes tamanhos de tela
-- Elementos se redimensionam proporcionalmente
-- Distribuição adequada dos participantes em torno da mesa
+2. Iniciar servidor de desenvolvimento:
+```bash
+npm run dev
+```
 
-### Comunicação em Tempo Real
-- Atualizações instantâneas de votos e participantes
-- Reconexão automática em caso de perda de conexão
-- Tratamento robusto de erros e estados de conexão
+3. Acessar aplicação:
+   - Abrir http://localhost:3000 no navegador
 
-## Como Executar o Projeto
+## Próximos Passos
+1. **Melhorias de UX**
+   - Adicionar animações de transição
+   - Melhorar feedback visual
+   - Implementar modo escuro
 
-1. Clone o repositório
-2. Instale as dependências: `npm install`
-3. Execute o servidor de desenvolvimento: `npm run dev`
-4. Acesse http://localhost:3000 no navegador
+2. **Funcionalidades Adicionais**
+   - Histórico de votos
+   - Exportação de resultados
+   - Configurações personalizadas
 
-## Notas de Desenvolvimento
-
-### Socket.io
-- Servidor personalizado para melhor integração com Next.js
-- Gerenciamento de estado de conexão e reconexão
-- Eventos específicos para cada ação na sala
-- Limpeza adequada de recursos e listeners
-
-### Estados e Props
-- Gerenciamento centralizado de estados na sala
-- Props bem definidas entre componentes
-- Tratamento de estados de carregamento e erro
-- Feedback visual para ações do usuário
-
-## Estado Atual e Limitações
-
-Este projeto é um protótipo funcional com dados simulados. Em uma implementação completa, seria necessário:
-
-- Implementar a comunicação em tempo real via Socket.io
-- Adicionar persistência de dados com um backend
-- Implementar autenticação de usuários
-- Desenvolver funcionalidades adicionais como histórico de sessões
-
-## Notas de Implementação
-
-- O layout foi otimizado para evitar scrollbars, criando uma experiência de aplicativo
-- A mesa se ajusta automaticamente ao número de participantes
-- As interações são intuitivas, como clicar na mesma carta para cancelar o voto 
+3. **Otimizações**
+   - Melhorar performance
+   - Reduzir bundle size
+   - Implementar testes 

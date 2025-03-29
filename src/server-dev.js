@@ -33,7 +33,7 @@ app.prepare().then(() => {
           revelarVotos: false
         });
       }
-
+      
       const sala = salas.get(codigo);
       const isModerador = sala.participantes.size === 0;
 

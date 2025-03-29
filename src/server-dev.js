@@ -1,5 +1,5 @@
+const express = require('express');
 const { createServer } = require('http');
-const { parse } = require('url');
 const next = require('next');
 const { Server } = require('socket.io');
 
@@ -7,156 +7,154 @@ const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
-const rooms = new Map();
-
 app.prepare().then(() => {
-  const server = createServer((req, res) => {
-    const parsedUrl = parse(req.url, true);
-    handle(req, res, parsedUrl);
-  });
-
-  const io = new Server(server, {
+  const server = express();
+  const httpServer = createServer(server);
+  const io = new Server(httpServer, {
     cors: {
       origin: '*',
       methods: ['GET', 'POST']
-    },
-    transports: ['websocket', 'polling']
+    }
   });
+
+  // Gerenciamento de salas
+  const salas = new Map();
 
   io.on('connection', (socket) => {
     console.log('Cliente conectado:', socket.id);
 
+    // Entrar em uma sala
     socket.on('entrarSala', ({ codigo, usuario }) => {
-      console.log(`Cliente ${socket.id} tentando entrar na sala ${codigo}`, usuario);
-      
       socket.join(codigo);
       
-      if (!rooms.has(codigo)) {
-        console.log(`Criando nova sala ${codigo}`);
-        rooms.set(codigo, {
-          participants: new Map(),
-          votes: new Map(),
-          revealed: false,
-          moderador: usuario.nome
+      if (!salas.has(codigo)) {
+        salas.set(codigo, {
+          participantes: new Map(),
+          revelarVotos: false
         });
       }
 
-      const room = rooms.get(codigo);
-      room.participants.set(usuario.nome, {
+      const sala = salas.get(codigo);
+      const isModerador = sala.participantes.size === 0;
+
+      sala.participantes.set(socket.id, {
         ...usuario,
-        socketId: socket.id,
+        id: socket.id,
         jaVotou: false,
         valorVotado: null,
-        isModerador: usuario.nome === room.moderador
+        isModerador
       });
-
-      console.log(`Sala ${codigo} atualizada:`, {
-        participantsCount: room.participants.size,
-        participants: Array.from(room.participants.values())
-      });
-
+      
       io.to(codigo).emit('atualizarParticipantes', 
-        Array.from(room.participants.values())
+        Array.from(sala.participantes.values())
       );
     });
 
+    // Votar
     socket.on('votar', ({ codigo, usuario, voto }) => {
-      const room = rooms.get(codigo);
-      if (room && room.participants.has(usuario.nome)) {
-        const participant = room.participants.get(usuario.nome);
-        participant.jaVotou = voto !== null;
-        participant.valorVotado = voto;
+      if (!salas.has(codigo)) return;
+      
+      const sala = salas.get(codigo);
+      const participante = sala.participantes.get(socket.id);
+      
+      if (participante) {
+        participante.jaVotou = true;
+        participante.valorVotado = voto;
         
-        io.to(codigo).emit('votoRecebido', {
-          usuario,
-          voto,
-          jaVotou: voto !== null
-        });
-      }
-    });
-
-    socket.on('cancelarVoto', ({ codigo, usuario }) => {
-      const room = rooms.get(codigo);
-      if (room && room.participants.has(usuario.nome)) {
-        const participant = room.participants.get(usuario.nome);
-        participant.jaVotou = false;
-        participant.valorVotado = null;
-        
-        io.to(codigo).emit('votoRecebido', {
-          usuario,
-          voto: null
-        });
-      }
-    });
-
-    socket.on('revelarVotos', (codigo) => {
-      const room = rooms.get(codigo);
-      if (room) {
-        io.to(codigo).emit('votosRevelados');
-      }
-    });
-
-    socket.on('reiniciarVotacao', (codigo) => {
-      const room = rooms.get(codigo);
-      if (room) {
-        for (const participant of room.participants.values()) {
-          participant.jaVotou = false;
-          participant.valorVotado = null;
-          
-          io.to(codigo).emit('votoRecebido', {
-            usuario: { nome: participant.nome },
-            voto: null,
-            jaVotou: false
-          });
-        }
-        
-        io.to(codigo).emit('votacaoReiniciada');
-      }
-    });
-
-    socket.on('alternarModoObservador', ({ codigo, usuario, isObservador }) => {
-      const room = rooms.get(codigo);
-      if (room && room.participants.has(usuario.nome)) {
-        const participant = room.participants.get(usuario.nome);
-        participant.isObservador = isObservador;
-        
-        if (isObservador) {
-          participant.jaVotou = false;
-          participant.valorVotado = null;
-        }
-        
-        io.to(codigo).emit('modoObservadorAlterado', {
-          usuario,
-          isObservador
+        io.to(codigo).emit('votoRecebido', { 
+          usuario: participante,
+          voto 
         });
         
         io.to(codigo).emit('atualizarParticipantes', 
-          Array.from(room.participants.values())
+          Array.from(sala.participantes.values())
         );
       }
     });
 
-    socket.on('disconnecting', () => {
-      for (const [codigo, room] of rooms.entries()) {
-        for (const [nome, participant] of room.participants.entries()) {
-          if (participant.socketId === socket.id) {
-            room.participants.delete(nome);
-            
-            if (room.participants.size === 0) {
-              rooms.delete(codigo);
-            } else {
-              io.to(codigo).emit('atualizarParticipantes', 
-                Array.from(room.participants.values())
-              );
+    // Cancelar voto
+    socket.on('cancelarVoto', ({ codigo }) => {
+      if (!salas.has(codigo)) return;
+      
+      const sala = salas.get(codigo);
+      const participante = sala.participantes.get(socket.id);
+      
+      if (participante) {
+        participante.jaVotou = false;
+        participante.valorVotado = null;
+        
+        io.to(codigo).emit('atualizarParticipantes', 
+          Array.from(sala.participantes.values())
+        );
+      }
+    });
+
+    // Revelar votos
+    socket.on('revelarVotos', (codigo) => {
+      if (!salas.has(codigo)) return;
+      
+      const sala = salas.get(codigo);
+      sala.revelarVotos = true;
+      
+      io.to(codigo).emit('votosRevelados');
+    });
+
+    // Reiniciar votação
+    socket.on('reiniciarVotacao', (codigo) => {
+      if (!salas.has(codigo)) return;
+      
+      const sala = salas.get(codigo);
+      sala.revelarVotos = false;
+      
+      for (const participante of sala.participantes.values()) {
+        participante.jaVotou = false;
+        participante.valorVotado = null;
+      }
+      
+      io.to(codigo).emit('votacaoReiniciada');
+      io.to(codigo).emit('atualizarParticipantes', 
+        Array.from(sala.participantes.values())
+      );
+    });
+
+    // Desconexão
+    socket.on('disconnect', () => {
+      console.log('Cliente desconectado:', socket.id);
+      
+      for (const [codigo, sala] of salas.entries()) {
+        if (sala.participantes.has(socket.id)) {
+          const participante = sala.participantes.get(socket.id);
+          const eraModerador = participante.isModerador;
+          
+          sala.participantes.delete(socket.id);
+          
+          if (sala.participantes.size === 0) {
+            salas.delete(codigo);
+            continue;
+          }
+          
+          if (eraModerador) {
+            const novoModerador = sala.participantes.values().next().value;
+            if (novoModerador) {
+              novoModerador.isModerador = true;
             }
           }
+          
+          io.to(codigo).emit('atualizarParticipantes', 
+            Array.from(sala.participantes.values())
+          );
         }
       }
     });
   });
 
+  // Roteamento do Next.js
+  server.all('*', (req, res) => {
+    return handle(req, res);
+  });
+
   const PORT = process.env.PORT || 3000;
-  server.listen(PORT, () => {
-    console.log(`> Servidor Socket.io rodando em http://localhost:${PORT}`);
+  httpServer.listen(PORT, () => {
+    console.log(`> Servidor rodando em http://localhost:${PORT}`);
   });
 }); 

@@ -14,7 +14,7 @@ export function SocketProvider({ children }) {
     const initConnection = async () => {
       try {
         console.log('Inicializando Socket.io...');
-        const socketInstance = io('http://localhost:3000', {
+        const socketInstance = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
           reconnection: true,
           reconnectionAttempts: 5,
           reconnectionDelay: 1000,

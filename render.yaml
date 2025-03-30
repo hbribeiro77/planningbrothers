@@ -8,4 +8,6 @@ services:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 3000 
+        value: 3000
+      - key: NEXT_PUBLIC_SOCKET_URL
+        value: https://planningbrothers.onrender.com 

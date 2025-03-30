@@ -4,9 +4,9 @@
 Aplicação web para facilitar sessões de Planning Poker em equipes ágeis, permitindo votação em tempo real através de WebSocket.
 
 ## Tecnologias Principais
-- **Frontend**: Next.js 14, React, Mantine UI, Tailwind CSS
+- **Frontend**: Next.js 14, React, Mantine UI (@mantine/core, @mantine/hooks)
 - **Backend**: Node.js com Express e Socket.io
-- **Comunicação em Tempo Real**: Socket.io
+- **Comunicação em Tempo Real**: Socket.io com WebSocket
 
 ## Estrutura do Projeto
 ```
@@ -42,11 +42,12 @@ planningbrothers/
 3. **Interface do Usuário**
    - Design responsivo com Mantine UI
    - Feedback visual das ações
+   - Identificação de moderador da sala
    - Modo observador para stakeholders
 
 ## Fluxo de Dados
 1. **Conexão**
-   - Cliente conecta ao servidor Socket.io
+   - Cliente conecta ao servidor Socket.io via WebSocket
    - Gerenciamento de reconexão automática
 
 2. **Eventos da Sala**
@@ -54,6 +55,7 @@ planningbrothers/
    - Votação e cancelamento de votos
    - Revelação de votos
    - Atualização de status
+   - Alternância de modo observador
 
 3. **Estado da Aplicação**
    - Gerenciamento via Context API
@@ -84,7 +86,8 @@ npm run dev
    - Exportação de resultados
    - Configurações personalizadas
 
-3. **Otimizações**
-   - Melhorar performance
-   - Reduzir bundle size
-   - Implementar testes 
+3. **Otimizações e Monitoramento**
+   - Implementar testes automatizados
+   - Monitoramento de erros em produção
+   - Análise de métricas de uso
+   - Otimização de performance 

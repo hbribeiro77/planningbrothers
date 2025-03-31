@@ -23,17 +23,28 @@ Aplicação web para facilitar sessões de Planning Poker em equipes ágeis, per
 planningbrothers/
 ├── src/
 │   ├── app/                    # Páginas e rotas Next.js
+│   │   ├── page.js            # Página inicial
 │   │   ├── sala/              # Páginas relacionadas à sala
+│   │   │   └── [codigo]/      # Rota dinâmica para cada sala
+│   │   │       └── page.js    # Componente da página da sala
 │   │   └── layout.js          # Layout principal
 │   ├── components/            # Componentes React
+│   │   ├── Auth/             # Componentes de autenticação
+│   │   │   └── FormularioEntrada.jsx # Formulário de entrada na sala
 │   │   ├── Mesa/             # Componentes da mesa de Planning Poker
-│   │   └── ...               # Outros componentes
+│   │   │   └── Mesa.jsx      # Componente principal da mesa
+│   │   ├── Participante/     # Componentes de participante
+│   │   │   └── Card.jsx      # Card de participante
+│   │   └── Sala/             # Componentes da sala
+│   │       └── OpcoesVotacao.jsx # Opções de votação
 │   ├── contexts/             # Contextos React
 │   │   └── SocketContext.js  # Gerenciamento do Socket.io
 │   ├── hooks/                # Hooks personalizados
 │   │   └── useSalaSocket.js  # Lógica de eventos da sala
 │   ├── constants/            # Constantes e configurações
 │   │   └── socketEvents.js   # Eventos do Socket.io
+│   ├── utils/                # Utilitários e funções auxiliares
+│   │   └── browserToken.js   # Gerenciamento de token e identificação do navegador
 │   └── server-dev.js         # Servidor de desenvolvimento
 ├── public/                   # Arquivos estáticos
 ├── .env.example             # Template de variáveis de ambiente
@@ -45,6 +56,7 @@ planningbrothers/
 1. **Criação de Salas**
    - Geração de código único para cada sala
    - Interface intuitiva para criar/entrar em salas
+   - Sistema de convites via link para compartilhamento
 
 2. **Votação em Tempo Real**
    - Sistema de votação usando Socket.io
@@ -56,6 +68,12 @@ planningbrothers/
    - Feedback visual das ações
    - Identificação de moderador da sala
    - Modo observador para stakeholders
+
+4. **Gerenciamento de Sessão**
+   - Verificação de sessão por token e navegador
+   - Prevenção de sessões duplicadas do mesmo navegador
+   - Identificação única de participantes
+   - Fluxos diferentes para criação e convites
 
 ## Fluxo de Dados
 1. **Conexão**
@@ -83,6 +101,7 @@ planningbrothers/
    - CORS configurado para produção
    - Validação de entrada de dados
    - Sanitização de parâmetros
+   - Gerenciamento de token por navegador
 
 3. **Monitoramento**
    - Logs de erro em produção

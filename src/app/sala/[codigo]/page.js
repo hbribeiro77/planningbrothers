@@ -50,9 +50,9 @@ function PedirNome({ codigoSala, nomeSugerido, onNomeDefinido }) {
 
 // Componente da sala - só renderizado quando temos nome definido
 function SalaConteudo({ codigoSala, nomeUsuario }) {
-  // Estados para controlar a sessão
-  const [sessaoId] = useState(() => Math.random().toString(36).substring(2, 15));
-  const [conexaoDuplicada, setConexaoDuplicada] = useState(false);
+  // Estado para controlar animações
+  const [entradaAnimada, setEntradaAnimada] = useState(false);
+  const [novaRodadaAnimada, setNovaRodadaAnimada] = useState(false);
   
   // Aqui chamamos o hook com os parâmetros finais
   const {
@@ -62,6 +62,7 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     salaURL,
     modoObservador,
     conectado,
+    erroEntrada,
     handleVotar,
     handleCancelarVoto,
     handleRevelarVotos,
@@ -69,51 +70,56 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     toggleModoObservador
   } = useSalaSocket(codigoSala, nomeUsuario);
 
-  // Filtra participantes para remover duplicatas do mesmo nome
-  // Mantém apenas a primeira ocorrência de cada nome
-  const filtrarParticipantesUnicos = (participantes) => {
-    const nomesVistos = new Set();
-    return participantes.filter(participante => {
-      // Se já vimos este nome antes, ignoramos este participante
-      if (nomesVistos.has(participante.nome)) {
-        return false;
-      }
-      // Caso contrário, marcamos o nome como visto e mantemos o participante
-      nomesVistos.add(participante.nome);
-      return true;
-    });
-  };
-
-  // Lista de participantes sem duplicatas
-  const participantesUnicos = filtrarParticipantesUnicos(participantes);
-
-  // Verifica se este é o primeiro acesso ou uma janela duplicada
+  // Animar entrada na sala
   useEffect(() => {
     if (conectado) {
-      // Cria chave específica para o usuário nesta sala
-      const salaUserKey = `planning_brothers_sala_${codigoSala}_${nomeUsuario}`;
-      
-      // Verifica se já existe uma sessão ativa para este usuário nesta sala
-      const sessaoAtiva = localStorage.getItem(salaUserKey);
-      
-      if (!sessaoAtiva) {
-        // Primeira conexão deste usuário nesta sala - registra esta sessão
-        localStorage.setItem(salaUserKey, sessaoId);
-      } else if (sessaoAtiva !== sessaoId) {
-        // Já existe sessão e não é esta - indica tentativa de conexão duplicada
-        setConexaoDuplicada(true);
-      }
-      
-      // Limpa a sessão quando o componente desmontar
-      return () => {
-        // Apenas limpar se for a nossa sessão
-        const sessaoAtual = localStorage.getItem(salaUserKey);
-        if (sessaoAtual === sessaoId) {
-          localStorage.removeItem(salaUserKey);
-        }
-      };
+      // Pequeno delay para iniciar a animação de entrada
+      const timer = setTimeout(() => {
+        setEntradaAnimada(true);
+      }, 100);
+      return () => clearTimeout(timer);
     }
-  }, [conectado, codigoSala, nomeUsuario, sessaoId]);
+  }, [conectado]);
+
+  // Animar nova rodada
+  useEffect(() => {
+    if (revelarVotos === false) {
+      // Quando revelarVotos muda para false, significa que começou uma nova rodada
+      setNovaRodadaAnimada(true);
+      const timer = setTimeout(() => {
+        setNovaRodadaAnimada(false);
+      }, 1000); // Duração da animação
+      return () => clearTimeout(timer);
+    }
+  }, [revelarVotos]);
+
+  // Handler personalizado para nova rodada com animação
+  const handleNovaRodadaComAnimacao = () => {
+    // Iniciar a animação de nova rodada
+    setNovaRodadaAnimada(true);
+    // Chamar o handler original após um pequeno delay
+    setTimeout(() => {
+      handleNovaRodada();
+    }, 500);
+  };
+
+  // Se houver erro de entrada, mostra mensagem (verificar antes da conexão)
+  if (erroEntrada) {
+    return (
+      <Container size="sm" py="xl">
+        <Center>
+          <Paper withBorder shadow="md" p={30} radius="md" mt="xl" style={{ textAlign: 'center' }}>
+            <Title order={3} mb="md" c="orange">Não foi possível entrar na sala</Title>
+            <Text mb="md" fw={500}>{erroEntrada}</Text>
+            <Text mb="md">Por favor, aguarde o participante atual sair da sala.</Text>
+            <Text c="dimmed" fs="italic" size="sm">
+              Você já está conectado nesta sala em outra aba/janela deste navegador.
+            </Text>
+          </Paper>
+        </Center>
+      </Container>
+    );
+  }
 
   // Renderização condicional baseada no estado de conexão
   if (!conectado) {
@@ -129,26 +135,37 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     );
   }
 
-  // Se detectamos que esta é uma tentativa de conexão duplicada
-  if (conexaoDuplicada) {
-    return (
-      <Container size="sm" py="xl">
-        <Center>
-          <Paper withBorder shadow="md" p={30} radius="md" mt="xl" style={{ textAlign: 'center' }}>
-            <Title order={3} mb="md" c="orange">Sessão duplicada detectada</Title>
-            <Text mb="md" fw={500}>Você já está participando desta sala em outra janela ou aba.</Text>
-            <Text mb="md">Para evitar problemas de sincronização nos votos, por favor feche esta aba e continue utilizando a sala original.</Text>
-            <Text c="dimmed" fs="italic" size="sm">
-              Manter múltiplas sessões abertas com o mesmo nome pode causar comportamentos inesperados durante as votações.
-            </Text>
-          </Paper>
-        </Center>
-      </Container>
-    );
-  }
+  // Estilos para as animações
+  const animacaoEntrada = {
+    opacity: entradaAnimada ? 1 : 0,
+    transform: entradaAnimada ? 'translateY(0)' : 'translateY(20px)',
+    transition: 'opacity 0.8s ease-out, transform 0.8s ease-out'
+  };
+
+  const animacaoNovaRodada = {
+    animation: novaRodadaAnimada ? 'pulseEffect 0.8s ease-out' : 'none'
+  };
 
   return (
-    <Container size="lg" py="xl">
+    <Container size="lg" py="xl" style={animacaoEntrada}>
+      {/* Estilo global para animações */}
+      <style jsx global>{`
+        @keyframes pulseEffect {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.03); }
+          100% { transform: scale(1); }
+        }
+        
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        
+        .nova-rodada-transition {
+          transition: all 0.5s ease-out;
+        }
+      `}</style>
+      
       <Group justify="flex-start" align="center" mb="xl" gap="xs">
         <Title order={1}>Sala {codigoSala}</Title>
         <CopyButton value={salaURL}>
@@ -173,18 +190,25 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
         <Button
           color="blue"
           size="sm"
-          onClick={handleNovaRodada}
+          onClick={handleNovaRodadaComAnimacao}
+          className="nova-rodada-transition"
         >
           Nova Rodada
         </Button>
       </Box>
 
-      <Paper shadow="sm" p="md" mb="xl">
+      <Paper 
+        shadow="sm" 
+        p="md" 
+        mb="xl" 
+        style={animacaoNovaRodada}
+        className="nova-rodada-transition"
+      >
         <Mesa 
-          participantes={participantesUnicos}
+          participantes={participantes}
           revelarVotos={revelarVotos}
           onRevelarVotos={handleRevelarVotos}
-          onNovaRodada={handleNovaRodada}
+          onNovaRodada={handleNovaRodadaComAnimacao}
         />
       </Paper>
 
@@ -193,6 +217,12 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
           meuVoto={meuVoto}
           onVotar={handleVotar}
           onCancelarVoto={handleCancelarVoto}
+          style={{
+            opacity: entradaAnimada ? 1 : 0,
+            transform: entradaAnimada ? 'translateY(0)' : 'translateY(20px)',
+            transition: 'opacity 0.8s ease-out, transform 0.8s ease-out',
+            transitionDelay: '0.2s'
+          }}
         />
       )}
     </Container>
@@ -205,6 +235,7 @@ export default function SalaPage() {
   const searchParams = useSearchParams();
   const codigoSala = params.codigo;
   const nomeSugerido = searchParams.get('nome') || '';
+  const isLinkConvite = searchParams.get('convite') === 'true'; // Indica se está entrando via link de convite
   
   // Estado para controlar o nome do usuário
   const [nomeUsuario, setNomeUsuario] = useState(null);
@@ -212,21 +243,20 @@ export default function SalaPage() {
 
   // Verificar se já temos o nome no localStorage ou na URL
   useEffect(() => {
-    // Primeiro verificamos se já existe um nome salvo
+    // Se estamos entrando via link de convite, não usamos o nome do localStorage
+    if (isLinkConvite) {
+      setCarregando(false);
+      return;
+    }
+
+    // Se não é link de convite, tenta pegar do localStorage
     const nomeSalvo = localStorage.getItem(LOCALSTORAGE_NOME_KEY);
-    
     if (nomeSalvo) {
-      // Se tem nome salvo, usa ele
       setNomeUsuario(nomeSalvo);
-    } else if (nomeSugerido) {
-      // Se tem nome na URL, salva e usa ele
-      localStorage.setItem(LOCALSTORAGE_NOME_KEY, nomeSugerido);
-      setNomeUsuario(nomeSugerido);
     }
     
-    // Independentemente do resultado, não estamos mais carregando
     setCarregando(false);
-  }, [nomeSugerido]); // Executa apenas na montagem e se nomeSugerido mudar
+  }, [isLinkConvite]); // Executa apenas na montagem e se isLinkConvite mudar
 
   // Callback quando o nome for informado e salvo pelo FormularioEntrada
   const handleNomeDefinido = (nome) => {
@@ -242,8 +272,8 @@ export default function SalaPage() {
     );
   }
 
-  // Se não temos nome definido, mostra formulário para pedir nome
-  if (!nomeUsuario) {
+  // Se estamos entrando via link de convite, SEMPRE mostra o formulário
+  if (isLinkConvite) {
     return (
       <PedirNome 
         codigoSala={codigoSala} 
@@ -253,6 +283,17 @@ export default function SalaPage() {
     );
   }
 
-  // Se chegou aqui, temos o nome definido
+  // Se não temos nome definido E não estamos entrando via link de convite, mostra formulário
+  if (!nomeUsuario) {
+    return (
+      <PedirNome 
+        codigoSala={codigoSala} 
+        nomeSugerido="" 
+        onNomeDefinido={handleNomeDefinido} 
+      />
+    );
+  }
+
+  // Se chegou aqui, temos o nome definido e não é link de convite
   return <SalaConteudo codigoSala={codigoSala} nomeUsuario={nomeUsuario} />;
 } 

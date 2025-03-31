@@ -58,9 +58,9 @@ export default function FormularioEntrada({
     // Gerar código aleatório para a sala
     const novoCodigo = gerarCodigoAleatorio();
     
-    // Redirecionar para a sala
+    // Redirecionar para a sala sem parâmetros de convite
     setTimeout(() => {
-      router.push(`/sala/${novoCodigo}?nome=${encodeURIComponent(nome)}`);
+      router.push(`/sala/${novoCodigo}`);
     }, 500);
   };
   
@@ -72,9 +72,16 @@ export default function FormularioEntrada({
     setValidando(true);
     salvarNome(nome);
     
-    // Redirecionar para a sala existente
+    // Redirecionar para a sala existente com nome na URL
     setTimeout(() => {
-      router.push(`/sala/${codigo}?nome=${encodeURIComponent(nome)}`);
+      // Se estamos entrando em uma sala existente (não criando), adiciona o parâmetro convite
+      const params = new URLSearchParams();
+      params.append('nome', nome);
+      // Só adiciona o parâmetro convite se não estamos em um link de convite (codigoSalaFixo)
+      if (!codigoSalaFixo && codigoSala) {
+        params.append('convite', 'true');
+      }
+      router.push(`/sala/${codigo}?${params.toString()}`);
     }, 500);
   };
 

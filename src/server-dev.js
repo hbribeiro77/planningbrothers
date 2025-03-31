@@ -25,6 +25,22 @@ app.prepare().then(() => {
 
     // Entrar em uma sala
     socket.on('entrarSala', ({ codigo, usuario }) => {
+      // Verifica se já existe alguém com este token/browser na sala
+      const sala = salas.get(codigo);
+      if (sala) {
+        const participanteExistente = Array.from(sala.participantes.values())
+          .find(p => p.token === usuario.token && p.browserName === usuario.browserName);
+          
+        if (participanteExistente) {
+          // Se já existe uma sessão deste navegador na sala, rejeita a conexão
+          socket.emit('erroEntrada', {
+            mensagem: 'Você já está conectado nesta sala em outra aba/janela deste navegador'
+          });
+          return;
+        }
+      }
+      
+      // Se não existe, permite a entrada
       socket.join(codigo);
       
       if (!salas.has(codigo)) {
@@ -34,10 +50,10 @@ app.prepare().then(() => {
         });
       }
       
-      const sala = salas.get(codigo);
-      const isModerador = sala.participantes.size === 0;
+      const salaAtual = salas.get(codigo);
+      const isModerador = salaAtual.participantes.size === 0;
 
-      sala.participantes.set(socket.id, {
+      salaAtual.participantes.set(socket.id, {
         ...usuario,
         id: socket.id,
         jaVotou: false,
@@ -46,7 +62,7 @@ app.prepare().then(() => {
       });
       
       io.to(codigo).emit('atualizarParticipantes', 
-        Array.from(sala.participantes.values())
+        Array.from(salaAtual.participantes.values())
       );
     });
 

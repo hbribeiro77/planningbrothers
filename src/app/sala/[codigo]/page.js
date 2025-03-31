@@ -135,26 +135,12 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
       <Container size="sm" py="xl">
         <Center>
           <Paper withBorder shadow="md" p={30} radius="md" mt="xl" style={{ textAlign: 'center' }}>
-            <Title order={3} mb="md">Você já está nesta sala</Title>
-            <Text mb="md">Você já está participando desta sala em outra janela ou aba.</Text>
-            <Text size="sm" c="dimmed" mb="xl">Apenas uma conexão ativa é recomendada para evitar problemas de sincronização durante as votações.</Text>
-            
-            <Group justify="center">
-              <Button 
-                variant="light" 
-                component="a" 
-                href="/"
-              >
-                Voltar para o início
-              </Button>
-              <Button 
-                color="blue"
-                component="a" 
-                href={`/sala/${codigoSala}`}
-              >
-                Tentar novamente
-              </Button>
-            </Group>
+            <Title order={3} mb="md" c="orange">Sessão duplicada detectada</Title>
+            <Text mb="md" fw={500}>Você já está participando desta sala em outra janela ou aba.</Text>
+            <Text mb="md">Para evitar problemas de sincronização nos votos, por favor feche esta aba e continue utilizando a sala original.</Text>
+            <Text c="dimmed" fs="italic" size="sm">
+              Manter múltiplas sessões abertas com o mesmo nome pode causar comportamentos inesperados durante as votações.
+            </Text>
           </Paper>
         </Center>
       </Container>

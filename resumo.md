@@ -3,10 +3,20 @@
 ## Visão Geral
 Aplicação web para facilitar sessões de Planning Poker em equipes ágeis, permitindo votação em tempo real através de WebSocket.
 
+## Requisitos do Sistema
+- Node.js 18.x ou superior
+- NPM 9.x ou superior
+- Navegador moderno com suporte a WebSocket
+
 ## Tecnologias Principais
-- **Frontend**: Next.js 14, React, Mantine UI (@mantine/core, @mantine/hooks)
+- **Frontend**: 
+  - Next.js 14.1.0 (LTS)
+  - React 18
+  - Mantine UI (@mantine/core, @mantine/hooks)
+  - @tabler/icons-react 2.40.0
 - **Backend**: Node.js com Express e Socket.io
 - **Comunicação em Tempo Real**: Socket.io com WebSocket
+- **Gerenciamento de Dependências**: NPM
 
 ## Estrutura do Projeto
 ```
@@ -26,6 +36,8 @@ planningbrothers/
 │   │   └── socketEvents.js   # Eventos do Socket.io
 │   └── server-dev.js         # Servidor de desenvolvimento
 ├── public/                   # Arquivos estáticos
+├── .env.example             # Template de variáveis de ambiente
+├── render.yaml              # Configuração de deploy no Render
 └── package.json             # Dependências e scripts
 ```
 
@@ -61,19 +73,72 @@ planningbrothers/
    - Gerenciamento via Context API
    - Persistência de estado durante a sessão
 
+## Segurança
+1. **Variáveis de Ambiente**
+   - Uso de `.env` para desenvolvimento
+   - Configurações sensíveis não versionadas
+   - Template disponível em `.env.example`
+
+2. **Boas Práticas**
+   - CORS configurado para produção
+   - Validação de entrada de dados
+   - Sanitização de parâmetros
+
+3. **Monitoramento**
+   - Logs de erro em produção
+   - Alertas de segurança via GitHub
+   - Atualizações de dependências monitoradas
+
+## Manutenção
+1. **Versionamento**
+   - Repositório Git
+   - Commits semânticos
+   - Branches protegidas
+
+2. **Deploy**
+   - Deploy automatizado no Render
+   - Configurações via `render.yaml`
+   - Rollback automático em falhas
+
+3. **Atualizações**
+   - Dependências principais em versões LTS
+   - Plano de atualização para correções de segurança
+   - Monitoramento de vulnerabilidades
+
 ## Como Executar
-1. Instalar dependências:
+
+1. Configurar variáveis de ambiente:
+   - Copiar `.env.example` para `.env`
+   - Ajustar as variáveis conforme necessário
+
+2. Instalar dependências:
 ```bash
 npm install
 ```
 
-2. Iniciar servidor de desenvolvimento:
+3. Iniciar servidor de desenvolvimento:
 ```bash
 npm run dev
 ```
 
-3. Acessar aplicação:
+4. Acessar aplicação:
    - Abrir http://localhost:3000 no navegador
+
+## Deploy
+
+1. **Plataforma**
+   - Deploy automatizado no Render
+   - Configurações definidas em `render.yaml`
+
+2. **Variáveis de Ambiente**
+   - `NODE_ENV`: production
+   - `PORT`: 3000
+   - `NEXT_PUBLIC_SOCKET_URL`: URL do servidor WebSocket
+
+3. **Processo de Deploy**
+   - Push para o GitHub inicia deploy automático
+   - Build: `npm install && npm run build`
+   - Start: `npm run start`
 
 ## Próximos Passos
 1. **Melhorias de UX**

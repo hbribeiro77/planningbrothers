@@ -77,4 +77,36 @@ console.log('Recebeu evento:', data);
 ### Gerenciamento de Estado
 - Usar estados locais quando possível
 - Considerar Context API para estados globais
-- Manter estados próximos de onde são utilizados 
+- Manter estados próximos de onde são utilizados
+
+## Gerenciamento de Estado em Aplicações React com WebSocket
+
+### Estado Local vs Estado Remoto
+- Em aplicações multiplayer, estados que precisam ser sincronizados entre usuários devem ter o servidor como fonte única da verdade
+- O estado local no cliente deve ser um reflexo do estado remoto
+- Evitar inicializar estados locais com valores hardcoded quando eles precisam ser sincronizados
+
+### Boas Práticas
+- Usar o estado do `currentUser` (ou dados do servidor) para inicializar estados locais
+- Implementar sincronização bidirecional:
+  - Servidor → Cliente: Através de dados iniciais e eventos
+  - Cliente → Servidor: Através de eventos de mudança
+  - Cliente → Cliente: Através de observadores de mudanças
+- Utilizar operadores de coalescência nula (`??`) para fallbacks seguros
+- Manter o servidor como fonte única da verdade para estados compartilhados
+
+### Exemplo Prático
+```javascript
+// Antes (problemático)
+const [keyboardMode, setKeyboardMode] = useState(true);
+
+// Depois (correto)
+const [keyboardMode, setKeyboardMode] = useState(currentUser?.keyboardMode ?? true);
+
+// Sincronização com mudanças do servidor
+useEffect(() => {
+  if (currentUser?.keyboardMode !== undefined) {
+    setKeyboardMode(currentUser.keyboardMode);
+  }
+}, [currentUser?.keyboardMode]);
+``` 

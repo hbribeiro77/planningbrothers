@@ -60,7 +60,8 @@ app.prepare().then(() => {
         jaVotou: false,
         valorVotado: null,
         isModerador,
-        keyboardMode: isModerador ? true : false // Define o keyboardMode inicial
+        keyboardMode: isModerador ? true : false, // Define o keyboardMode inicial
+        life: 100 // Adiciona vida inicial
       });
 
       // Se não for o primeiro participante, copia o modo PVP do moderador
@@ -82,13 +83,50 @@ app.prepare().then(() => {
       const { codigo, fromUser, toUser, objectType } = data;
       
       if (!salas.has(codigo)) return;
-      
-      // Repassar o evento para todos os participantes da sala
+
+      // Apenas repassa o evento para iniciar a animação
       io.to(codigo).emit('throwObject', {
         fromUser,
         toUser,
         objectType
       });
+    });
+
+    // Aplicar dano após a animação
+    socket.on('applyDamage', (data) => {
+      const { codigo, fromUser, toUser, objectType } = data;
+      
+      if (!salas.has(codigo)) return;
+      
+      const sala = salas.get(codigo);
+      const participanteAlvo = Array.from(sala.participantes.values())
+        .find(p => p.id === toUser);
+
+      if (participanteAlvo) {
+        // Aplica dano baseado no tipo de objeto
+        let dano = 0;
+        switch (objectType) {
+          case 'keyboard':
+            dano = 20; // Dano do teclado
+            break;
+          // Adicione outros tipos de objetos aqui
+        }
+        
+        // Atualiza a vida do participante
+        participanteAlvo.life = Math.max(0, participanteAlvo.life - dano);
+
+        // Emite evento de dano
+        io.to(codigo).emit('damageReceived', {
+          targetId: toUser,
+          damage: dano,
+          currentLife: participanteAlvo.life
+        });
+
+        // Atualiza a lista de participantes
+        io.to(codigo).emit('atualizarParticipantes', 
+          Array.from(sala.participantes.values())
+        );
+      }
     });
 
     // Votar

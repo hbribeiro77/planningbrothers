@@ -1,5 +1,6 @@
 import { Paper, Text, Badge } from '@mantine/core';
 import { IconEye } from '@tabler/icons-react';
+import { LifeBar } from '../GameElements/LifeBar';
 
 export default function CartaParticipante({ 
   nome, 
@@ -8,7 +9,9 @@ export default function CartaParticipante({
   revelarVotos = false,
   isModerador = false,
   isObservador = false,
-  id
+  id,
+  life = 100,
+  maxLife = 100
 }) {
   return (
     <Paper
@@ -32,6 +35,9 @@ export default function CartaParticipante({
         opacity: isObservador ? 0.85 : 1,
       }}
     >
+      {/* Barra de vida */}
+      {!isObservador && <LifeBar currentLife={life} maxLife={maxLife} />}
+
       {isModerador && (
         <Badge 
           size="xs" 

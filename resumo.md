@@ -32,8 +32,9 @@ planningbrothers/
 │   │   ├── Auth/             # Componentes de autenticação
 │   │   │   └── FormularioEntrada.jsx # Formulário de entrada na sala
 │   │   ├── GameElements/     # Componentes de gamificação
-│   │   │   └── KeyboardThrower.jsx # Sistema de arremesso de teclado
-│   │   │   └── GameController.jsx # Controlador de elementos de gamificação
+│   │   │   ├── KeyboardThrower.jsx # Sistema de arremesso de teclado
+│   │   │   ├── GameController.jsx # Controlador de elementos de gamificação
+│   │   │   └── LifeBar.jsx   # Barra de vida dos participantes
 │   │   ├── Mesa/             # Componentes da mesa de Planning Poker
 │   │   │   └── Mesa.jsx      # Componente principal da mesa
 │   │   ├── Participante/     # Componentes de participante
@@ -86,6 +87,8 @@ planningbrothers/
    - Sistema de arremesso de teclado para interação divertida entre participantes
    - Efeitos visuais de animação, explosão e ricochete
    - Feedback tátil com efeito de tremor no avatar atingido
+   - Sistema de vida com barra de status visual
+   - Dano baseado no tipo de objeto arremessado
    - Comunicação em tempo real via WebSockets para sincronização multiplayer
    - GameController para gerenciamento centralizado dos elementos de gamificação
 
@@ -181,28 +184,36 @@ npm run dev
    - Efeito de ricochete após impacto com rotação contínua
    - Feedback visual com efeito de explosão no avatar atingido
    - Animação de tremor no participante que recebe o arremesso
+   - Sistema de dano baseado no tipo de objeto
 
-2. **GameController**
+2. **Sistema de Vida**
+   - Barra de vida visual acima de cada avatar
+   - Dano baseado no tipo de objeto arremessado
+   - Feedback visual de dano recebido
+   - Sincronização em tempo real entre todos os participantes
+   - Estado gerenciado pelo servidor para consistência
+
+3. **GameController**
    - Componente central para gerenciamento dos elementos de gamificação
    - Interface de controle para ativar/desativar funcionalidades
    - Gerencia a comunicação de eventos de jogo via WebSockets
    - Centraliza a lógica de interação com elementos de gamificação
    - Integração com o sistema de sala e participantes
 
-3. **Implementação Técnica**
+4. **Implementação Técnica**
    - Animações CSS utilizando keyframes para movimentos fluidos
    - Manipulação dinâmica do DOM para efeitos visuais
    - Comunicação via WebSockets para sincronização multiplayer
    - Prevenção de seleção de texto para melhor experiência de usuário
    - Cursor personalizado (pointer) para melhorar a usabilidade
 
-4. **Recursos Visuais**
+5. **Recursos Visuais**
    - SVG otimizado do teclado com proporções quadradas
    - Cores suaves para integração com o design da aplicação
    - Efeito de explosão animado
    - Transições suaves entre estados de animação
 
-5. **Interatividade**
+6. **Interatividade**
    - Sem limite de arremessos (cooldown removido)
    - Feedback imediato ao clicar em um avatar
    - Sincronização em tempo real entre todos os usuários da sala

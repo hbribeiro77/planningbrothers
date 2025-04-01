@@ -256,6 +256,8 @@ export default function Mesa({
                 revelarVotos={revelarVotos}
                 isModerador={participante.isModerador}
                 isObservador={participante.isObservador}
+                life={participante.life}
+                maxLife={participante.maxLife}
               />
             ))}
           </div>
@@ -286,6 +288,8 @@ export default function Mesa({
                 revelarVotos={revelarVotos}
                 isModerador={participante.isModerador}
                 isObservador={participante.isObservador}
+                life={participante.life}
+                maxLife={participante.maxLife}
               />
             ))}
           </div>

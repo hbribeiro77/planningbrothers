@@ -109,4 +109,43 @@ useEffect(() => {
     setKeyboardMode(currentUser.keyboardMode);
   }
 }, [currentUser?.keyboardMode]);
-``` 
+```
+
+## Sincronização de Eventos e Animações em Multiplayer
+
+### Padrão de Separação de Eventos de Animação e Lógica
+
+Para garantir uma experiência fluida em jogos multiplayer com animações:
+
+1. **Separar Eventos de Animação e Lógica:**
+```javascript
+// No cliente (emissor)
+// Primeiro envia o evento de animação
+socket.emit('throwObject', { /* dados */ });
+
+// Depois da animação completar, emite o evento de lógica
+setTimeout(() => {
+  socket.emit('applyDamage', { /* dados */ });
+}, duracaoAnimacao);
+```
+
+2. **No Servidor:**
+```javascript
+// Evento de animação apenas repassa
+socket.on('throwObject', (data) => {
+  io.to(codigo).emit('throwObject', data);
+});
+
+// Evento de lógica processa e atualiza estado
+socket.on('applyDamage', (data) => {
+  // Processa a lógica
+  // Atualiza estados
+  // Emite atualizações
+});
+```
+
+### Pontos Importantes:
+- Sincronizar a duração das animações com os eventos de lógica
+- Manter o servidor como fonte única da verdade
+- Usar timeouts no cliente para coordenar animações e lógica
+- Garantir que o estado só é atualizado após a conclusão das animações 

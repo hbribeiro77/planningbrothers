@@ -50,6 +50,16 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
       setErroEntrada(null);
     });
 
+    // Receber dano
+    socket.on('damageReceived', ({ targetId, damage, currentLife }) => {
+      console.log('Recebeu dano:', { targetId, damage, currentLife });
+      setParticipantes(prev => prev.map(p => 
+        p.id === targetId 
+          ? { ...p, life: currentLife }
+          : p
+      ));
+    });
+
     // Receber votos
     socket.on(SOCKET_EVENTS.VOTO_RECEBIDO, ({ usuario, voto, jaVotou }) => {
       setParticipantes(prev => prev.map(p => 

@@ -295,12 +295,23 @@ export function KeyboardThrower({
     
     // Envia evento para outros participantes via socket.io
     if (socket) {
+      // Primeiro envia o evento de arremesso para iniciar a animação
       socket.emit('throwObject', {
         codigo: codigoSala,
         fromUser: currentUser.id,
         toUser: targetId,
         objectType: 'keyboard'
       });
+
+      // Depois da animação, emite o evento de dano
+      setTimeout(() => {
+        socket.emit('applyDamage', {
+          codigo: codigoSala,
+          fromUser: currentUser.id,
+          toUser: targetId,
+          objectType: 'keyboard'
+        });
+      }, 400); // Tempo da animação
     }
   };
   

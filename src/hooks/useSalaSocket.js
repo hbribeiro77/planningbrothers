@@ -44,6 +44,7 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
 
     // Receber atualizações de participantes
     socket.on(SOCKET_EVENTS.ATUALIZAR_PARTICIPANTES, (participantesAtualizados) => {
+      console.log('Recebeu atualizarParticipantes:', participantesAtualizados);
       setParticipantes(participantesAtualizados);
       setConectado(true);
       setErroEntrada(null);
@@ -71,11 +72,23 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
 
     // Modo observador alterado
     socket.on(SOCKET_EVENTS.MODO_OBSERVADOR_ALTERADO, ({ usuario, isObservador }) => {
-      setParticipantes(prev => prev.map(p => 
-        p.nome === usuario.nome 
-          ? { ...p, isObservador }
-          : p
-      ));
+      console.log('Cliente recebeu modoObservadorAlterado:', { usuario, isObservador });
+      
+      setParticipantes(prev => {
+        console.log('Participantes antes da atualização:', prev);
+        
+        const participantesAtualizados = prev.map(p => {
+          const deveAtualizar = p.nome === usuario.nome;
+          console.log('Verificando participante:', p.nome, 'vs', usuario.nome, 'resultado:', deveAtualizar);
+          
+          return deveAtualizar
+            ? { ...p, isObservador }
+            : p;
+        });
+        
+        console.log('Participantes após atualização:', participantesAtualizados);
+        return participantesAtualizados;
+      });
     });
 
     return () => {
@@ -86,7 +99,7 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
       socket.off(SOCKET_EVENTS.VOTACAO_REINICIADA);
       socket.off(SOCKET_EVENTS.MODO_OBSERVADOR_ALTERADO);
     };
-  }, [socket, codigoSala, nomeUsuario, modoObservador]);
+  }, [socket, codigoSala, nomeUsuario]);
 
   // Funções de manipulação de eventos
   const handleVotar = (valor) => {
@@ -126,9 +139,13 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
     const novoModo = !modoObservador;
     setModoObservador(novoModo);
     
+    // Encontrar o usuário atual entre os participantes
+    const meuParticipante = participantes.find(p => p.nome === nomeUsuario);
+    console.log('toggleModoObservador - participante encontrado:', meuParticipante, 'nome:', nomeUsuario);
+    
     socket.emit(SOCKET_EVENTS.ALTERNAR_MODO_OBSERVADOR, {
       codigo: codigoSala,
-      usuario: { nome: nomeUsuario },
+      usuario: meuParticipante || { nome: nomeUsuario },
       isObservador: novoModo
     });
   };
@@ -145,6 +162,7 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
     handleCancelarVoto,
     handleRevelarVotos,
     handleNovaRodada,
-    toggleModoObservador
+    toggleModoObservador,
+    socket
   };
 } 

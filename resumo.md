@@ -31,6 +31,9 @@ planningbrothers/
 │   ├── components/            # Componentes React
 │   │   ├── Auth/             # Componentes de autenticação
 │   │   │   └── FormularioEntrada.jsx # Formulário de entrada na sala
+│   │   ├── GameElements/     # Componentes de gamificação
+│   │   │   └── KeyboardThrower.jsx # Sistema de arremesso de teclado
+│   │   │   └── GameController.jsx # Controlador de elementos de gamificação
 │   │   ├── Mesa/             # Componentes da mesa de Planning Poker
 │   │   │   └── Mesa.jsx      # Componente principal da mesa
 │   │   ├── Participante/     # Componentes de participante
@@ -47,6 +50,10 @@ planningbrothers/
 │   │   └── browserToken.js   # Gerenciamento de token e identificação do navegador
 │   └── server-dev.js         # Servidor de desenvolvimento
 ├── public/                   # Arquivos estáticos
+│   ├── images/              # Imagens e recursos gráficos
+│   │   └── game-objects/    # Recursos para elementos de gamificação
+│   │       ├── keyboard.svg # Ícone de teclado para arremesso
+│   │       └── collision.svg # Efeito de explosão
 ├── .env.example             # Template de variáveis de ambiente
 ├── render.yaml              # Configuração de deploy no Render
 └── package.json             # Dependências e scripts
@@ -75,6 +82,13 @@ planningbrothers/
    - Identificação única de participantes
    - Fluxos diferentes para criação e convites
 
+5. **Elementos de Gamificação**
+   - Sistema de arremesso de teclado para interação divertida entre participantes
+   - Efeitos visuais de animação, explosão e ricochete
+   - Feedback tátil com efeito de tremor no avatar atingido
+   - Comunicação em tempo real via WebSockets para sincronização multiplayer
+   - GameController para gerenciamento centralizado dos elementos de gamificação
+
 ## Fluxo de Dados
 1. **Conexão**
    - Cliente conecta ao servidor Socket.io via WebSocket
@@ -86,6 +100,7 @@ planningbrothers/
    - Revelação de votos
    - Atualização de status
    - Alternância de modo observador
+   - Interações de gamificação (arremesso de objetos)
 
 3. **Estado da Aplicação**
    - Gerenciamento via Context API
@@ -159,16 +174,51 @@ npm run dev
    - Build: `npm install && npm run build`
    - Start: `npm run start`
 
+## Recursos de Gamificação
+
+1. **Sistema de Arremesso de Teclado**
+   - Animação fluida do teclado voando pela tela
+   - Efeito de ricochete após impacto com rotação contínua
+   - Feedback visual com efeito de explosão no avatar atingido
+   - Animação de tremor no participante que recebe o arremesso
+
+2. **GameController**
+   - Componente central para gerenciamento dos elementos de gamificação
+   - Interface de controle para ativar/desativar funcionalidades
+   - Gerencia a comunicação de eventos de jogo via WebSockets
+   - Centraliza a lógica de interação com elementos de gamificação
+   - Integração com o sistema de sala e participantes
+
+3. **Implementação Técnica**
+   - Animações CSS utilizando keyframes para movimentos fluidos
+   - Manipulação dinâmica do DOM para efeitos visuais
+   - Comunicação via WebSockets para sincronização multiplayer
+   - Prevenção de seleção de texto para melhor experiência de usuário
+   - Cursor personalizado (pointer) para melhorar a usabilidade
+
+4. **Recursos Visuais**
+   - SVG otimizado do teclado com proporções quadradas
+   - Cores suaves para integração com o design da aplicação
+   - Efeito de explosão animado
+   - Transições suaves entre estados de animação
+
+5. **Interatividade**
+   - Sem limite de arremessos (cooldown removido)
+   - Feedback imediato ao clicar em um avatar
+   - Sincronização em tempo real entre todos os usuários da sala
+
 ## Próximos Passos
 1. **Melhorias de UX**
    - Adicionar animações de transição
    - Melhorar feedback visual
    - Implementar modo escuro
+   - Expandir elementos de gamificação com novos objetos arremessáveis
 
 2. **Funcionalidades Adicionais**
    - Histórico de votos
    - Exportação de resultados
    - Configurações personalizadas
+   - Sistema de pontuação para elementos de gamificação
 
 3. **Otimizações e Monitoramento**
    - Implementar testes automatizados

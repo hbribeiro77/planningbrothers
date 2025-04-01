@@ -7,7 +7,8 @@ export default function CartaParticipante({
   valorVotado = null, 
   revelarVotos = false,
   isModerador = false,
-  isObservador = false
+  isObservador = false,
+  id
 }) {
   return (
     <Paper
@@ -15,6 +16,8 @@ export default function CartaParticipante({
       p="xs"
       radius="md"
       withBorder
+      className="carta-participante"
+      data-id={id}
       style={{
         width: 'clamp(45px, 3.5vw, 60px)',
         height: 'clamp(68px, 5vw, 80px)',

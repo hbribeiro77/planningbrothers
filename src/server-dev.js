@@ -65,6 +65,20 @@ app.prepare().then(() => {
         Array.from(salaAtual.participantes.values())
       );
     });
+    
+    // Arremessar objeto (eventos de gamificação)
+    socket.on('throwObject', (data) => {
+      const { codigo, fromUser, toUser, objectType } = data;
+      
+      if (!salas.has(codigo)) return;
+      
+      // Repassar o evento para todos os participantes da sala
+      io.to(codigo).emit('throwObject', {
+        fromUser,
+        toUser,
+        objectType
+      });
+    });
 
     // Votar
     socket.on('votar', ({ codigo, usuario, voto }) => {
@@ -131,6 +145,41 @@ app.prepare().then(() => {
       io.to(codigo).emit('atualizarParticipantes', 
         Array.from(sala.participantes.values())
       );
+    });
+
+    // Alternar modo observador
+    socket.on('alternarModoObservador', ({ codigo, usuario, isObservador }) => {
+      if (!salas.has(codigo)) return;
+      
+      console.log('Servidor recebeu alternarModoObservador:', { codigo, usuario, isObservador });
+      
+      const sala = salas.get(codigo);
+      const participante = sala.participantes.get(socket.id);
+      
+      if (participante) {
+        participante.isObservador = isObservador;
+        
+        if (isObservador && participante.jaVotou) {
+          participante.jaVotou = false;
+          participante.valorVotado = null;
+        }
+        
+        console.log('Servidor enviando modoObservadorAlterado:', { 
+          usuario: participante,
+          isObservador 
+        });
+        
+        io.to(codigo).emit('modoObservadorAlterado', { 
+          usuario: participante,
+          isObservador 
+        });
+        
+        io.to(codigo).emit('atualizarParticipantes', 
+          Array.from(sala.participantes.values())
+        );
+      } else {
+        console.log('Participante não encontrado no servidor:', socket.id);
+      }
     });
 
     // Desconexão

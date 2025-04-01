@@ -14,10 +14,9 @@ export default function Home() {
       
       <Paper withBorder shadow="md" p={30} radius="md" mt="xl">
         <FormularioEntrada 
-          // Usando as configurações padrão
-          titulo="Entre no Planning Poker"
+          titulo="Crie uma Sala de Planning Poker"
           mostrarCriarSala={true}
-          mostrarEntrarSala={true}
+          mostrarEntrarSala={false}
         />
       </Paper>
       

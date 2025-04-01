@@ -22,6 +22,7 @@ import Mesa from '@/components/Mesa/Mesa';
 import OpcoesVotacao from '@/components/Sala/OpcoesVotacao';
 import { useSalaSocket } from '@/hooks/useSalaSocket';
 import FormularioEntrada, { LOCALSTORAGE_NOME_KEY } from '@/components/Auth/FormularioEntrada';
+import { GameController } from '@/components/GameElements/GameController';
 
 // Componente que pede o nome do usuário - mantém a aparência original
 function PedirNome({ codigoSala, nomeSugerido, onNomeDefinido }) {
@@ -67,7 +68,8 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     handleCancelarVoto,
     handleRevelarVotos,
     handleNovaRodada,
-    toggleModoObservador
+    toggleModoObservador,
+    socket
   } = useSalaSocket(codigoSala, nomeUsuario);
 
   // Animar entrada na sala
@@ -102,6 +104,9 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
       handleNovaRodada();
     }, 500);
   };
+
+  // Encontrar o usuário atual entre os participantes
+  const currentUser = participantes.find(p => p.nome === nomeUsuario) || { id: '', nome: nomeUsuario };
 
   // Se houver erro de entrada, mostra mensagem (verificar antes da conexão)
   if (erroEntrada) {
@@ -183,6 +188,15 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
         >
           {modoObservador ? 'Sair do Modo Observador' : 'Modo Observador'}
         </Button>
+        
+        {/* Componente de Gamificação */}
+        <div style={{ marginLeft: 'auto' }}>
+          <GameController 
+            socket={socket}
+            codigoSala={codigoSala}
+            currentUser={currentUser}
+          />
+        </div>
       </Group>
 
       {/* Botão de Nova Rodada - sempre presente mas só visível quando necessário */}

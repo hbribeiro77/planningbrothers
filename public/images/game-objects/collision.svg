@@ -1,0 +1,14 @@
+<svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Efeito de explosão/colisão -->
+  <path d="M30 5L35 20H45L35 30L40 45L30 35L20 45L25 30L15 20H25L30 5Z" fill="#FFD700" stroke="#FF6B00" stroke-width="1.5"/>
+  <path d="M15 30L5 28L10 35L3 40L13 42L10 52L18 45L25 55L25 45L35 50L30 40L15 30Z" fill="#FF6B00" stroke="#FF6B00" stroke-width="1.5"/>
+  <path d="M45 30L55 28L50 35L57 40L47 42L50 52L42 45L35 55L35 45L25 50L30 40L45 30Z" fill="#FF6B00" stroke="#FF6B00" stroke-width="1.5"/>
+  
+  <!-- Pequenas estrelas ao redor -->
+  <circle cx="12" cy="15" r="2" fill="white"/>
+  <circle cx="48" cy="15" r="2" fill="white"/>
+  <circle cx="20" cy="8" r="1.5" fill="white"/>
+  <circle cx="40" cy="8" r="1.5" fill="white"/>
+  <circle cx="50" cy="25" r="1.5" fill="white"/>
+  <circle cx="10" cy="25" r="1.5" fill="white"/>
+</svg> 

@@ -1,0 +1,31 @@
+<svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Corpo do teclado -->
+  <rect x="2" y="10" width="56" height="40" rx="4" fill="#555555" stroke="#444444" stroke-width="1" />
+  
+  <!-- Teclas (primeira fileira) -->
+  <rect x="6" y="14" width="6" height="6" rx="1" fill="#777777" />
+  <rect x="14" y="14" width="6" height="6" rx="1" fill="#777777" />
+  <rect x="22" y="14" width="6" height="6" rx="1" fill="#777777" />
+  <rect x="30" y="14" width="6" height="6" rx="1" fill="#777777" />
+  <rect x="38" y="14" width="6" height="6" rx="1" fill="#777777" />
+  <rect x="46" y="14" width="6" height="6" rx="1" fill="#777777" />
+  
+  <!-- Teclas (segunda fileira) -->
+  <rect x="8" y="22" width="6" height="6" rx="1" fill="#777777" />
+  <rect x="16" y="22" width="6" height="6" rx="1" fill="#777777" />
+  <rect x="24" y="22" width="6" height="6" rx="1" fill="#777777" />
+  <rect x="32" y="22" width="6" height="6" rx="1" fill="#777777" />
+  <rect x="40" y="22" width="6" height="6" rx="1" fill="#777777" />
+  <rect x="48" y="22" width="6" height="6" rx="1" fill="#777777" />
+  
+  <!-- Teclas (terceira fileira) -->
+  <rect x="6" y="30" width="6" height="6" rx="1" fill="#777777" />
+  <rect x="14" y="30" width="6" height="6" rx="1" fill="#777777" />
+  <rect x="22" y="30" width="6" height="6" rx="1" fill="#777777" />
+  <rect x="30" y="30" width="6" height="6" rx="1" fill="#777777" />
+  <rect x="38" y="30" width="6" height="6" rx="1" fill="#777777" />
+  <rect x="46" y="30" width="6" height="6" rx="1" fill="#777777" />
+  
+  <!-- Barra de espaço -->
+  <rect x="16" y="40" width="28" height="5" rx="1" fill="#777777" />
+</svg> 

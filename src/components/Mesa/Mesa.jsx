@@ -249,6 +249,7 @@ export default function Mesa({
             {lados.superior.map((participante, idx) => (
               <CartaParticipante
                 key={`top-${idx}`}
+                id={participante.id}
                 nome={participante.nome}
                 jaVotou={participante.jaVotou}
                 valorVotado={participante.valorVotado}
@@ -278,6 +279,7 @@ export default function Mesa({
             {lados.inferior.map((participante, idx) => (
               <CartaParticipante
                 key={`bottom-${idx}`}
+                id={participante.id}
                 nome={participante.nome}
                 jaVotou={participante.jaVotou}
                 valorVotado={participante.valorVotado}

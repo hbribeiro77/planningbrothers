@@ -8,10 +8,17 @@ export function GameController({
   codigoSala,
   currentUser
 }) {
-  const [keyboardMode, setKeyboardMode] = useState(true);
+  const [keyboardMode, setKeyboardMode] = useState(currentUser?.keyboardMode ?? true);
   const [drawerOpened, setDrawerOpened] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [keyboardKey, setKeyboardKey] = useState(0); // Chave para forçar remontagem
+
+  // Atualiza o keyboardMode quando o currentUser mudar
+  useEffect(() => {
+    if (currentUser?.keyboardMode !== undefined) {
+      setKeyboardMode(currentUser.keyboardMode);
+    }
+  }, [currentUser?.keyboardMode]);
 
   // Escuta mudanças do modo diversão de outros jogadores
   useEffect(() => {

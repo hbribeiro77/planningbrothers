@@ -53,13 +53,24 @@ app.prepare().then(() => {
       const salaAtual = salas.get(codigo);
       const isModerador = salaAtual.participantes.size === 0;
 
+      // Primeiro adiciona o usuário à sala
       salaAtual.participantes.set(socket.id, {
         ...usuario,
         id: socket.id,
         jaVotou: false,
         valorVotado: null,
-        isModerador
+        isModerador,
+        keyboardMode: isModerador ? true : false // Define o keyboardMode inicial
       });
+
+      // Se não for o primeiro participante, copia o modo PVP do moderador
+      if (!isModerador) {
+        const moderador = Array.from(salaAtual.participantes.values()).find(p => p.isModerador);
+        if (moderador) {
+          const participante = salaAtual.participantes.get(socket.id);
+          participante.keyboardMode = moderador.keyboardMode;
+        }
+      }
       
       io.to(codigo).emit('atualizarParticipantes', 
         Array.from(salaAtual.participantes.values())
@@ -186,8 +197,21 @@ app.prepare().then(() => {
     socket.on('funModeChanged', ({ codigo, enabled }) => {
       if (!salas.has(codigo)) return;
       
-      // Repassar o evento para todos os participantes da sala
-      io.to(codigo).emit('funModeChanged', { enabled });
+      const sala = salas.get(codigo);
+      const participante = sala.participantes.get(socket.id);
+      
+      if (participante) {
+        // Atualiza o estado do modo PVP no participante
+        participante.keyboardMode = enabled;
+        
+        // Repassar o evento para todos os participantes da sala
+        io.to(codigo).emit('funModeChanged', { enabled });
+        
+        // Atualiza todos os participantes para refletir a mudança
+        io.to(codigo).emit('atualizarParticipantes', 
+          Array.from(sala.participantes.values())
+        );
+      }
     });
 
     // Desconexão

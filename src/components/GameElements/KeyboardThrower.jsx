@@ -252,7 +252,11 @@ export function KeyboardThrower({
   // Função para mostrar explosão dentro do avatar
   const showExplosionInAvatar = (element, userId) => {
     if (!element) return;
-    
+
+    // Toca o som de colisão
+    const audio = new Audio('/audio/beat.wav');
+    audio.play().catch(error => console.log('Erro ao tocar som:', error));
+
     // Cria um ID único para esta explosão
     const explosionId = Date.now().toString();
     

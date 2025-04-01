@@ -102,32 +102,11 @@ export function KeyboardThrower({
   enabled = false,
   socket, 
   codigoSala, 
-  currentUser
+  currentUser,
+  soundEnabled
 }) {
   const [explodingAvatars, setExplodingAvatars] = useState([]);
   const [flyingKeyboards, setFlyingKeyboards] = useState([]);
-
-  // Adiciona o estilo de prevenção de seleção de texto na montagem
-  useEffect(() => {
-    if (enabled) {
-      // Aplica estilos globais para prevenção de seleção de texto
-      const styleElement = document.createElement('style');
-      styleElement.textContent = `
-        .carta-participante, .carta-participante * {
-          user-select: none !important;
-          -webkit-user-select: none !important;
-          -moz-user-select: none !important;
-          -ms-user-select: none !important;
-          cursor: pointer !important;
-        }
-      `;
-      document.head.appendChild(styleElement);
-      
-      return () => {
-        document.head.removeChild(styleElement);
-      };
-    }
-  }, [enabled]);
 
   // Função para adicionar teclado voador e explosão a um avatar
   const throwKeyboardAtAvatar = (element, userId) => {
@@ -253,9 +232,11 @@ export function KeyboardThrower({
   const showExplosionInAvatar = (element, userId) => {
     if (!element) return;
 
-    // Toca o som de colisão
-    const audio = new Audio('/audio/beat.wav');
-    audio.play().catch(error => console.log('Erro ao tocar som:', error));
+    // Toca o som apenas se soundEnabled for true
+    if (soundEnabled) {
+      const audio = new Audio('/audio/beat.wav');
+      audio.play().catch(error => console.log('Erro ao tocar som:', error));
+    }
 
     // Cria um ID único para esta explosão
     const explosionId = Date.now().toString();
@@ -387,6 +368,7 @@ export function KeyboardThrower({
     <>
       {/* Estilos globais */}
       <style>{GLOBAL_STYLES}</style>
+      <div style={{ display: 'none' }} />
     </>
   );
 } 

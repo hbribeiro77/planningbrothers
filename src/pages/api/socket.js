@@ -151,6 +151,14 @@ const SocketHandler = async (req, res) => {
       }
     });
 
+    // Modo diversão alterado
+    socket.on('funModeChanged', ({ codigo, enabled }) => {
+      if (!salas.has(codigo)) return;
+      
+      // Repassar o evento para todos os participantes da sala
+      io.to(codigo).emit('funModeChanged', { enabled });
+    });
+
     // Desconexão
     socket.on('disconnect', () => {
       console.log('Cliente desconectado:', socket.id);

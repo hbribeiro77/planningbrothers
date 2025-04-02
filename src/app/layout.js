@@ -13,11 +13,11 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="pt-BR" style={{ overflow: 'hidden' }}>
+    <html lang="pt-BR">
       <head>
         <ColorSchemeScript />
       </head>
-      <body className={inter.className} style={{ overflow: 'hidden' }}>
+      <body className={inter.className}>
         <Providers>
           {children}
         </Providers>

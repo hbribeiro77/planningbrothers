@@ -1,4 +1,4 @@
-import { Paper, Text, Badge } from '@mantine/core';
+import { Paper, Text, Badge, useMantineTheme } from '@mantine/core';
 import { IconEye } from '@tabler/icons-react';
 import { LifeBar } from '../GameElements/LifeBar';
 
@@ -13,6 +13,9 @@ export default function CartaParticipante({
   life = 100,
   maxLife = 100
 }) {
+  const theme = useMantineTheme();
+  const isDark = theme.colorScheme === 'dark';
+
   return (
     <Paper
       shadow="sm"
@@ -21,6 +24,8 @@ export default function CartaParticipante({
       withBorder
       className="carta-participante"
       data-id={id}
+      data-votou={jaVotou}
+      data-observador={isObservador}
       style={{
         width: 'clamp(45px, 3.5vw, 60px)',
         height: 'clamp(68px, 5vw, 80px)',
@@ -29,8 +34,16 @@ export default function CartaParticipante({
         alignItems: 'center',
         justifyContent: 'center',
         position: 'relative',
-        backgroundColor: isObservador ? '#f0ffee' : (jaVotou ? '#e7f5ff' : 'white'),
-        borderColor: isObservador ? '#20c997' : (jaVotou ? '#228be6' : undefined),
+        backgroundColor: isObservador 
+          ? (isDark ? '#1f3b2c' : '#f0ffee')
+          : (jaVotou 
+              ? (isDark ? '#1c3f5f' : '#e7f5ff')
+              : (isDark ? theme.colors.dark.card[0] : theme.white)),
+        borderColor: isObservador 
+          ? (isDark ? '#2d5640' : '#20c997')
+          : (jaVotou 
+              ? (isDark ? '#2b5580' : '#228be6')
+              : undefined),
         transition: 'all 0.3s ease',
         opacity: isObservador ? 0.85 : 1,
       }}
@@ -66,7 +79,7 @@ export default function CartaParticipante({
       </Text>
       
       {jaVotou && revelarVotos && !isObservador && (
-        <Text fw={700} size="md" c="#228be6">
+        <Text fw={700} size="md" c={isDark ? 'blue.4' : 'blue'}>
           {valorVotado === "?" ? "?" : valorVotado}
         </Text>
       )}
@@ -84,7 +97,7 @@ export default function CartaParticipante({
       )}
       
       {isObservador && (
-        <IconEye size={16} color="#20c997" style={{ opacity: 0.7 }} />
+        <IconEye size={16} color={isDark ? '#2d5640' : '#20c997'} style={{ opacity: 0.7 }} />
       )}
     </Paper>
   );

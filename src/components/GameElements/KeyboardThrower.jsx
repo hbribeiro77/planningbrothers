@@ -201,8 +201,8 @@ export function KeyboardThrower({
       // Remove da lista de teclados em voo
       setFlyingKeyboards(prev => prev.filter(item => item.id !== animationId));
 
-      // Mostra a barra de vida
-      showLifeBarTemporarily();
+      // Mostra a barra de vida do avatar atingido
+      showLifeBarTemporarily(userId);
 
       // Emite o evento de dano após a animação
       if (socket) {

@@ -1,38 +1,51 @@
-import { Box, Progress } from '@mantine/core';
+import { Box } from '@mantine/core';
 import { useLifeBar } from '@/contexts/LifeBarContext';
 import { GAME_CONFIG } from '@/constants/gameConfig';
 
-export function LifeBar({ 
-  currentLife = GAME_CONFIG.LIFE.MAX, 
-  maxLife = GAME_CONFIG.LIFE.MAX 
-}) {
-  const { showLifeBar } = useLifeBar();
-  const percentage = (currentLife / maxLife) * 100;
+export function LifeBar({ currentLife, maxLife, avatarId }) {
+  const { showLifeBar, targetAvatarId } = useLifeBar();
   
-  // Define a cor baseada na porcentagem de vida
-  let color = 'green';
-  if (percentage <= 25) color = 'red';
-  else if (percentage <= 50) color = 'orange';
-  else if (percentage <= 75) color = 'yellow';
+  // Calcula a porcentagem de vida
+  const lifePercentage = (currentLife / maxLife) * 100;
+  
+  // Determina a cor da barra de vida baseada na porcentagem
+  let barColor;
+  if (lifePercentage > 60) {
+    barColor = '#4CAF50'; // Verde
+  } else if (lifePercentage > 30) {
+    barColor = '#FFC107'; // Amarelo
+  } else if (lifePercentage > 15) {
+    barColor = '#FF9800'; // Laranja
+  } else {
+    barColor = '#F44336'; // Vermelho
+  }
+
+  // Só mostra a barra se showLifeBar for true e o avatarId corresponder ao targetAvatarId
+  const shouldShow = showLifeBar && avatarId === targetAvatarId;
 
   return (
-    <Box 
-      style={{ 
+    <Box
+      style={{
         position: 'absolute',
         top: '-10px',
         left: '50%',
         transform: 'translateX(-50%)',
         width: '80%',
-        zIndex: 1,
-        opacity: showLifeBar ? 1 : 0,
-        transition: `opacity ${GAME_CONFIG.ANIMATION.LIFE_BAR_FADE_DURATION}ms ease`
+        height: '4px',
+        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+        borderRadius: '2px',
+        overflow: 'hidden',
+        opacity: shouldShow ? 1 : 0,
+        transition: 'opacity 0.3s ease'
       }}
     >
-      <Progress 
-        value={percentage} 
-        color={color}
-        size="sm"
-        radius="xl"
+      <Box
+        style={{
+          width: `${lifePercentage}%`,
+          height: '100%',
+          backgroundColor: barColor,
+          transition: 'width 0.3s ease, background-color 0.3s ease'
+        }}
       />
     </Box>
   );

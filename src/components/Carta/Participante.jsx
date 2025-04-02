@@ -36,7 +36,7 @@ export default function CartaParticipante({
       }}
     >
       {/* Barra de vida */}
-      {!isObservador && <LifeBar currentLife={life} maxLife={maxLife} />}
+      {!isObservador && <LifeBar currentLife={life} maxLife={maxLife} avatarId={id} />}
 
       {isModerador && (
         <Badge 

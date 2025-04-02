@@ -189,6 +189,7 @@ app.prepare().then(() => {
       for (const participante of sala.participantes.values()) {
         participante.jaVotou = false;
         participante.valorVotado = null;
+        participante.life = GAME_CONFIG.LIFE.MAX; // Restaura a vida ao máximo
       }
       
       io.to(codigo).emit('votacaoReiniciada');

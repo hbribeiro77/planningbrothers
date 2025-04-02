@@ -5,16 +5,19 @@ const LifeBarContext = createContext();
 
 export function LifeBarProvider({ children }) {
   const [showLifeBar, setShowLifeBar] = useState(false);
+  const [targetAvatarId, setTargetAvatarId] = useState(null);
 
-  const showLifeBarTemporarily = () => {
+  const showLifeBarTemporarily = (avatarId) => {
+    setTargetAvatarId(avatarId);
     setShowLifeBar(true);
     setTimeout(() => {
       setShowLifeBar(false);
-    }, GAME_CONFIG.TIMING.LIFE_BAR_DURATION);
+      setTargetAvatarId(null);
+    }, 3000);
   };
 
   return (
-    <LifeBarContext.Provider value={{ showLifeBar, showLifeBarTemporarily }}>
+    <LifeBarContext.Provider value={{ showLifeBar, targetAvatarId, showLifeBarTemporarily }}>
       {children}
     </LifeBarContext.Provider>
   );

@@ -24,6 +24,7 @@ export default function CartaParticipante({
       withBorder
       className="carta-participante"
       data-id={id}
+      data-user-id={id}
       data-votou={jaVotou}
       data-observador={isObservador}
       style={{

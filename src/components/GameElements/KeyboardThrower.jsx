@@ -138,6 +138,28 @@ export function KeyboardThrower({
   const [flyingKeyboards, setFlyingKeyboards] = useState([]);
   const { showLifeBarTemporarily } = useLifeBar();
 
+  // Adiciona listener para o evento throwObject
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleThrowObject = (data) => {
+      const { toUser, objectType } = data;
+      if (objectType === 'keyboard') {
+        // Encontra o elemento do avatar alvo usando data-id
+        const targetElement = document.querySelector(`[data-id="${toUser}"]`);
+        if (targetElement) {
+          throwKeyboardAtAvatar(targetElement, toUser);
+        }
+      }
+    };
+
+    socket.on('throwObject', handleThrowObject);
+
+    return () => {
+      socket.off('throwObject', handleThrowObject);
+    };
+  }, [socket]);
+
   // Função para adicionar teclado voador e explosão a um avatar
   const throwKeyboardAtAvatar = (element, userId) => {
     if (!element) return;
@@ -391,24 +413,10 @@ export function KeyboardThrower({
       
       // Socket listener para receber eventos de outros usuários
       if (socket) {
-        const handleIncomingThrow = (data) => {
-          if (data.toUser === currentUser.id) {
-            // Somos o alvo do arremesso
-            const ourElement = document.querySelector(`.carta-participante[data-id="${currentUser.id}"]`);
-            if (ourElement) {
-              // Adiciona teclado e explosão ao nosso avatar
-              throwKeyboardAtAvatar(ourElement, currentUser.id);
-            }
-          }
-        };
-        
-        socket.on('throwObject', handleIncomingThrow);
-        
         return () => {
           document.removeEventListener('click', handleClick);
           document.removeEventListener('mousedown', preventSelection);
           document.removeEventListener('selectstart', preventSelection);
-          socket.off('throwObject', handleIncomingThrow);
         };
       }
       

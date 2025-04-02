@@ -2,6 +2,7 @@ const express = require('express');
 const { createServer } = require('http');
 const next = require('next');
 const { Server } = require('socket.io');
+const { GAME_CONFIG } = require('./constants/gameConfig');
 
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
@@ -61,7 +62,7 @@ app.prepare().then(() => {
         valorVotado: null,
         isModerador,
         keyboardMode: isModerador ? true : false, // Define o keyboardMode inicial
-        life: 100 // Adiciona vida inicial
+        life: GAME_CONFIG.LIFE.MAX // Adiciona vida inicial
       });
 
       // Se não for o primeiro participante, copia o modo PVP do moderador
@@ -107,13 +108,13 @@ app.prepare().then(() => {
         let dano = 0;
         switch (objectType) {
           case 'keyboard':
-            dano = 20; // Dano do teclado
+            dano = GAME_CONFIG.DAMAGE.KEYBOARD; // Dano do teclado
             break;
           // Adicione outros tipos de objetos aqui
         }
         
         // Atualiza a vida do participante
-        participanteAlvo.life = Math.max(0, participanteAlvo.life - dano);
+        participanteAlvo.life = Math.max(GAME_CONFIG.LIFE.MIN, participanteAlvo.life - dano);
 
         // Emite evento de dano
         io.to(codigo).emit('damageReceived', {

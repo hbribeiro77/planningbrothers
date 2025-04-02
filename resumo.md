@@ -42,11 +42,13 @@ planningbrothers/
 │   │   └── Sala/             # Componentes da sala
 │   │       └── OpcoesVotacao.jsx # Opções de votação
 │   ├── contexts/             # Contextos React
-│   │   └── SocketContext.js  # Gerenciamento do Socket.io
+│   │   ├── SocketContext.js  # Gerenciamento do Socket.io
+│   │   └── LifeBarContext.jsx # Gerenciamento da visibilidade da barra de vida
 │   ├── hooks/                # Hooks personalizados
 │   │   └── useSalaSocket.js  # Lógica de eventos da sala
 │   ├── constants/            # Constantes e configurações
-│   │   └── socketEvents.js   # Eventos do Socket.io
+│   │   ├── socketEvents.js   # Eventos do Socket.io
+│   │   └── gameConfig.js     # Configurações do jogo (vida, dano, tempos)
 │   ├── utils/                # Utilitários e funções auxiliares
 │   │   └── browserToken.js   # Gerenciamento de token e identificação do navegador
 │   └── server-dev.js         # Servidor de desenvolvimento
@@ -91,6 +93,9 @@ planningbrothers/
    - Dano baseado no tipo de objeto arremessado
    - Comunicação em tempo real via WebSockets para sincronização multiplayer
    - GameController para gerenciamento centralizado dos elementos de gamificação
+   - Sistema de configuração centralizado para ajuste fácil de parâmetros do jogo
+   - Barra de vida que aparece apenas quando o participante recebe dano
+   - Feedback visual de dano com cores dinâmicas na barra de vida
 
 ## Fluxo de Dados
 1. **Conexão**
@@ -185,38 +190,29 @@ npm run dev
    - Feedback visual com efeito de explosão no avatar atingido
    - Animação de tremor no participante que recebe o arremesso
    - Sistema de dano baseado no tipo de objeto
+   - Dano configurável via arquivo de configuração centralizado
 
 2. **Sistema de Vida**
-   - Barra de vida visual acima de cada avatar
+   - Barra de vida visual que aparece apenas quando o participante recebe dano
    - Dano baseado no tipo de objeto arremessado
-   - Feedback visual de dano recebido
+   - Feedback visual de dano com cores dinâmicas (verde, amarelo, laranja, vermelho)
    - Sincronização em tempo real entre todos os participantes
    - Estado gerenciado pelo servidor para consistência
+   - Configurações centralizadas para vida máxima, dano e tempos de animação
+   - Transições suaves de visibilidade da barra de vida
 
 3. **GameController**
    - Componente central para gerenciamento dos elementos de gamificação
    - Interface de controle para ativar/desativar funcionalidades
    - Gerencia a comunicação de eventos de jogo via WebSockets
    - Centraliza a lógica de interação com elementos de gamificação
-   - Integração com o sistema de sala e participantes
 
-4. **Implementação Técnica**
-   - Animações CSS utilizando keyframes para movimentos fluidos
-   - Manipulação dinâmica do DOM para efeitos visuais
-   - Comunicação via WebSockets para sincronização multiplayer
-   - Prevenção de seleção de texto para melhor experiência de usuário
-   - Cursor personalizado (pointer) para melhorar a usabilidade
-
-5. **Recursos Visuais**
-   - SVG otimizado do teclado com proporções quadradas
-   - Cores suaves para integração com o design da aplicação
-   - Efeito de explosão animado
-   - Transições suaves entre estados de animação
-
-6. **Interatividade**
-   - Sem limite de arremessos (cooldown removido)
-   - Feedback imediato ao clicar em um avatar
-   - Sincronização em tempo real entre todos os usuários da sala
+4. **Sistema de Configuração**
+   - Arquivo centralizado `gameConfig.js` para todas as configurações do jogo
+   - Ajuste fácil de parâmetros como vida máxima, dano e tempos
+   - Separação clara entre configurações de vida, dano, tempo e animação
+   - Facilidade para adicionar novos tipos de dano e objetos no futuro
+   - Manutenção simplificada com todas as configurações em um único lugar
 
 ## Próximos Passos
 1. **Melhorias de UX**

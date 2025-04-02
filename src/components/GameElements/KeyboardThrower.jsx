@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Box, Image } from '@mantine/core';
+import { useLifeBar } from '@/contexts/LifeBarContext';
 
 // Estilo CSS global para o click overlay, explosão e teclado
 const GLOBAL_STYLES = `
@@ -107,6 +108,7 @@ export function KeyboardThrower({
 }) {
   const [explodingAvatars, setExplodingAvatars] = useState([]);
   const [flyingKeyboards, setFlyingKeyboards] = useState([]);
+  const { showLifeBarTemporarily } = useLifeBar();
 
   // Função para adicionar teclado voador e explosão a um avatar
   const throwKeyboardAtAvatar = (element, userId) => {
@@ -167,6 +169,18 @@ export function KeyboardThrower({
       
       // Remove da lista de teclados em voo
       setFlyingKeyboards(prev => prev.filter(item => item.id !== animationId));
+
+      // Mostra a barra de vida
+      showLifeBarTemporarily();
+
+      // Emite o evento de dano após a animação
+      if (socket) {
+        socket.emit('damage', {
+          codigo: codigoSala,
+          targetId: userId,
+          damage: 20
+        });
+      }
     }, 400); // Tempo ainda mais reduzido da animação do teclado
   };
 

@@ -9,6 +9,7 @@ import { GameModal } from './components/GameElements/GameModal';
 import { useSocket } from './hooks/useSocket';
 import { useLocalStorage } from '@mantine/hooks';
 import { useNavigate } from 'react-router-dom';
+import { LifeBarProvider } from './contexts/LifeBarContext';
 
 function App() {
   const [colorScheme, setColorScheme] = useLocalStorage<ColorScheme>({
@@ -41,54 +42,56 @@ function App() {
         withGlobalStyles
         withNormalizeCSS
       >
-        <Notifications />
-        <div className="game-container">
-          <GameHeader 
-            currentUser={currentUser}
-            codigoSala={codigoSala}
-            isHost={isHost}
-            onLeaveRoom={handleLeaveRoom}
-            onStartGame={handleStartGame}
-            isGameStarted={isGameStarted}
-            isGameFinished={isGameFinished}
-            onNewGame={handleNewGame}
-          />
-          
-          <GameBoard 
-            participantes={participantes}
-            currentUser={currentUser}
-            isGameStarted={isGameStarted}
-            isGameFinished={isGameFinished}
-            gameState={gameState}
-            isHost={isHost}
-            onVote={handleVote}
-          />
+        <LifeBarProvider>
+          <Notifications />
+          <div className="game-container">
+            <GameHeader 
+              currentUser={currentUser}
+              codigoSala={codigoSala}
+              isHost={isHost}
+              onLeaveRoom={handleLeaveRoom}
+              onStartGame={handleStartGame}
+              isGameStarted={isGameStarted}
+              isGameFinished={isGameFinished}
+              onNewGame={handleNewGame}
+            />
+            
+            <GameBoard 
+              participantes={participantes}
+              currentUser={currentUser}
+              isGameStarted={isGameStarted}
+              isGameFinished={isGameFinished}
+              gameState={gameState}
+              isHost={isHost}
+              onVote={handleVote}
+            />
 
-          <GameController
-            socket={socket}
-            codigoSala={codigoSala}
-            currentUser={currentUser}
-          />
+            <GameController
+              socket={socket}
+              codigoSala={codigoSala}
+              currentUser={currentUser}
+            />
 
-          <GameFooter 
-            currentUser={currentUser}
-            codigoSala={codigoSala}
-            isHost={isHost}
-            onLeaveRoom={handleLeaveRoom}
-            onStartGame={handleStartGame}
-            isGameStarted={isGameStarted}
-            isGameFinished={isGameFinished}
-            onNewGame={handleNewGame}
-          />
-        </div>
+            <GameFooter 
+              currentUser={currentUser}
+              codigoSala={codigoSala}
+              isHost={isHost}
+              onLeaveRoom={handleLeaveRoom}
+              onStartGame={handleStartGame}
+              isGameStarted={isGameStarted}
+              isGameFinished={isGameFinished}
+              onNewGame={handleNewGame}
+            />
+          </div>
 
-        <GameModal
-          opened={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          currentUser={currentUser}
-          onJoinRoom={handleJoinRoom}
-          onHostRoom={handleHostRoom}
-        />
+          <GameModal
+            opened={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            currentUser={currentUser}
+            onJoinRoom={handleJoinRoom}
+            onHostRoom={handleHostRoom}
+          />
+        </LifeBarProvider>
       </MantineProvider>
     </ColorSchemeProvider>
   );

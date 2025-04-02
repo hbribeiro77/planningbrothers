@@ -23,6 +23,7 @@ import OpcoesVotacao from '@/components/Sala/OpcoesVotacao';
 import { useSalaSocket } from '@/hooks/useSalaSocket';
 import FormularioEntrada, { LOCALSTORAGE_NOME_KEY } from '@/components/Auth/FormularioEntrada';
 import { GameController } from '@/components/GameElements/GameController';
+import { LifeBarProvider } from '@/contexts/LifeBarContext';
 
 // Componente que pede o nome do usuário - mantém a aparência original
 function PedirNome({ codigoSala, nomeSugerido, onNomeDefinido }) {
@@ -152,94 +153,96 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
   };
 
   return (
-    <Container size="lg" py="xl" style={animacaoEntrada}>
-      {/* Estilo global para animações */}
-      <style jsx global>{`
-        @keyframes pulseEffect {
-          0% { transform: scale(1); }
-          50% { transform: scale(1.03); }
-          100% { transform: scale(1); }
-        }
+    <LifeBarProvider>
+      <Container size="lg" py="xl" style={animacaoEntrada}>
+        {/* Estilo global para animações */}
+        <style jsx global>{`
+          @keyframes pulseEffect {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+            100% { transform: scale(1); }
+          }
+          
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          
+          .nova-rodada-transition {
+            transition: all 0.5s ease-out;
+          }
+        `}</style>
         
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        
-        .nova-rodada-transition {
-          transition: all 0.5s ease-out;
-        }
-      `}</style>
-      
-      <Group justify="flex-start" align="center" mb="xl" gap="xs">
-        <Title order={1}>Sala {codigoSala}</Title>
-        <CopyButton value={salaURL}>
-          {({ copied, copy }) => (
-            <Tooltip label={copied ? 'Link copiado!' : 'Copiar link da sala'}>
-              <ActionIcon color={copied ? 'teal' : 'blue'} onClick={copy}>
-                {copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
-              </ActionIcon>
-            </Tooltip>
-          )}
-        </CopyButton>
-        <Button 
-          variant={modoObservador ? 'light' : 'filled'}
-          onClick={toggleModoObservador}
-        >
-          {modoObservador ? 'Sair do Modo Observador' : 'Modo Observador'}
-        </Button>
-        
-        {/* Componente de Gamificação */}
-        <div style={{ marginLeft: 'auto' }}>
-          <GameController 
-            socket={socket}
-            codigoSala={codigoSala}
-            currentUser={currentUser}
-          />
-        </div>
-      </Group>
+        <Group justify="flex-start" align="center" mb="xl" gap="xs">
+          <Title order={1}>Sala {codigoSala}</Title>
+          <CopyButton value={salaURL}>
+            {({ copied, copy }) => (
+              <Tooltip label={copied ? 'Link copiado!' : 'Copiar link da sala'}>
+                <ActionIcon color={copied ? 'teal' : 'blue'} onClick={copy}>
+                  {copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
+                </ActionIcon>
+              </Tooltip>
+            )}
+          </CopyButton>
+          <Button 
+            variant={modoObservador ? 'light' : 'filled'}
+            onClick={toggleModoObservador}
+          >
+            {modoObservador ? 'Sair do Modo Observador' : 'Modo Observador'}
+          </Button>
+          
+          {/* Componente de Gamificação */}
+          <div style={{ marginLeft: 'auto' }}>
+            <GameController 
+              socket={socket}
+              codigoSala={codigoSala}
+              currentUser={currentUser}
+            />
+          </div>
+        </Group>
 
-      {/* Botão de Nova Rodada - sempre presente mas só visível quando necessário */}
-      <Box mb="xl" style={{ display: 'flex', justifyContent: 'center', visibility: revelarVotos ? 'visible' : 'hidden' }}>
-        <Button
-          color="blue"
-          size="sm"
-          onClick={handleNovaRodadaComAnimacao}
+        {/* Botão de Nova Rodada - sempre presente mas só visível quando necessário */}
+        <Box mb="xl" style={{ display: 'flex', justifyContent: 'center', visibility: revelarVotos ? 'visible' : 'hidden' }}>
+          <Button
+            color="blue"
+            size="sm"
+            onClick={handleNovaRodadaComAnimacao}
+            className="nova-rodada-transition"
+          >
+            Nova Rodada
+          </Button>
+        </Box>
+
+        <Paper 
+          shadow="sm" 
+          p="md" 
+          mb="xl" 
+          style={animacaoNovaRodada}
           className="nova-rodada-transition"
         >
-          Nova Rodada
-        </Button>
-      </Box>
+          <Mesa 
+            participantes={participantes}
+            revelarVotos={revelarVotos}
+            onRevelarVotos={handleRevelarVotos}
+            onNovaRodada={handleNovaRodadaComAnimacao}
+          />
+        </Paper>
 
-      <Paper 
-        shadow="sm" 
-        p="md" 
-        mb="xl" 
-        style={animacaoNovaRodada}
-        className="nova-rodada-transition"
-      >
-        <Mesa 
-          participantes={participantes}
-          revelarVotos={revelarVotos}
-          onRevelarVotos={handleRevelarVotos}
-          onNovaRodada={handleNovaRodadaComAnimacao}
-        />
-      </Paper>
-
-      {!modoObservador && (
-        <OpcoesVotacao
-          meuVoto={meuVoto}
-          onVotar={handleVotar}
-          onCancelarVoto={handleCancelarVoto}
-          style={{
-            opacity: entradaAnimada ? 1 : 0,
-            transform: entradaAnimada ? 'translateY(0)' : 'translateY(20px)',
-            transition: 'opacity 0.8s ease-out, transform 0.8s ease-out',
-            transitionDelay: '0.2s'
-          }}
-        />
-      )}
-    </Container>
+        {!modoObservador && (
+          <OpcoesVotacao
+            meuVoto={meuVoto}
+            onVotar={handleVotar}
+            onCancelarVoto={handleCancelarVoto}
+            style={{
+              opacity: entradaAnimada ? 1 : 0,
+              transform: entradaAnimada ? 'translateY(0)' : 'translateY(20px)',
+              transition: 'opacity 0.8s ease-out, transform 0.8s ease-out',
+              transitionDelay: '0.2s'
+            }}
+          />
+        )}
+      </Container>
+    </LifeBarProvider>
   );
 }
 

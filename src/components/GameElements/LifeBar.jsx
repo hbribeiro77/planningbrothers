@@ -1,6 +1,12 @@
 import { Box, Progress } from '@mantine/core';
+import { useLifeBar } from '@/contexts/LifeBarContext';
+import { GAME_CONFIG } from '@/constants/gameConfig';
 
-export function LifeBar({ currentLife = 100, maxLife = 100 }) {
+export function LifeBar({ 
+  currentLife = GAME_CONFIG.LIFE.MAX, 
+  maxLife = GAME_CONFIG.LIFE.MAX 
+}) {
+  const { showLifeBar } = useLifeBar();
   const percentage = (currentLife / maxLife) * 100;
   
   // Define a cor baseada na porcentagem de vida
@@ -17,7 +23,9 @@ export function LifeBar({ currentLife = 100, maxLife = 100 }) {
         left: '50%',
         transform: 'translateX(-50%)',
         width: '80%',
-        zIndex: 1
+        zIndex: 1,
+        opacity: showLifeBar ? 1 : 0,
+        transition: `opacity ${GAME_CONFIG.ANIMATION.LIFE_BAR_FADE_DURATION}ms ease`
       }}
     >
       <Progress 

@@ -10,18 +10,32 @@ const GLOBAL_STYLES = `
   100% { transform: scale(1) rotate(360deg); opacity: 0; }
 }
 
-@keyframes keyboard-flying {
+@keyframes keyboard-flying-left {
   0% { transform: translateX(-120vw) translateY(0) rotate(15deg); opacity: 1; }
   95% { transform: translateX(0) translateY(0) rotate(15deg); opacity: 1; }
   100% { transform: translateX(0) translateY(0) rotate(15deg); opacity: 0; }
 }
 
-@keyframes keyboard-ricochet {
+@keyframes keyboard-flying-right {
+  0% { transform: translateX(120vw) translateY(0) rotate(-15deg); opacity: 1; }
+  95% { transform: translateX(0) translateY(0) rotate(-15deg); opacity: 1; }
+  100% { transform: translateX(0) translateY(0) rotate(-15deg); opacity: 0; }
+}
+
+@keyframes keyboard-ricochet-left {
   0% { transform: translateX(0) translateY(0) rotate(15deg); opacity: 1; }
   25% { transform: translateX(-40px) translateY(-40px) rotate(-90deg); opacity: 1; }
   50% { transform: translateX(-80px) translateY(-20px) rotate(-180deg); opacity: 1; }
   75% { transform: translateX(-130px) translateY(10px) rotate(-270deg); opacity: 0.8; }
   100% { transform: translateX(-170px) translateY(20px) rotate(-360deg); opacity: 0; }
+}
+
+@keyframes keyboard-ricochet-right {
+  0% { transform: translateX(0) translateY(0) rotate(-15deg); opacity: 1; }
+  25% { transform: translateX(40px) translateY(-40px) rotate(90deg); opacity: 1; }
+  50% { transform: translateX(80px) translateY(-20px) rotate(180deg); opacity: 1; }
+  75% { transform: translateX(130px) translateY(10px) rotate(270deg); opacity: 0.8; }
+  100% { transform: translateX(170px) translateY(20px) rotate(360deg); opacity: 0; }
 }
 
 @keyframes avatar-shake {
@@ -69,7 +83,14 @@ const GLOBAL_STYLES = `
   height: 35px;
   z-index: 9999;
   pointer-events: none;
-  animation: keyboard-flying 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.keyboard-flying-left {
+  animation: keyboard-flying-left 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.keyboard-flying-right {
+  animation: keyboard-flying-right 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
 .keyboard-ricochet {
@@ -78,7 +99,14 @@ const GLOBAL_STYLES = `
   height: 35px;
   z-index: 9998;
   pointer-events: none;
-  animation: keyboard-ricochet 0.4s cubic-bezier(0.14, 0.7, 0.8, 1) forwards;
+}
+
+.keyboard-ricochet-left {
+  animation: keyboard-ricochet-left 0.4s cubic-bezier(0.14, 0.7, 0.8, 1) forwards;
+}
+
+.keyboard-ricochet-right {
+  animation: keyboard-ricochet-right 0.4s cubic-bezier(0.14, 0.7, 0.8, 1) forwards;
 }
 
 .keyboard-image {
@@ -114,6 +142,9 @@ export function KeyboardThrower({
   const throwKeyboardAtAvatar = (element, userId) => {
     if (!element) return;
     
+    // Escolhe uma direção aleatória
+    const attackDirection = Math.random() < 0.5 ? 'left' : 'right';
+    
     // Cria IDs únicos para esta animação
     const animationId = Date.now().toString();
     
@@ -135,7 +166,7 @@ export function KeyboardThrower({
     // Cria o contêiner do teclado voador
     const keyboardDiv = document.createElement('div');
     keyboardDiv.id = `keyboard-${animationId}`;
-    keyboardDiv.className = 'keyboard-flying';
+    keyboardDiv.className = `keyboard-flying keyboard-flying-${attackDirection}`;
     
     // Cria a imagem do teclado
     const keyboardImg = document.createElement('img');
@@ -150,7 +181,7 @@ export function KeyboardThrower({
     element.appendChild(keyboardDiv);
     
     // Rastreia teclados em voo
-    setFlyingKeyboards(prev => [...prev, { id: animationId, element, userId }]);
+    setFlyingKeyboards(prev => [...prev, { id: animationId, element, userId, direction: attackDirection }]);
     
     // Quando a animação do teclado terminar, mostre a explosão e o ricochete
     setTimeout(() => {
@@ -165,7 +196,7 @@ export function KeyboardThrower({
       showExplosionInAvatar(element, userId);
       
       // Adiciona efeito de ricochete imediatamente no mesmo instante
-      createRicochetKeyboard(element);
+      createRicochetKeyboard(element, attackDirection);
       
       // Remove da lista de teclados em voo
       setFlyingKeyboards(prev => prev.filter(item => item.id !== animationId));
@@ -181,11 +212,11 @@ export function KeyboardThrower({
           damage: 20
         });
       }
-    }, 400); // Tempo ainda mais reduzido da animação do teclado
+    }, 400);
   };
 
   // Função para criar o teclado ricocheteando
-  const createRicochetKeyboard = (element) => {
+  const createRicochetKeyboard = (element, direction) => {
     // Gera um ID único para o teclado ricocheteando
     const ricochetId = `ricochet-${Date.now()}`;
     
@@ -195,7 +226,7 @@ export function KeyboardThrower({
     // Cria o contêiner do teclado ricocheteando
     const ricochetDiv = document.createElement('div');
     ricochetDiv.id = ricochetId;
-    ricochetDiv.className = 'keyboard-ricochet';
+    ricochetDiv.className = `keyboard-ricochet keyboard-ricochet-${direction}`;
     
     // Posiciona o ricochete absolutamente em relação ao body, mas começando na posição do avatar
     ricochetDiv.style.position = 'fixed';

@@ -275,3 +275,36 @@ useEffect(() => {
   );
   ```
 - Isso garante que o overlay ignore as restrições de largura e padding do container e se expanda por toda a viewport. 
+
+## Compartilhamento de Estado entre Componentes Irmãos/Distantes
+
+### Problema: Sincronizar UI com Estado Interno de Componente Irmão
+
+- **Cenário:** Um componente (ex: `InventoryDisplay` dentro de `OpcoesVotacao`) precisa reagir visualmente (ex: habilitar/desabilitar) a um estado (ex: `keyboardMode`) que é gerenciado internamente por um componente "irmão" ou distante na árvore (ex: `GameController`), cuja lógica de sincronização interna é complexa e sensível a alterações.
+- **Tentativas Problemáticas:**
+  - **Prop Drilling + Callback:** Tentar fazer o componente com estado (`GameController`) chamar um callback no pai (`SalaConteudo`) para que este atualize um estado próprio e passe via prop drilling para o componente alvo (`InventoryDisplay`). Isso pode quebrar a lógica interna de sincronização do componente original se o callback for adicionado incorretamente às dependências de `useEffect` ou causar renderizações inesperadas.
+  - **Controle Externo:** Tentar fazer o componente pai (`SalaConteudo`) controlar o estado diretamente e passá-lo como prop para ambos os componentes (`GameController` e `InventoryDisplay`). Isso também quebra a encapsulação e a lógica interna de sincronização do componente original.
+
+### Solução: Context API para Estado Compartilhado e Sincronizado
+
+- **Abordagem:** Utilizar a Context API do React para criar uma fonte única da verdade para o estado compartilhado.
+- **Passos:**
+  1.  **Criar Contexto e Provider:** Definir um Contexto específico (ex: `PvpContext`) e um componente Provedor (ex: `PvpProvider`).
+  2.  **Centralizar Estado e Lógica no Provider:** Mover o estado compartilhado (ex: `pvpStatus`) e **toda** a lógica relacionada à sua sincronização (ouvir socket, reagir a dados do servidor, emitir eventos de mudança) para dentro do `PvpProvider`.
+  3.  **Envolver Componentes:** Envolver a parte da árvore de componentes que necessita do estado compartilhado com o `PvpProvider` (ex: envolver `SalaConteudo`). Passar quaisquer dependências necessárias (socket, dados do usuário, ID da sala) para o Provider via props.
+  4.  **Criar Hook Customizado:** Criar um hook simples (ex: `usePvpStatus`) para facilitar o consumo do contexto.
+  5.  **Consumir o Contexto:** Fazer os componentes que precisam do estado ou da função de atualização consumirem o contexto usando o hook customizado:
+     - O componente que dispara a mudança (ex: `GameController`) obtém a função de atualização (`togglePvpStatus`) do contexto e a chama no evento apropriado (ex: `onChange` do Switch).
+     - O componente que reage visualmente (ex: `InventoryDisplay`) obtém o estado (`pvpStatus`) do contexto e o utiliza diretamente em sua lógica de renderização (ex: no atributo `disabled`).
+     - O componente que *antes* gerenciava o estado internamente (ex: `GameController`) é refatorado para remover seu estado interno e lógica de sincronização duplicada, tornando-se um consumidor do contexto.
+- **Vantagens:**
+  - Desacopla os componentes.
+  - Cria uma fonte única e clara da verdade para o estado sincronizado.
+  - Evita prop drilling complexo.
+  - Preserva a lógica de sincronização original, movendo-a para um local centralizado (o Provider).
+  - Permite que componentes em diferentes partes da árvore acessem o mesmo estado sincronizado.
+
+### Atenção com Renderização Inicial no Provider
+
+- Ao usar um Provider de Contexto que precisa buscar ou determinar um estado inicial (ex: o estado PVP ao entrar na sala), evite retornar `null` ou um loader *dentro* do Provider enquanto espera. Isso pode impedir a renderização de `children` importantes que não dependem diretamente daquele contexto específico (ex: um overlay de feedback visual renderizado pelo componente pai).
+- **Solução:** O Provider deve *sempre* renderizar `<PvpContext.Provider value={value}>{children}</PvpContext.Provider>`. O `value` pode conter um estado inicial padrão ou `null` temporariamente. Os componentes *consumidores* do contexto é que devem lidar com esse estado inicial (ex: exibindo um estado padrão ou esperando que o valor real chegue). 

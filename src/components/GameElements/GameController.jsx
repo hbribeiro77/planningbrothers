@@ -2,57 +2,21 @@ import { useState, useEffect } from 'react';
 import { Switch, Tooltip, ActionIcon, Drawer, Stack, Text, Group } from '@mantine/core';
 import { IconSettings, IconKeyboard, IconVolume } from '@tabler/icons-react';
 import { KeyboardThrower } from './KeyboardThrower';
+import { usePvpStatus } from '@/contexts/PvpContext';
 
 export function GameController({ 
   socket,
   codigoSala,
-  currentUser
+  currentUser,
+  armaSelecionada
 }) {
-  const [keyboardMode, setKeyboardMode] = useState(currentUser?.keyboardMode ?? true);
+  const { pvpStatus, togglePvpStatus } = usePvpStatus();
   const [drawerOpened, setDrawerOpened] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [keyboardKey, setKeyboardKey] = useState(0); // Chave para forçar remontagem
-
-  // Atualiza o keyboardMode quando o currentUser mudar
-  useEffect(() => {
-    if (currentUser?.keyboardMode !== undefined) {
-      setKeyboardMode(currentUser.keyboardMode);
-    }
-  }, [currentUser?.keyboardMode]);
-
-  // Escuta mudanças do modo diversão de outros jogadores
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleFunModeChange = (data) => {
-      console.log('Recebeu mudança de modo diversão:', data);
-      setKeyboardMode(data.enabled);
-    };
-
-    socket.on('funModeChanged', handleFunModeChange);
-
-    return () => {
-      socket.off('funModeChanged', handleFunModeChange);
-    };
-  }, [socket]);
-  
-  const handleToggleKeyboardMode = (event) => {
-    const newMode = event.currentTarget.checked;
-    setKeyboardMode(newMode);
-    
-    // Emite mudança do modo diversão para outros jogadores
-    if (socket) {
-      console.log('Emitindo mudança de modo diversão:', { codigoSala, enabled: newMode });
-      socket.emit('funModeChanged', {
-        codigo: codigoSala,
-        enabled: newMode
-      });
-    }
-  };
+  const [keyboardKey, setKeyboardKey] = useState(0);
 
   const handleToggleSound = (event) => {
     setSoundEnabled(event.currentTarget.checked);
-    // Força remontagem do KeyboardThrower
     setKeyboardKey(prev => prev + 1);
   };
   
@@ -70,7 +34,7 @@ export function GameController({
       
       <KeyboardThrower
         key={keyboardKey}
-        enabled={keyboardMode}
+        enabled={pvpStatus} 
         socket={socket}
         codigoSala={codigoSala}
         currentUser={currentUser}
@@ -96,8 +60,8 @@ export function GameController({
             </Text>
             <Switch
               size="sm"
-              checked={keyboardMode}
-              onChange={handleToggleKeyboardMode}
+              checked={pvpStatus} 
+              onChange={(event) => togglePvpStatus(event.currentTarget.checked)}
             />
           </Group>
 

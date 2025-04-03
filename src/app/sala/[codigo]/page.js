@@ -23,7 +23,9 @@ import OpcoesVotacao from '@/components/Sala/OpcoesVotacao';
 import { useSalaSocket } from '@/hooks/useSalaSocket';
 import FormularioEntrada, { LOCALSTORAGE_NOME_KEY } from '@/components/Auth/FormularioEntrada';
 import { GameController } from '@/components/GameElements/GameController';
+import { InventoryDisplay } from '@/components/GameElements/InventoryDisplay';
 import { LifeBarProvider } from '@/contexts/LifeBarContext';
+import { PvpProvider } from '@/contexts/PvpContext';
 
 // Componente que pede o nome do usuário - mantém a aparência original
 function PedirNome({ codigoSala, nomeSugerido, onNomeDefinido }) {
@@ -52,10 +54,12 @@ function PedirNome({ codigoSala, nomeSugerido, onNomeDefinido }) {
 
 // Componente da sala - só renderizado quando temos nome definido
 function SalaConteudo({ codigoSala, nomeUsuario }) {
-  // Estado para controlar animações
+  // Estados da UI e animação
   const [entradaAnimada, setEntradaAnimada] = useState(false);
   const [novaRodadaAnimada, setNovaRodadaAnimada] = useState(false);
-  
+  // Adicionando de volta o estado para a arma selecionada
+  const [armaSelecionada, setArmaSelecionada] = useState('keyboard');
+
   // Aqui chamamos o hook com os parâmetros finais
   const {
     participantes,
@@ -70,15 +74,18 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     handleRevelarVotos,
     handleNovaRodada,
     toggleModoObservador,
-    socket
+    socket,
+    currentUserData
   } = useSalaSocket(codigoSala, nomeUsuario);
+
+  // Encontrar o usuário atual entre os participantes
+  const currentUser = participantes.find(p => p.nome === nomeUsuario) || { id: '', nome: nomeUsuario };
 
   // Encontrar os dados completos do usuário atual na lista de participantes
   // Verifica a propriedade 'life', 'isObservador' e 'jaVotou' para a condição de atenção
-  const currentUserData = participantes.find(p => p.nome === nomeUsuario);
-  const shouldShowAttentionOverlay = currentUserData?.life <= 0 && 
-                                     !currentUserData?.isObservador && 
-                                     !currentUserData?.jaVotou;
+  const shouldShowAttentionOverlay = currentUser?.life <= 0 && 
+                                     !currentUser?.isObservador && 
+                                     !currentUser?.jaVotou;
 
   // Animar entrada na sala
   useEffect(() => {
@@ -112,9 +119,6 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
       handleNovaRodada();
     }, 500);
   };
-
-  // Encontrar o usuário atual entre os participantes
-  const currentUser = participantes.find(p => p.nome === nomeUsuario) || { id: '', nome: nomeUsuario };
 
   // Se houver erro de entrada, mostra mensagem (verificar antes da conexão)
   if (erroEntrada) {
@@ -159,112 +163,116 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
   };
 
   return (
-    <LifeBarProvider>
-      <Container size="lg" py="xl" style={animacaoEntrada}>
-        {/* Estilo global para animações */}
-        <style jsx global>{`
-          @keyframes pulseEffect {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.03); }
-            100% { transform: scale(1); }
-          }
+    <PvpProvider socket={socket} currentUserData={currentUserData} codigoSala={codigoSala} participantes={participantes}>
+      <LifeBarProvider>
+        <Container size="lg" py="xl" style={animacaoEntrada}>
+          {/* Estilo global para animações */}
+          <style jsx global>{`
+            @keyframes pulseEffect {
+              0% { transform: scale(1); }
+              50% { transform: scale(1.03); }
+              100% { transform: scale(1); }
+            }
+            
+            @keyframes fadeIn {
+              from { opacity: 0; }
+              to { opacity: 1; }
+            }
+            
+            .nova-rodada-transition {
+              transition: all 0.5s ease-out;
+            }
+          `}</style>
           
-          @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-          }
-          
-          .nova-rodada-transition {
-            transition: all 0.5s ease-out;
-          }
-        `}</style>
-        
-        <Group justify="flex-start" align="center" mb="xl" gap="xs">
-          <Title order={1}>Sala {codigoSala}</Title>
-          <CopyButton value={salaURL}>
-            {({ copied, copy }) => (
-              <Tooltip label={copied ? 'Link copiado!' : 'Copiar link da sala'}>
-                <ActionIcon color={copied ? 'teal' : 'blue'} onClick={copy}>
-                  {copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
-                </ActionIcon>
-              </Tooltip>
-            )}
-          </CopyButton>
-          <Button 
-            variant={modoObservador ? 'light' : 'filled'}
-            onClick={toggleModoObservador}
-          >
-            {modoObservador ? 'Sair do Modo Observador' : 'Modo Observador'}
-          </Button>
-          
-          {/* Componente de Gamificação */}
-          <div style={{ marginLeft: 'auto' }}>
-            <GameController 
-              socket={socket}
-              codigoSala={codigoSala}
-              currentUser={currentUser}
-            />
-          </div>
-        </Group>
+          <Group justify="flex-start" align="center" mb="xl" gap="xs">
+            <Title order={1}>Sala {codigoSala}</Title>
+            <CopyButton value={salaURL}>
+              {({ copied, copy }) => (
+                <Tooltip label={copied ? 'Link copiado!' : 'Copiar link da sala'}>
+                  <ActionIcon color={copied ? 'teal' : 'blue'} onClick={copy}>
+                    {copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
+                  </ActionIcon>
+                </Tooltip>
+              )}
+            </CopyButton>
+            <Button 
+              variant={modoObservador ? 'light' : 'filled'}
+              onClick={toggleModoObservador}
+            >
+              {modoObservador ? 'Sair do Modo Observador' : 'Modo Observador'}
+            </Button>
+            
+            {/* GameController permanece no canto */}
+            <Group ml="auto" spacing="md" align="center">
+              <GameController 
+                socket={socket}
+                codigoSala={codigoSala}
+                currentUser={currentUser} 
+                armaSelecionada={armaSelecionada}
+              />
+            </Group>
+          </Group>
 
-        {/* Botão de Nova Rodada - sempre presente mas só visível quando necessário */}
-        <Box mb="xl" style={{ display: 'flex', justifyContent: 'center', visibility: revelarVotos ? 'visible' : 'hidden' }}>
-          <Button
-            color="blue"
-            size="sm"
-            onClick={handleNovaRodadaComAnimacao}
+          {/* Botão de Nova Rodada - sempre presente mas só visível quando necessário */}
+          <Box mb="xl" style={{ display: 'flex', justifyContent: 'center', visibility: revelarVotos ? 'visible' : 'hidden' }}>
+            <Button
+              color="blue"
+              size="sm"
+              onClick={handleNovaRodadaComAnimacao}
+              className="nova-rodada-transition"
+            >
+              Nova Rodada
+            </Button>
+          </Box>
+
+          <Paper 
+            shadow="sm" 
+            p="md" 
+            mb="xl" 
+            style={animacaoNovaRodada}
             className="nova-rodada-transition"
           >
-            Nova Rodada
-          </Button>
-        </Box>
+            <Mesa 
+              participantes={participantes}
+              revelarVotos={revelarVotos}
+              onRevelarVotos={handleRevelarVotos}
+              onNovaRodada={handleNovaRodadaComAnimacao}
+            />
+          </Paper>
 
-        <Paper 
-          shadow="sm" 
-          p="md" 
-          mb="xl" 
-          style={animacaoNovaRodada}
-          className="nova-rodada-transition"
-        >
-          <Mesa 
-            participantes={participantes}
-            revelarVotos={revelarVotos}
-            onRevelarVotos={handleRevelarVotos}
-            onNovaRodada={handleNovaRodadaComAnimacao}
-          />
-        </Paper>
+          {/* Renderiza apenas OpcoesVotacao (que agora contém o InventoryDisplay) */}
+          {!modoObservador && (
+            <OpcoesVotacao
+              meuVoto={meuVoto}
+              onVotar={handleVotar}
+              onCancelarVoto={handleCancelarVoto}
+              style={{
+                opacity: entradaAnimada ? 1 : 0,
+                transform: entradaAnimada ? 'translateY(0)' : 'translateY(20px)',
+                transition: 'opacity 0.8s ease-out, transform 0.8s ease-out',
+                transitionDelay: '0.2s'
+              }}
+            />
+          )}
+        </Container>
 
-        {!modoObservador && (
-          <OpcoesVotacao
-            meuVoto={meuVoto}
-            onVotar={handleVotar}
-            onCancelarVoto={handleCancelarVoto}
-            style={{
-              opacity: entradaAnimada ? 1 : 0,
-              transform: entradaAnimada ? 'translateY(0)' : 'translateY(20px)',
-              transition: 'opacity 0.8s ease-out, transform 0.8s ease-out',
-              transitionDelay: '0.2s'
-            }}
-          />
+        {/* Overlay vermelho (fora do Container para cobrir tela inteira) */}
+        {shouldShowAttentionOverlay && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(255, 0, 0, 0.3)', // Vermelho semi-transparente
+            zIndex: 1000, // Garante que fique sobre a maioria dos elementos
+            pointerEvents: 'none', // Permite interações com elementos abaixo, se necessário
+          }}>
+            {/* Pode adicionar uma mensagem aqui se quiser, ex: "Sua vez de votar!" */}
+          </div>
         )}
-      </Container>
-
-      {/* Overlay vermelho (fora do Container para cobrir tela inteira) */}
-      {shouldShowAttentionOverlay && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(255, 0, 0, 0.3)', // Vermelho semi-transparente
-          zIndex: 1000, // Garante que fique sobre a maioria dos elementos
-          pointerEvents: 'none', // Permite interações com elementos abaixo, se necessário
-        }}>
-          {/* Pode adicionar uma mensagem aqui se quiser, ex: "Sua vez de votar!" */}
-        </div>
-      )}
-    </LifeBarProvider>
+      </LifeBarProvider>
+    </PvpProvider>
   );
 }
 

@@ -1,6 +1,7 @@
-import { Group, Paper, Button } from '@mantine/core';
+import { Group, Paper, Text, Box } from '@mantine/core';
 import CartaVotacao from '../Carta/Votacao';
 import { useState, useEffect } from 'react';
+import { InventoryDisplay } from '../GameElements/InventoryDisplay';
 
 export default function OpcoesVotacao({ 
   onVotar, 
@@ -29,16 +30,23 @@ export default function OpcoesVotacao({
   };
   
   return (
-    <Paper withBorder p="sm" radius="md">
-      <Group position="center" spacing="xs">
-        {opcoesDeVoto.map((valor) => (
-          <CartaVotacao
-            key={valor}
-            valor={valor}
-            selecionada={valor === valorSelecionado}
-            onClick={() => handleSelecao(valor)}
-          />
-        ))}
+    <Paper withBorder p="md" radius="md" mt="xl">
+      <Group position="apart" align="baseline" spacing="lg">
+        <Box sx={{ flexGrow: 1 }}>
+          <Text size="sm" weight={500} c="dimmed" ta="center" mb="xs">Sua Estimativa:</Text>
+          <Group position="center" spacing="xs">
+            {opcoesDeVoto.map((valor) => (
+              <CartaVotacao
+                key={valor}
+                valor={valor}
+                selecionada={valor === valorSelecionado}
+                onClick={() => handleSelecao(valor)}
+              />
+            ))}
+          </Group>
+        </Box>
+
+        <InventoryDisplay />
       </Group>
     </Paper>
   );

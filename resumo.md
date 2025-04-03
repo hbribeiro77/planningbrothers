@@ -44,6 +44,7 @@ planningbrothers/
 │   ├── contexts/             # Contextos React
 │   │   ├── SocketContext.js  # Gerenciamento do Socket.io
 │   │   └── LifeBarContext.jsx # Gerenciamento da visibilidade da barra de vida
+│   │   └── PvpContext.jsx    # Gerenciamento do estado PVP compartilhado
 │   ├── hooks/                # Hooks personalizados
 │   │   └── useSalaSocket.js  # Lógica de eventos da sala
 │   ├── constants/            # Constantes e configurações
@@ -99,10 +100,12 @@ planningbrothers/
    - Sistema de vida com barra de status visual
    - Dano baseado no tipo de objeto arremessado
    - Comunicação em tempo real via WebSockets para sincronização multiplayer
-   - GameController para gerenciamento centralizado dos elementos de gamificação
+   - **Estado PVP (Modo Diversão) compartilhado via Context API (`PvpContext`)** para sincronização entre componentes.
+   - `GameController` para interação com elementos de gamificação e **controle de ativação do modo PVP (via contexto)**.
    - Sistema de configuração centralizado para ajuste fácil de parâmetros do jogo
    - Barra de vida que aparece apenas quando o participante recebe dano
    - Feedback visual de dano com cores dinâmicas na barra de vida
+   - **Seleção de arma desabilitada visualmente quando o modo PVP está desligado.**
 
 ## Fluxo de Dados
 1. **Conexão**
@@ -118,7 +121,7 @@ planningbrothers/
    - Interações de gamificação (arremesso de objetos)
 
 3. **Estado da Aplicação**
-   - Gerenciamento via Context API
+   - Gerenciamento via Context API (Socket.io, Barra de Vida, **Estado PVP**)
    - Persistência de estado durante a sessão
 
 ## Segurança
@@ -222,10 +225,10 @@ npm run dev
    - Feedback visual consistente para todos os participantes
 
 4. **GameController**
-   - Componente central para gerenciamento dos elementos de gamificação
-   - Interface de controle para ativar/desativar funcionalidades
-   - Gerencia a comunicação de eventos de jogo via WebSockets
-   - Centraliza a lógica de interação com elementos de gamificação
+   - Componente para interação com elementos de gamificação.
+   - Interface de controle (Drawer) para ativar/desativar funcionalidades como Som e **Modo PVP**.
+   - **Consome e atualiza o estado PVP através do `PvpContext`**. 
+   - Renderiza componentes como `KeyboardThrower`.
 
 5. **Sistema de Configuração**
    - Arquivo centralizado `gameConfig.js` para todas as configurações do jogo

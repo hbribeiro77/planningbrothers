@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Box, Image } from '@mantine/core';
 import { useLifeBar } from '@/contexts/LifeBarContext';
+import { GAME_CONFIG } from '@/constants/gameConfig';
 
 // Estilo CSS global para o click overlay, explosão e teclado
 const GLOBAL_STYLES = `
@@ -50,6 +51,24 @@ const GLOBAL_STYLES = `
   80% { transform: translate(3px, -5px) rotate(1deg); }
   90% { transform: translate(-1px, 3px) rotate(0deg); }
   100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+@keyframes damage-number {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  50% { transform: translateY(-30px) scale(1.2); opacity: 1; }
+  100% { transform: translateY(-60px) scale(1); opacity: 0; }
+}
+
+.damage-number {
+  position: absolute;
+  color: #ff4444;
+  font-weight: bold;
+  font-size: 1.2rem;
+  pointer-events: none;
+  z-index: 10001;
+  text-shadow: 2px 2px 0 #000;
+  animation: damage-number 0.8s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+  transform: translateY(-20px);
 }
 
 .shake-effect {
@@ -229,12 +248,25 @@ export function KeyboardThrower({
       // Mostra a barra de vida do avatar atingido
       showLifeBarTemporarily(userId);
 
+      // Cria e mostra o número de dano
+      const damageNumber = document.createElement('div');
+      damageNumber.className = 'damage-number';
+      damageNumber.textContent = `-${GAME_CONFIG.DAMAGE.KEYBOARD}`;
+      damageNumber.style.left = `${element.offsetWidth / 2}px`;
+      damageNumber.style.top = `${element.offsetHeight / 2 - 20}px`;
+      element.appendChild(damageNumber);
+
+      // Remove o número de dano após a animação
+      setTimeout(() => {
+        damageNumber.remove();
+      }, 800);
+
       // Emite o evento de dano após a animação
       if (socket) {
         socket.emit('damage', {
           codigo: codigoSala,
           targetId: userId,
-          damage: 20
+          damage: GAME_CONFIG.DAMAGE.KEYBOARD
         });
       }
     }, 400);

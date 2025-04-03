@@ -149,3 +149,85 @@ socket.on('applyDamage', (data) => {
 - Manter o servidor como fonte única da verdade
 - Usar timeouts no cliente para coordenar animações e lógica
 - Garantir que o estado só é atualizado após a conclusão das animações 
+
+## Otimização de Animações e Eventos em Multiplayer
+
+### Prevenção de Duplicação de Animações
+
+Para evitar que um usuário veja a mesma animação duas vezes em um jogo multiplayer:
+
+1. **Separar Execução Local e Eventos:**
+```javascript
+// No componente que inicia a ação
+const handleAction = () => {
+  // Executa a animação localmente
+  executeLocalAnimation();
+  
+  // Emite o evento para outros usuários
+  socket.emit('actionEvent', {
+    fromUser: currentUser.id,
+    // outros dados
+  });
+};
+
+// No listener do evento
+useEffect(() => {
+  const handleIncomingAction = (data) => {
+    // Ignora o evento se o remetente for o próprio usuário
+    if (data.fromUser === currentUser.id) return;
+    
+    // Executa a animação para outros usuários
+    executeAnimation();
+  };
+  
+  socket.on('actionEvent', handleIncomingAction);
+  return () => socket.off('actionEvent', handleIncomingAction);
+}, [socket, currentUser.id]);
+```
+
+### Pontos Importantes:
+- Sempre incluir o ID do usuário remetente nos eventos
+- Verificar se o remetente é o próprio usuário antes de processar eventos
+- Manter a consistência visual entre todos os participantes
+- Usar o ID do usuário atual para filtrar eventos locais
+- Garantir que animações sejam executadas apenas uma vez por ação
+
+### Exemplo Prático de Sistema de Ataque
+```javascript
+// No componente de ataque
+const handleAttack = (targetId) => {
+  // Executa a animação localmente
+  throwKeyboardAtAvatar(targetElement, targetId);
+  
+  // Emite o evento para outros usuários
+  socket.emit('throwObject', {
+    fromUser: currentUser.id,
+    toUser: targetId,
+    objectType: 'keyboard'
+  });
+};
+
+// No listener de eventos de ataque
+useEffect(() => {
+  const handleIncomingAttack = (data) => {
+    // Ignora se o atacante for o próprio usuário
+    if (data.fromUser === currentUser.id) return;
+    
+    // Executa a animação para outros usuários
+    const targetElement = document.querySelector(`[data-id="${data.toUser}"]`);
+    if (targetElement) {
+      throwKeyboardAtAvatar(targetElement, data.toUser);
+    }
+  };
+  
+  socket.on('throwObject', handleIncomingAttack);
+  return () => socket.off('throwObject', handleIncomingAttack);
+}, [socket, currentUser.id]);
+```
+
+### Benefícios:
+- Evita duplicação de animações para o usuário que iniciou a ação
+- Mantém a consistência visual entre todos os participantes
+- Reduz a carga de processamento no cliente
+- Melhora a experiência do usuário com animações mais suaves
+- Facilita a manutenção do código com padrões claros de implementação 

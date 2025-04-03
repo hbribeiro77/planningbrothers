@@ -193,21 +193,31 @@ npm run dev
    - Dano configurável via arquivo de configuração centralizado
 
 2. **Sistema de Vida**
-   - Barra de vida visual que aparece apenas quando o participante recebe dano
+   - Barra de vida visual que aparece quando um participante recebe dano
+   - Visibilidade da barra de vida para todos os participantes quando um avatar é atingido
    - Dano baseado no tipo de objeto arremessado
    - Feedback visual de dano com cores dinâmicas (verde, amarelo, laranja, vermelho)
    - Sincronização em tempo real entre todos os participantes
    - Estado gerenciado pelo servidor para consistência
    - Configurações centralizadas para vida máxima, dano e tempos de animação
    - Transições suaves de visibilidade da barra de vida
+   - Tempo configurável para exibição da barra de vida após receber dano
 
-3. **GameController**
+3. **Sistema de Ataque**
+   - Direção aleatória de ataque (esquerda/direita)
+   - Animações sincronizadas para todos os participantes
+   - Efeitos visuais otimizados para evitar duplicação
+   - Sistema de eventos para garantir consistência entre atacante e alvo
+   - Prevenção de ataques múltiplos simultâneos
+   - Feedback visual consistente para todos os participantes
+
+4. **GameController**
    - Componente central para gerenciamento dos elementos de gamificação
    - Interface de controle para ativar/desativar funcionalidades
    - Gerencia a comunicação de eventos de jogo via WebSockets
    - Centraliza a lógica de interação com elementos de gamificação
 
-4. **Sistema de Configuração**
+5. **Sistema de Configuração**
    - Arquivo centralizado `gameConfig.js` para todas as configurações do jogo
    - Ajuste fácil de parâmetros como vida máxima, dano e tempos
    - Separação clara entre configurações de vida, dano, tempo e animação

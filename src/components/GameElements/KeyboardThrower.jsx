@@ -143,7 +143,10 @@ export function KeyboardThrower({
     if (!socket) return;
 
     const handleThrowObject = (data) => {
-      const { toUser, objectType } = data;
+      const { fromUser, toUser, objectType } = data;
+      // Ignora o evento se o remetente for o próprio usuário
+      if (fromUser === currentUser.id) return;
+      
       if (objectType === 'keyboard') {
         // Encontra o elemento do avatar alvo usando data-id
         const targetElement = document.querySelector(`[data-id="${toUser}"]`);
@@ -158,7 +161,7 @@ export function KeyboardThrower({
     return () => {
       socket.off('throwObject', handleThrowObject);
     };
-  }, [socket]);
+  }, [socket, currentUser.id]);
 
   // Função para adicionar teclado voador e explosão a um avatar
   const throwKeyboardAtAvatar = (element, userId) => {

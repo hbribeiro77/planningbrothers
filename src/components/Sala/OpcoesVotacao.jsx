@@ -31,10 +31,32 @@ export default function OpcoesVotacao({
   
   return (
     <Paper withBorder p="md" radius="md" mt="xl">
-      <Group position="apart" align="baseline" spacing="lg">
-        <Box sx={{ flexGrow: 1 }}>
+      <Group 
+        position="apart" 
+        align="baseline" 
+        spacing="lg"
+        sx={(theme) => ({
+          [`@media (max-width: ${theme.breakpoints.sm})`]: {
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: theme.spacing.xl,
+          },
+        })}
+      >
+        <Box sx={{ flexGrow: 1, width: '100%' }}>
           <Text size="sm" weight={500} c="dimmed" ta="center" mb="xs">Sua Estimativa:</Text>
-          <Group position="center" spacing="xs">
+          <Group 
+            position="center" 
+            spacing="xs"
+            sx={(theme) => ({
+              [`@media (max-width: ${theme.breakpoints.sm})`]: {
+                flexWrap: 'nowrap',
+                overflowX: 'auto',
+                paddingBottom: `calc(${theme.spacing.xs} / 2)`,
+                alignItems: 'center',
+              },
+            })}
+          >
             {opcoesDeVoto.map((valor) => (
               <CartaVotacao
                 key={valor}

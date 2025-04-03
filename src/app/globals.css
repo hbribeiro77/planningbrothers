@@ -1,11 +1,22 @@
 html,
 body {
   height: 100vh;
-  overflow: hidden;
+  overflow: hidden; /* Impede rolagem por padrão (desktop) */
   margin: 0;
   padding: 0;
   background-color: #ffffff;
   color: #000000;
+}
+
+/* Permitir rolagem vertical apenas em telas menores */
+@media (max-width: 768px) { /* Usando 768px como breakpoint comum para mobile/tablet */
+  html,
+  body {
+    height: auto; /* Permite que o body cresça com o conteúdo */
+    overflow-y: auto; /* Habilita rolagem vertical */
+    overflow-x: hidden; /* Mantém a rolagem horizontal desabilitada */
+    -webkit-overflow-scrolling: touch; /* Melhora a experiência de rolagem no iOS */
+  }
 }
 
 /* Ajustes para telas menores */

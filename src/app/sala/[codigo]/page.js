@@ -117,9 +117,8 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
           <Paper withBorder shadow="md" p={30} radius="md" mt="xl" style={{ textAlign: 'center' }}>
             <Title order={3} mb="md" c="orange">Não foi possível entrar na sala</Title>
             <Text mb="md" fw={500}>{erroEntrada}</Text>
-            <Text mb="md">Por favor, aguarde o participante atual sair da sala.</Text>
             <Text c="dimmed" fs="italic" size="sm">
-              Você já está conectado nesta sala em outra aba/janela deste navegador.
+              Feche esta aba/janela e vá para a que já está aberta.
             </Text>
           </Paper>
         </Center>

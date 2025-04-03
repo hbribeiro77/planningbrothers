@@ -73,6 +73,13 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     socket
   } = useSalaSocket(codigoSala, nomeUsuario);
 
+  // Encontrar os dados completos do usuário atual na lista de participantes
+  // Verifica a propriedade 'life', 'isObservador' e 'jaVotou' para a condição de atenção
+  const currentUserData = participantes.find(p => p.nome === nomeUsuario);
+  const shouldShowAttentionOverlay = currentUserData?.life <= 0 && 
+                                     !currentUserData?.isObservador && 
+                                     !currentUserData?.jaVotou;
+
   // Animar entrada na sala
   useEffect(() => {
     if (conectado) {
@@ -241,6 +248,22 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
           />
         )}
       </Container>
+
+      {/* Overlay vermelho (fora do Container para cobrir tela inteira) */}
+      {shouldShowAttentionOverlay && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(255, 0, 0, 0.3)', // Vermelho semi-transparente
+          zIndex: 1000, // Garante que fique sobre a maioria dos elementos
+          pointerEvents: 'none', // Permite interações com elementos abaixo, se necessário
+        }}>
+          {/* Pode adicionar uma mensagem aqui se quiser, ex: "Sua vez de votar!" */}
+        </div>
+      )}
     </LifeBarProvider>
   );
 }

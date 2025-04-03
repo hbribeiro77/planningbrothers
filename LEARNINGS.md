@@ -111,6 +111,24 @@ useEffect(() => {
 }, [currentUser?.keyboardMode]);
 ```
 
+### Utilizando Estado Sincronizado Diretamente na UI
+
+- Após receber o estado sincronizado do servidor (ex: lista de `participantes` com propriedades como `life`, `jaVotou`, `isObservador`), a lógica de exibição de componentes ou efeitos visuais específicos do cliente (como um overlay de "derrota" ou "atenção") pode ser implementada diretamente no componente que consome esse estado.
+- **Exemplo:** Em vez de criar um estado local `mostrarOverlay`, a condição de renderização pode usar diretamente as propriedades do objeto do usuário atual dentro do estado sincronizado:
+  ```javascript
+  // Dentro do componente SalaConteudo, que recebe 'participantes' do useSalaSocket
+  const currentUserData = participantes.find(p => p.nome === nomeUsuario);
+  const shouldShowOverlay = currentUserData?.life <= 0 && !currentUserData?.isObservador && !currentUserData?.jaVotou;
+
+  return (
+    <>
+      {/* ... outros elementos ... */}
+      {shouldShowOverlay && <OverlayVermelho />}
+    </>
+  );
+  ```
+- Isso evita a necessidade de estados locais adicionais apenas para refletir informações que já estão disponíveis no estado sincronizado, simplificando o fluxo de dados no componente.
+
 ## Sincronização de Eventos e Animações em Multiplayer
 
 ### Padrão de Separação de Eventos de Animação e Lógica
@@ -231,3 +249,29 @@ useEffect(() => {
 - Reduz a carga de processamento no cliente
 - Melhora a experiência do usuário com animações mais suaves
 - Facilita a manutenção do código com padrões claros de implementação 
+
+## Layout e UI
+
+### Criando Overlays de Tela Cheia com Bibliotecas de UI
+
+- Ao usar bibliotecas de componentes como Mantine, que frequentemente utilizam `<Container>` ou elementos similares para limitar a largura e adicionar padding ao conteúdo principal, pode ser necessário criar overlays, modais ou outros elementos que ocupem toda a tela (viewport).
+- **Técnica:** Para garantir que um elemento cubra toda a tela, ele deve ser renderizado *fora* do container restritivo principal. Utilize CSS `position: fixed` com `top: 0`, `left: 0`, `right: 0`, `bottom: 0` e um `z-index` apropriado.
+- **Exemplo de Estrutura:**
+  ```jsx
+  // Componente de Página/Layout
+  return (
+    <LayoutPrincipal> // Pode ter alguma estrutura base
+      <Container size="lg"> // Container restritivo do Mantine
+        {/* Conteúdo principal da página aqui */}
+      </Container>
+
+      {/* Overlay/Modal de tela cheia renderizado como irmão do Container */}
+      {mostrarOverlay && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          Conteúdo do Overlay
+        </div>
+      )}
+    </LayoutPrincipal>
+  );
+  ```
+- Isso garante que o overlay ignore as restrições de largura e padding do container e se expanda por toda a viewport. 

@@ -49,8 +49,15 @@ planningbrothers/
 │   ├── constants/            # Constantes e configurações
 │   │   ├── socketEvents.js   # Eventos do Socket.io
 │   │   └── gameConfig.js     # Configurações do jogo (vida, dano, tempos)
+│   ├── services/             # Serviços da aplicação
+│   │   └── AnimationService.js # Serviço de animações centralizado
+│   ├── styles/               # Estilos CSS
+│   │   └── animations.css    # Animações e efeitos visuais
 │   ├── utils/                # Utilitários e funções auxiliares
 │   │   └── browserToken.js   # Gerenciamento de token e identificação do navegador
+│   ├── lib/                  # Bibliotecas e configurações
+│   │   └── mantine/          # Configurações do Mantine UI
+│   ├── pages/                # Páginas legadas (em migração)
 │   └── server-dev.js         # Servidor de desenvolvimento
 ├── public/                   # Arquivos estáticos
 │   ├── images/              # Imagens e recursos gráficos
@@ -191,6 +198,9 @@ npm run dev
    - Animação de tremor no participante que recebe o arremesso
    - Sistema de dano baseado no tipo de objeto
    - Dano configurável via arquivo de configuração centralizado
+   - Exibição do valor de dano quando um avatar é atingido
+   - Animações centralizadas em um único arquivo CSS para melhor manutenção
+   - Prevenção de duplicação de animações para o atacante
 
 2. **Sistema de Vida**
    - Barra de vida visual que aparece quando um participante recebe dano
@@ -228,7 +238,7 @@ npm run dev
 1. **Melhorias de UX**
    - Adicionar animações de transição
    - Melhorar feedback visual
-   - Implementar modo escuro
+   - Implementar modo escuro ✓
    - Expandir elementos de gamificação com novos objetos arremessáveis
 
 2. **Funcionalidades Adicionais**
@@ -241,4 +251,6 @@ npm run dev
    - Implementar testes automatizados
    - Monitoramento de erros em produção
    - Análise de métricas de uso
-   - Otimização de performance 
+   - Otimização de performance
+   - Refatoração do sistema de animações para melhor manutenção ✓
+   - Centralização de estilos CSS para melhor organização ✓ 

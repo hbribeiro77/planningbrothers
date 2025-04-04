@@ -21,6 +21,7 @@ import { IconCopy, IconCheck } from '@tabler/icons-react';
 import Mesa from '@/components/Mesa/Mesa';
 import OpcoesVotacao from '@/components/Sala/OpcoesVotacao';
 import { useSalaSocket } from '@/hooks/useSalaSocket';
+import { useSalaUiEffects } from '@/hooks/useSalaUiEffects';
 import FormularioEntrada, { LOCALSTORAGE_NOME_KEY } from '@/components/Auth/FormularioEntrada';
 import { GameController } from '@/components/GameElements/GameController';
 import { InventoryDisplay } from '@/components/GameElements/InventoryDisplay';
@@ -54,16 +55,11 @@ function PedirNome({ codigoSala, nomeSugerido, onNomeDefinido }) {
 
 // Componente da sala - só renderizado quando temos nome definido
 function SalaConteudo({ codigoSala, nomeUsuario }) {
-  // Estados da UI e animação
-  const [entradaAnimada, setEntradaAnimada] = useState(false);
-  // Renomear estado para animação de pulso genérica
-  const [isPulsing, setIsPulsing] = useState(false);
-  // Adicionando de volta o estado para a arma selecionada
   const [armaSelecionada, setArmaSelecionada] = useState('keyboard');
+  const [isFlashEffectEnabled, setIsFlashEffectEnabled] = useState(true); 
 
-  // Aqui chamamos o hook com os parâmetros finais
-  const {
-    participantes,
+  const { 
+    participantes, 
     revelarVotos,
     meuVoto,
     salaURL,
@@ -76,99 +72,40 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     handleNovaRodada,
     toggleModoObservador: originalToggleModoObservador,
     socket,
-    lastDamageTimestamp
+    lastDamageTimestamp 
   } = useSalaSocket(codigoSala, nomeUsuario);
 
-  // Encontrar o usuário atual entre os participantes
   const currentUser = participantes.find(p => p.nome === nomeUsuario) || { id: '', nome: nomeUsuario };
 
-  // Encontrar os dados completos do usuário atual na lista de participantes
-  // Verifica a propriedade 'life', 'isObservador' e 'jaVotou' para a condição de atenção
   const shouldShowAttentionOverlay = currentUser?.life <= 0 && 
                                      !currentUser?.isObservador && 
                                      !currentUser?.jaVotou;
 
-  // Estado para controlar a piscada
-  const [isFlashing, setIsFlashing] = useState(false);
-  // NOVO estado para controlar se o efeito de flash está habilitado
-  const [isFlashEffectEnabled, setIsFlashEffectEnabled] = useState(true); 
+  const { 
+    entradaAnimada, 
+    isPulsing, 
+    isFlashing, 
+    triggerPulse 
+  } = useSalaUiEffects(
+    conectado,
+    revelarVotos,
+    lastDamageTimestamp,
+    isFlashEffectEnabled,
+    shouldShowAttentionOverlay
+  );
 
-  // Efeito para ativar a piscada
-  useEffect(() => {
-    if (lastDamageTimestamp === 0) return;
-
-    const isDeadOnDamage = currentUser?.life <= 0 &&
-                           !currentUser?.isObservador &&
-                           !currentUser?.jaVotou;
-
-    // ADICIONAR VERIFICAÇÃO: Só pisca se o efeito estiver habilitado
-    if (isDeadOnDamage && isFlashEffectEnabled) {
-      console.log("FLASH: Timestamp de dano recebido mudou enquanto morto E EFEITO HABILITADO, piscando.");
-      setIsFlashing(true);
-      const timer = setTimeout(() => {
-        setIsFlashing(false);
-      }, 150);
-      return () => clearTimeout(timer);
-    }
-  // Adicionar isFlashEffectEnabled às dependências
-  }, [lastDamageTimestamp, isFlashEffectEnabled]); 
-
-  // Efeito para desativar piscada
-  useEffect(() => {
-    if (!shouldShowAttentionOverlay && isFlashing) {
-      console.log("Overlay vermelho sumiu, garantindo que piscada está desligada.");
-      setIsFlashing(false);
-    }
-  }, [shouldShowAttentionOverlay, isFlashing]);
-
-  // Animar entrada na sala
-  useEffect(() => {
-    if (conectado) {
-      // Pequeno delay para iniciar a animação de entrada
-      const timer = setTimeout(() => {
-        setEntradaAnimada(true);
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [conectado]);
-
-  // Função helper para disparar a animação de pulso
-  const triggerPulse = useCallback(() => {
-    setIsPulsing(true);
-    const timer = setTimeout(() => {
-      setIsPulsing(false);
-    }, 800); // Duração da animação pulseEffect
-    // Não precisamos retornar a limpeza aqui, pois queremos que ela termine
-    // A menos que seja chamada rapidamente de novo, o que reiniciaria
-  }, []); // Sem dependências, a função em si não muda
-
-  // NOVO: Efeito para disparar pulso ao REVELAR votos
-  useEffect(() => {
-    if (revelarVotos === true) {
-      console.log("PULSE: Votos Revelados");
-      triggerPulse();
-    }
-    // Depende apenas de revelarVotos
-  }, [revelarVotos, triggerPulse]);
-
-  // Handler personalizado para nova rodada com animação
   const handleNovaRodadaComAnimacao = () => {
     console.log("PULSE: Nova Rodada");
     triggerPulse();
-    // Chama o handler original do hook após um pequeno delay ou imediatamente?
-    // Vamos chamar imediatamente para a lógica não atrasar.
     handleNovaRodada(); 
   };
 
-  // Handler personalizado para modo observador com animação
   const toggleModoObservadorComAnimacao = () => {
     console.log("PULSE: Toggle Modo Observador");
     triggerPulse();
-    // Chama o handler original do hook
     originalToggleModoObservador();
   };
 
-  // NOVO Handler para receber mudança da configuração do GameController
   const handleFlashEnabledChange = (isEnabled) => {
     console.log("SalaConteudo: Recebeu mudança na configuração de piscada:", isEnabled);
     setIsFlashEffectEnabled(isEnabled);
@@ -212,7 +149,6 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     transition: 'opacity 0.8s ease-out, transform 0.8s ease-out'
   };
 
-  // Renomear objeto de estilo da animação
   const pulseAnimation = {
     animation: isPulsing ? 'pulseEffect 0.8s ease-out' : 'none'
   };

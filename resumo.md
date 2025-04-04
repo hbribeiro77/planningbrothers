@@ -47,6 +47,7 @@ planningbrothers/
 │   │   └── PvpContext.jsx    # Gerenciamento do estado PVP compartilhado
 │   ├── hooks/                # Hooks personalizados
 │   │   └── useSalaSocket.js  # Lógica de eventos da sala
+│   │   └── useSalaUiEffects.js # Lógica de efeitos visuais da sala (animações, piscada)
 │   ├── constants/            # Constantes e configurações
 │   │   ├── socketEvents.js   # Eventos do Socket.io
 │   │   └── gameConfig.js     # Configurações do jogo (vida, dano, tempos)

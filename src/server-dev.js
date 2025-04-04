@@ -94,39 +94,72 @@ app.prepare().then(() => {
     });
 
     // Aplicar dano após a animação
-    socket.on('applyDamage', (data) => {
-      const { codigo, fromUser, toUser, objectType } = data;
+    socket.on('damage', (data) => {
+      // Receber objectType do payload
+      const { codigo, fromUserId, targetId, damage, objectType } = data;
+      
+      // Log inicial para depuração (incluindo objectType)
+      console.log(`[${codigo}] Evento 'damage' recebido: fromUserId=${fromUserId}, targetId=${targetId}, damage=${damage}, objectType=${objectType}`);
       
       if (!salas.has(codigo)) return;
       
       const sala = salas.get(codigo);
       const participanteAlvo = Array.from(sala.participantes.values())
-        .find(p => p.id === toUser);
+        .find(p => p.id === targetId);
+      const participanteAtacante = sala.participantes.get(fromUserId);
 
-      if (participanteAlvo) {
-        // Aplica dano baseado no tipo de objeto
-        let dano = 0;
-        switch (objectType) {
-          case 'keyboard':
-            dano = GAME_CONFIG.DAMAGE.KEYBOARD; // Dano do teclado
-            break;
-          // Adicione outros tipos de objetos aqui
-        }
+      // Log após buscar participantes
+      const nomeAlvoLog = participanteAlvo ? participanteAlvo.nome : 'NÃO ENCONTRADO';
+      const nomeAtacanteLog = participanteAtacante ? participanteAtacante.nome : 'NÃO ENCONTRADO';
+      console.log(`[${codigo}] Participantes encontrados: Atacante=${nomeAtacanteLog} (${fromUserId}), Alvo=${nomeAlvoLog} (${targetId})`);
+
+      // Verifica se os participantes foram encontrados E se o atacante é diferente do alvo
+      if (participanteAlvo && participanteAtacante && fromUserId !== targetId) {
+        const danoRecebido = damage;
         
+        // Guarda a vida ANTES do dano
+        const vidaAntes = participanteAlvo.life;
+
         // Atualiza a vida do participante
-        participanteAlvo.life = Math.max(GAME_CONFIG.LIFE.MIN, participanteAlvo.life - dano);
+        participanteAlvo.life = Math.max(GAME_CONFIG.LIFE.MIN, participanteAlvo.life - danoRecebido);
+        const vidaDepois = participanteAlvo.life;
+        console.log(`[${codigo}] Vida de ${nomeAlvoLog} atualizada de ${vidaAntes} para: ${vidaDepois}`);
 
-        // Emite evento de dano
-        io.to(codigo).emit('damageReceived', {
-          targetId: toUser,
-          damage: dano,
-          currentLife: participanteAlvo.life
-        });
+        // Verifica se foi uma eliminação NESTE ATAQUE ESPECÍFICO
+        const isKill = vidaAntes > GAME_CONFIG.LIFE.MIN && vidaDepois <= GAME_CONFIG.LIFE.MIN;
 
-        // Atualiza a lista de participantes
+        // Prepara o payload base do evento
+        const payload = {
+          targetId: targetId,
+          damage: danoRecebido, 
+          currentLife: vidaDepois
+        };
+
+        // Se foi kill NESTA TRANSIÇÃO, adiciona nomes e TIPO DA ARMA ao payload
+        if (isKill) {
+          payload.attackerName = participanteAtacante.nome;
+          payload.targetName = participanteAlvo.nome;
+          payload.weaponType = objectType;
+          console.log(`[${codigo}] KILL EVENT (Transição): ${payload.attackerName} eliminou ${payload.targetName} com ${payload.weaponType}`);
+        } else if (vidaDepois <= GAME_CONFIG.LIFE.MIN) {
+           console.log(`[${codigo}] Dano aplicado em ${nomeAlvoLog}, que já estava com vida <= ${GAME_CONFIG.LIFE.MIN}.`);
+        }
+
+        // Emite evento de dano para todos na sala
+        io.to(codigo).emit('damageReceived', payload);
+
+        // Atualiza a lista de participantes (importante para a barra de vida refletir)
         io.to(codigo).emit('atualizarParticipantes', 
           Array.from(sala.participantes.values())
         );
+      } else {
+          // Log caso atacante seja igual ao alvo ou participantes não encontrados
+          if (fromUserId === targetId) {
+              console.warn(`[${codigo}] Tentativa de dano onde atacante (${fromUserId}) é igual ao alvo (${targetId}). Evento ignorado.`);
+          } else {
+              console.warn(`[${codigo}] Atacante (${fromUserId}) ou Alvo (${targetId}) não encontrado(s). Evento ignorado.`);
+          }
+          // Não faz nada se o atacante for igual ao alvo ou se algum participante não foi encontrado
       }
     });
 

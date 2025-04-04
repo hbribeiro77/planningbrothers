@@ -14,9 +14,10 @@ import {
   Paper,
   Loader,
   Center,
-  Box
+  Box,
+  Notification
 } from '@mantine/core';
-import { IconCopy, IconCheck } from '@tabler/icons-react';
+import { IconCopy, IconCheck, IconX, IconSkull, IconKeyboard } from '@tabler/icons-react';
 
 import Mesa from '@/components/Mesa/Mesa';
 import OpcoesVotacao from '@/components/Sala/OpcoesVotacao';
@@ -72,7 +73,8 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     handleNovaRodada,
     toggleModoObservador: originalToggleModoObservador,
     socket,
-    lastDamageTimestamp 
+    lastDamageTimestamp,
+    lastKillInfo
   } = useSalaSocket(codigoSala, nomeUsuario);
 
   const currentUser = participantes.find(p => p.nome === nomeUsuario) || { id: '', nome: nomeUsuario };
@@ -93,6 +95,62 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     isFlashEffectEnabled,
     shouldShowAttentionOverlay
   );
+
+  // --- Kill Feed como Array ---
+  const [killFeed, setKillFeed] = useState([]); // Agora é um array
+
+  // Efeito para adicionar notificações de eliminação
+  useEffect(() => {
+    if (lastKillInfo) {
+      // Gera ID único, mensagem e determina o ícone da arma
+      const uniqueId = `${lastKillInfo.timestamp}-${Math.random().toString(36).substring(2, 9)}`;
+      
+      // Escolher o ícone da arma
+      let weaponIcon = null;
+      if (lastKillInfo.weaponType === 'keyboard') {
+        weaponIcon = <IconKeyboard size="1.1rem" style={{ marginRight: '5px' }} />;
+      } // Adicionar else if para outras armas aqui...
+      
+      // Monta a mensagem (pode ser um fragmento JSX agora)
+      const notificationMessage = (
+        <>
+          {lastKillInfo.attackerName} {weaponIcon} {lastKillInfo.targetName}!
+        </>
+      );
+
+      const newNotification = {
+        id: uniqueId, 
+        message: notificationMessage // Armazena o JSX da mensagem
+      };
+      
+      console.log("KILL FEED: Adicionando:", newNotification);
+      
+      // Adiciona a nova notificação ao array
+      setKillFeed(prevFeed => [...prevFeed, newNotification]);
+
+      // Agenda a remoção
+      setTimeout(() => {
+        setKillFeed(prevFeed => prevFeed.filter(n => n.id !== uniqueId)); 
+        console.log("KILL FEED: Removendo:", uniqueId);
+      }, 5000);
+    }
+  }, [lastKillInfo]);
+
+  // Opcional, mas recomendado: Limpeza geral ao desmontar o componente
+  useEffect(() => {
+    // Este effect não faz nada na montagem/atualização, 
+    // mas sua função de limpeza será chamada quando SalaConteudo for desmontado.
+    // Isso evita potenciais warnings de state update em componente desmontado,
+    // embora os timers individuais devam funcionar corretamente.
+    // Nota: Isso limparia timers que ainda não dispararam se o usuário SAIR da sala.
+    const killFeedTimeouts = []; // Precisaríamos armazenar os IDs dos timers se quiséssemos fazer isso.
+                                 // Por simplicidade e dado que o problema principal é outro, vamos omitir por agora.
+                                 // A remoção da limpeza no effect [lastKillInfo] é o ponto crucial.
+    return () => {
+      // console.log("SalaConteudo desmontando - limpar timers pendentes se necessário");
+      // Código para limpar timers pendentes iria aqui, se gerenciados externamente.
+    };
+  }, []); // Array vazio para rodar limpeza apenas no unmount
 
   const handleNovaRodadaComAnimacao = () => {
     console.log("PULSE: Nova Rodada");
@@ -276,6 +334,40 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
             // Poderia adicionar uma animação de fade-out aqui se desejado
           }} />
         )}
+
+        {/* --- Container para empilhar as notificações --- */}
+        <Box
+          style={{
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            zIndex: 1050, 
+            display: 'flex',
+            flexDirection: 'column-reverse', // Empilha de baixo para cima
+            alignItems: 'flex-end',
+            gap: '10px' // Espaço entre notificações
+          }}
+        >
+          {/* Mapeia o array killFeed e renderiza cada notificação */}
+          {killFeed.map((notification, index) => (
+            <Notification 
+              key={notification.id} 
+              icon={<IconSkull size="1.2rem" />} 
+              color="red" 
+              title="Eliminação!"
+              withCloseButton={false}
+              styles={{
+                root: {
+                  minWidth: '300px',
+                  textAlign: 'center' 
+                }
+              }}
+            >
+              {/* Renderiza a mensagem (que agora pode ser JSX com o ícone) */}
+              {notification.message}
+            </Notification>
+          ))}
+        </Box>
 
       </LifeBarProvider>
     </PvpProvider>

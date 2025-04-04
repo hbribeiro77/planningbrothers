@@ -239,6 +239,19 @@ npm run dev
    - Facilidade para adicionar novos tipos de dano e objetos no futuro
    - Manutenção simplificada com todas as configurações em um único lugar
 
+6. **Kill Feed (Notificação de Eliminação):**
+   - Quando um participante finaliza outro (vida chega a 0 ou menos), uma notificação é exibida.
+   - Aparece no canto inferior direito da tela.
+   - Mostra: `[Nome Atacante] [Ícone Arma] [Nome Alvo]!`. (Atualmente, só existe o ícone de teclado).
+   - Cada notificação dura 5 segundos.
+   - Se múltiplas eliminações ocorrerem rapidamente, as notificações são empilhadas verticalmente.
+   - A notificação só aparece no ataque que efetivamente causou a eliminação (não repete se o alvo já estava com 0 de vida).
+   - Implementação envolve:
+       - `KeyboardThrower.jsx`: Envia `objectType` no evento `damage`.
+       - `server-dev.js`: Recebe `damage`, verifica eliminação (transição de vida), envia `damageReceived` com `attackerName`, `targetName`, `weaponType`.
+       - `useSalaSocket.js`: Recebe `damageReceived`, atualiza `lastKillInfo` com os dados da eliminação.
+       - `page.js` (`SalaConteudo`): Usa `lastKillInfo` para exibir e gerenciar as notificações no estado `killFeed` (array), renderizando-as com ícone e timer individual.
+
 ## Próximos Passos
 1. **Melhorias de UX**
    - Adicionar animações de transição

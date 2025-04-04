@@ -353,3 +353,26 @@ useEffect(() => {
   - Evita a complexidade desnecessária da Context API para configurações puramente locais.
   - Mantém o estado próximo de onde ele é controlado.
   - Separa claramente as preocupações entre estado global sincronizado e preferências locais de UI. 
+
+## Implementação de Funcionalidades e Depuração (Kill Feed)
+
+### 1. Complexidade da Limpeza de `useEffect` com Operações Assíncronas
+
+*   **Contexto:** Ao implementar notificações que desaparecem após um `setTimeout`, se o `useEffect` que agenda o timer também tiver esse timer em sua função de limpeza e depender de um estado que muda rapidamente (como `lastKillInfo`), a limpeza pode cancelar o timer da notificação anterior antes que ela desapareça.
+*   **Solução:** Em cenários onde cada operação assíncrona (cada `setTimeout`) deve completar independentemente das atualizações que a desencadearam, a função de limpeza do `useEffect` que agenda a operação deve ser omitida (ou gerenciada de forma diferente, como apenas na desmontagem do componente).
+*   **Aprendizado:** Entender o ciclo de vida do `useEffect`, incluindo quando sua função de limpeza é chamada (antes da próxima execução do efeito ou na desmontagem), é crucial para lidar corretamente com efeitos colaterais assíncronos, especialmente em resposta a eventos frequentes.
+
+### 2. Validação Defensiva no Backend (Fonte Única da Verdade)
+
+*   **Contexto:** Mesmo com validações no frontend para prevenir ações inválidas (ex: impedir clique no próprio avatar para atacar), eventos correspondentes a essas ações inválidas ainda podem chegar ao backend.
+*   **Solução:** O backend deve sempre realizar suas próprias validações e verificações nos dados recebidos do cliente antes de modificar o estado ou executar lógica crítica (ex: verificar se `atacanteId !== alvoId` antes de aplicar dano).
+*   **Aprendizado:** O backend é a fonte única da verdade e deve ser robusto contra dados potencialmente inválidos ou inesperados do cliente. A validação no servidor é essencial para a segurança, integridade dos dados e prevenção de comportamentos indesejados.
+
+### 3. Rastreamento do Fluxo de Dados Fim-a-Fim
+
+*   **Contexto:** Adicionar uma informação simples (o tipo de arma usada) a uma funcionalidade existente (notificação de kill) exigiu modificações em toda a cadeia:
+    1.  **Emissão (Frontend):** Incluir o dado no evento Socket.IO.
+    2.  **Recepção e Processamento (Backend):** Ler o dado, usá-lo na lógica e incluí-lo na resposta.
+    3.  **Recepção e Armazenamento (Hook Frontend):** Ler o dado da resposta e armazená-lo no estado.
+    4.  **Utilização (UI Frontend):** Acessar o dado do estado e usá-lo para renderização condicional.
+*   **Aprendizado:** O desenvolvimento de funcionalidades em aplicações cliente-servidor requer atenção cuidadosa ao fluxo completo de dados. É importante mapear e implementar as alterações necessárias em cada camada (UI, estado do cliente, comunicação, lógica do servidor) para garantir que a informação correta esteja disponível onde e quando for necessária. 

@@ -101,7 +101,9 @@ export function KeyboardThrower({
         socket.emit('damage', {
           codigo: codigoSala,
           targetId: userId,
-          damage: GAME_CONFIG.DAMAGE.KEYBOARD
+          damage: GAME_CONFIG.DAMAGE.KEYBOARD,
+          fromUserId: currentUser.id,
+          objectType: 'keyboard'
         });
       }
     }, 400);
@@ -129,7 +131,7 @@ export function KeyboardThrower({
     
     // Envia evento para outros participantes via socket.io
     if (socket) {
-      // Primeiro envia o evento de arremesso para iniciar a animação
+      // Evento de arremesso (já tem fromUser)
       socket.emit('throwObject', {
         codigo: codigoSala,
         fromUser: currentUser.id,
@@ -137,15 +139,23 @@ export function KeyboardThrower({
         objectType: 'keyboard'
       });
 
-      // Depois da animação, emite o evento de dano
+      // Evento de dano (applyDamage?) - Verificar se este é o evento correto
+      // Assumindo que 'applyDamage' é o que causa o dano no servidor
+      // (Nota: a lógica original emitia 'damage' dentro do timeout de throwKeyboardAtAvatar,
+      // mas também emitia 'applyDamage' aqui. Precisamos ser consistentes)
+      // VAMOS ASSUMIR que o evento 'damage' emitido dentro de throwKeyboardAtAvatar 
+      // é o que precisa ser modificado, como feito acima.
+      // Se 'applyDamage' for usado, ele também precisaria do fromUserId.
+      /* 
       setTimeout(() => {
         socket.emit('applyDamage', {
           codigo: codigoSala,
-          fromUser: currentUser.id,
+          fromUser: currentUser.id, // <<< Se este for o evento, adicionar aqui também
           toUser: targetId,
           objectType: 'keyboard'
         });
-      }, 400); // Tempo da animação
+      }, 400); 
+      */
     }
   };
   

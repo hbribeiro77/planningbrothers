@@ -14,7 +14,8 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
   const [modoObservador, setModoObservador] = useState(false);
   const [conectado, setConectado] = useState(false);
   const [erroEntrada, setErroEntrada] = useState(null);
-  const [lastDamageTimestamp, setLastDamageTimestamp] = useState(0);
+  const [lastDamageTimestamp, setLastDamageTimestamp] = useState(null);
+  const [lastKillInfo, setLastKillInfo] = useState(null);
 
   // Conectar à sala quando o componente montar
   useEffect(() => {
@@ -52,27 +53,42 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
     });
 
     // Receber dano
-    socket.on('damageReceived', ({ targetId, damage, currentLife }) => {
-      console.log('Recebeu dano:', { targetId, damage, currentLife });
+    socket.on('damageReceived', (data) => {
+      console.log('Evento damageReceived recebido:', data);
+      // Desestruturar payload, incluindo weaponType
+      const { targetId, damage, currentLife, attackerName, targetName, weaponType } = data;
+      
+      console.log('Recebeu dano (payload completo):', data);
       let currentUserWasTarget = false;
+
       setParticipantes(prev => {
-        // Encontra o ID do usuário atual DENTRO do map para comparação segura
         const currentUserId = prev.find(p => p.nome === nomeUsuario)?.id;
         return prev.map(p => {
           if (p.id === targetId) {
-            // Verifica se o alvo é o usuário atual
             if (p.id === currentUserId) {
               currentUserWasTarget = true;
             }
-            return { ...p, life: currentLife };
+            return { ...p, life: currentLife }; // Atualiza vida
           } 
           return p;
         })
       });
-      // Atualiza o timestamp APENAS se o usuário atual foi o alvo
+
+      // Atualiza timestamp se o user atual foi alvo
       if (currentUserWasTarget) {
         console.log("Damage received by current user, updating timestamp.");
         setLastDamageTimestamp(Date.now());
+      }
+
+      // VERIFICAR se foi uma eliminação (backend enviou nomes)
+      if (attackerName && targetName) {
+        console.log(`KILL registrado: ${attackerName} -> ${targetName} com ${weaponType}`);
+        setLastKillInfo({ 
+          attackerName,
+          targetName,
+          weaponType,
+          timestamp: Date.now()
+        });
       }
     });
 
@@ -191,6 +207,7 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
     handleNovaRodada,
     toggleModoObservador,
     socket,
-    lastDamageTimestamp
+    lastDamageTimestamp,
+    lastKillInfo
   };
 } 

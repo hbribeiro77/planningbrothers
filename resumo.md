@@ -102,6 +102,7 @@ planningbrothers/
    - Comunicação em tempo real via WebSockets para sincronização multiplayer
    - **Estado PVP (Modo Diversão) compartilhado via Context API (`PvpContext`)** para sincronização entre componentes.
    - `GameController` para interação com elementos de gamificação e **controle de ativação do modo PVP (via contexto)**.
+   - **Configuração de efeitos visuais (Som, Piscada de Dano)** na interface do `GameController`.
    - Sistema de configuração centralizado para ajuste fácil de parâmetros do jogo
    - Barra de vida que aparece apenas quando o participante recebe dano
    - Feedback visual de dano com cores dinâmicas na barra de vida
@@ -226,8 +227,8 @@ npm run dev
 
 4. **GameController**
    - Componente para interação com elementos de gamificação.
-   - Interface de controle (Drawer) para ativar/desativar funcionalidades como Som e **Modo PVP**.
-   - **Consome e atualiza o estado PVP através do `PvpContext`**. 
+   - Interface de controle (Drawer) para ativar/desativar funcionalidades como Som, Modo PVP e **Efeito de Piscada ao Sofrer Dano (Morto)**.
+   - Consome e atualiza o estado PVP através do `PvpContext`.
    - Renderiza componentes como `KeyboardThrower`.
 
 5. **Sistema de Configuração**

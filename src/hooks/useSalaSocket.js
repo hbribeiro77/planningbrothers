@@ -14,6 +14,7 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
   const [modoObservador, setModoObservador] = useState(false);
   const [conectado, setConectado] = useState(false);
   const [erroEntrada, setErroEntrada] = useState(null);
+  const [lastDamageTimestamp, setLastDamageTimestamp] = useState(0);
 
   // Conectar à sala quando o componente montar
   useEffect(() => {
@@ -53,11 +54,26 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
     // Receber dano
     socket.on('damageReceived', ({ targetId, damage, currentLife }) => {
       console.log('Recebeu dano:', { targetId, damage, currentLife });
-      setParticipantes(prev => prev.map(p => 
-        p.id === targetId 
-          ? { ...p, life: currentLife }
-          : p
-      ));
+      let currentUserWasTarget = false;
+      setParticipantes(prev => {
+        // Encontra o ID do usuário atual DENTRO do map para comparação segura
+        const currentUserId = prev.find(p => p.nome === nomeUsuario)?.id;
+        return prev.map(p => {
+          if (p.id === targetId) {
+            // Verifica se o alvo é o usuário atual
+            if (p.id === currentUserId) {
+              currentUserWasTarget = true;
+            }
+            return { ...p, life: currentLife };
+          } 
+          return p;
+        })
+      });
+      // Atualiza o timestamp APENAS se o usuário atual foi o alvo
+      if (currentUserWasTarget) {
+        console.log("Damage received by current user, updating timestamp.");
+        setLastDamageTimestamp(Date.now());
+      }
     });
 
     // Receber votos
@@ -108,6 +124,7 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
       socket.off(SOCKET_EVENTS.VOTOS_REVELADOS);
       socket.off(SOCKET_EVENTS.VOTACAO_REINICIADA);
       socket.off(SOCKET_EVENTS.MODO_OBSERVADOR_ALTERADO);
+      socket.off('damageReceived');
     };
   }, [socket, codigoSala, nomeUsuario]);
 
@@ -173,6 +190,7 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
     handleRevelarVotos,
     handleNovaRodada,
     toggleModoObservador,
-    socket
+    socket,
+    lastDamageTimestamp
   };
 } 

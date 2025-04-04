@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Switch, Tooltip, ActionIcon, Drawer, Stack, Text, Group } from '@mantine/core';
-import { IconSettings, IconKeyboard, IconVolume } from '@tabler/icons-react';
+import { IconSettings, IconKeyboard, IconVolume, IconBellRinging } from '@tabler/icons-react';
 import { KeyboardThrower } from './KeyboardThrower';
 import { usePvpStatus } from '@/contexts/PvpContext';
 
@@ -8,16 +8,29 @@ export function GameController({
   socket,
   codigoSala,
   currentUser,
-  armaSelecionada
+  armaSelecionada,
+  onFlashEnabledChange
 }) {
   const { pvpStatus, togglePvpStatus } = usePvpStatus();
   const [drawerOpened, setDrawerOpened] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [flashEnabled, setFlashEnabled] = useState(true);
   const [keyboardKey, setKeyboardKey] = useState(0);
+
+  useEffect(() => {
+    if (onFlashEnabledChange) {
+      onFlashEnabledChange(flashEnabled);
+    }
+  }, [flashEnabled, onFlashEnabledChange]);
 
   const handleToggleSound = (event) => {
     setSoundEnabled(event.currentTarget.checked);
     setKeyboardKey(prev => prev + 1);
+  };
+
+  const handleToggleFlash = (event) => {
+    const isEnabled = event.currentTarget.checked;
+    setFlashEnabled(isEnabled);
   };
   
   return (
@@ -74,6 +87,18 @@ export function GameController({
               size="sm"
               checked={soundEnabled}
               onChange={handleToggleSound}
+            />
+          </Group>
+
+          <Group position="apart" mt="md">
+            <Text size="sm" c="dimmed">
+              <IconBellRinging size={16} style={{ marginRight: 4 }} /> 
+              Piscada ao Sofrer Dano (Morto)
+            </Text>
+            <Switch
+              size="sm"
+              checked={flashEnabled}
+              onChange={handleToggleFlash}
             />
           </Group>
         </Stack>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { 
   Container, 
@@ -75,7 +75,7 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     handleNovaRodada,
     toggleModoObservador,
     socket,
-    currentUserData
+    lastDamageTimestamp
   } = useSalaSocket(codigoSala, nomeUsuario);
 
   // Encontrar o usuário atual entre os participantes
@@ -86,6 +86,39 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
   const shouldShowAttentionOverlay = currentUser?.life <= 0 && 
                                      !currentUser?.isObservador && 
                                      !currentUser?.jaVotou;
+
+  // Estado para controlar a piscada
+  const [isFlashing, setIsFlashing] = useState(false);
+  // NOVO estado para controlar se o efeito de flash está habilitado
+  const [isFlashEffectEnabled, setIsFlashEffectEnabled] = useState(true); 
+
+  // Efeito para ativar a piscada
+  useEffect(() => {
+    if (lastDamageTimestamp === 0) return;
+
+    const isDeadOnDamage = currentUser?.life <= 0 &&
+                           !currentUser?.isObservador &&
+                           !currentUser?.jaVotou;
+
+    // ADICIONAR VERIFICAÇÃO: Só pisca se o efeito estiver habilitado
+    if (isDeadOnDamage && isFlashEffectEnabled) {
+      console.log("FLASH: Timestamp de dano recebido mudou enquanto morto E EFEITO HABILITADO, piscando.");
+      setIsFlashing(true);
+      const timer = setTimeout(() => {
+        setIsFlashing(false);
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  // Adicionar isFlashEffectEnabled às dependências
+  }, [lastDamageTimestamp, isFlashEffectEnabled]); 
+
+  // Efeito para desativar piscada
+  useEffect(() => {
+    if (!shouldShowAttentionOverlay && isFlashing) {
+      console.log("Overlay vermelho sumiu, garantindo que piscada está desligada.");
+      setIsFlashing(false);
+    }
+  }, [shouldShowAttentionOverlay, isFlashing]);
 
   // Animar entrada na sala
   useEffect(() => {
@@ -118,6 +151,12 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     setTimeout(() => {
       handleNovaRodada();
     }, 500);
+  };
+
+  // NOVO Handler para receber mudança da configuração do GameController
+  const handleFlashEnabledChange = (isEnabled) => {
+    console.log("SalaConteudo: Recebeu mudança na configuração de piscada:", isEnabled);
+    setIsFlashEffectEnabled(isEnabled);
   };
 
   // Se houver erro de entrada, mostra mensagem (verificar antes da conexão)
@@ -163,7 +202,7 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
   };
 
   return (
-    <PvpProvider socket={socket} currentUserData={currentUserData} codigoSala={codigoSala} participantes={participantes}>
+    <PvpProvider socket={socket} codigoSala={codigoSala} participantes={participantes}>
       <LifeBarProvider>
         <Container size="lg" py="xl" style={animacaoEntrada}>
           {/* Estilo global para animações */}
@@ -209,6 +248,7 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
                 codigoSala={codigoSala}
                 currentUser={currentUser} 
                 armaSelecionada={armaSelecionada}
+                onFlashEnabledChange={handleFlashEnabledChange}
               />
             </Group>
           </Group>
@@ -256,7 +296,7 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
           )}
         </Container>
 
-        {/* Overlay vermelho (fora do Container para cobrir tela inteira) */}
+        {/* Overlay vermelho original (atenção) */}
         {shouldShowAttentionOverlay && (
           <div style={{
             position: 'fixed',
@@ -264,13 +304,27 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(255, 0, 0, 0.3)', // Vermelho semi-transparente
-            zIndex: 1000, // Garante que fique sobre a maioria dos elementos
-            pointerEvents: 'none', // Permite interações com elementos abaixo, se necessário
-          }}>
-            {/* Pode adicionar uma mensagem aqui se quiser, ex: "Sua vez de votar!" */}
-          </div>
+            backgroundColor: 'rgba(255, 0, 0, 0.3)',
+            zIndex: 1000, 
+            pointerEvents: 'none',
+          }} />
         )}
+
+        {/* NOVO: Overlay branco para piscada */}
+        {isFlashing && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(255, 255, 255, 0.8)', // Branco semi-transparente
+            zIndex: 1001, // Acima do overlay vermelho
+            pointerEvents: 'none',
+            // Poderia adicionar uma animação de fade-out aqui se desejado
+          }} />
+        )}
+
       </LifeBarProvider>
     </PvpProvider>
   );

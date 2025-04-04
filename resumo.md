@@ -239,18 +239,20 @@ npm run dev
    - Facilidade para adicionar novos tipos de dano e objetos no futuro
    - Manutenção simplificada com todas as configurações em um único lugar
 
-6. **Kill Feed (Notificação de Eliminação):**
+6. **Kill Feed (Notificação de Eliminação) com Assinaturas:**
    - Quando um participante finaliza outro (vida chega a 0 ou menos), uma notificação é exibida.
    - Aparece no canto inferior direito da tela.
-   - Mostra: `[Nome Atacante] [Ícone Arma] [Nome Alvo]!`. (Atualmente, só existe o ícone de teclado).
+   - **Título:** Exibe uma "assinatura" definida pelo *atacante*. O usuário pode configurar até 3 assinaturas diferentes no Drawer de Configurações (`GameController`). Se o usuário tiver assinaturas salvas, uma delas é escolhida aleatoriamente a cada eliminação. Se não tiver nenhuma salva, as sugestões padrão (`Eliminação!`, `Até a próxima!`, `GG!`) são usadas aleatoriamente.
+   - **Corpo:** Mostra: `[Nome Atacante] [Ícone Arma] [Nome Alvo]!`.
    - Cada notificação dura 5 segundos.
    - Se múltiplas eliminações ocorrerem rapidamente, as notificações são empilhadas verticalmente.
-   - A notificação só aparece no ataque que efetivamente causou a eliminação (não repete se o alvo já estava com 0 de vida).
+   - A notificação só aparece no ataque que efetivamente causou a eliminação.
    - Implementação envolve:
+       - `GameController.jsx`: Permite ao usuário configurar até 3 assinaturas customizadas (array `signatures`) e envia para o servidor via evento `setCustomKillSignatures`.
        - `KeyboardThrower.jsx`: Envia `objectType` no evento `damage`.
-       - `server-dev.js`: Recebe `damage`, verifica eliminação (transição de vida), envia `damageReceived` com `attackerName`, `targetName`, `weaponType`.
-       - `useSalaSocket.js`: Recebe `damageReceived`, atualiza `lastKillInfo` com os dados da eliminação.
-       - `page.js` (`SalaConteudo`): Usa `lastKillInfo` para exibir e gerenciar as notificações no estado `killFeed` (array), renderizando-as com ícone e timer individual.
+       - `server-dev.js`: Armazena `customKillSignatures` (array) para cada participante. No evento `damage`, se for kill, seleciona aleatoriamente uma assinatura do atacante (ou uma padrão se vazio) e a envia como `killTitle` no evento `damageReceived`.
+       - `useSalaSocket.js`: Recebe `damageReceived` com `killTitle` e atualiza `lastKillInfo`.
+       - `page.js` (`SalaConteudo`): Usa `lastKillInfo` para exibir e gerenciar as notificações, usando `killTitle` como título e montando o corpo da mensagem.
 
 ## Próximos Passos
 1. **Melhorias de UX**

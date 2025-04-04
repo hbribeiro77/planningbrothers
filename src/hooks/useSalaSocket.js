@@ -55,8 +55,8 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
     // Receber dano
     socket.on('damageReceived', (data) => {
       console.log('Evento damageReceived recebido:', data);
-      // Desestruturar payload, incluindo weaponType
-      const { targetId, damage, currentLife, attackerName, targetName, weaponType } = data;
+      // Desestruturar payload, incluindo weaponType e killTitle
+      const { targetId, damage, currentLife, attackerName, targetName, weaponType, killTitle } = data;
       
       console.log('Recebeu dano (payload completo):', data);
       let currentUserWasTarget = false;
@@ -80,14 +80,17 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
         setLastDamageTimestamp(Date.now());
       }
 
-      // VERIFICAR se foi uma eliminação (backend enviou nomes)
-      if (attackerName && targetName) {
-        console.log(`KILL registrado: ${attackerName} -> ${targetName} com ${weaponType}`);
+      // Se for um evento de kill (tem attackerName e targetName)
+      // O backend agora SEMPRE envia killTitle se for um kill.
+      if (attackerName && targetName && killTitle) { // Verifica se killTitle também está presente
+        console.log(`KILL registrado: ${killTitle} - ${attackerName} -> ${targetName} com ${weaponType}`);
+        // Armazena a informação completa da eliminação
         setLastKillInfo({ 
           attackerName,
           targetName,
-          weaponType,
-          timestamp: Date.now()
+          weaponType, 
+          killTitle, // <-- ARMAZENAR TÍTULO DA KILL
+          timestamp: Date.now() 
         });
       }
     });

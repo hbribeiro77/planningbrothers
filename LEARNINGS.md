@@ -375,4 +375,16 @@ useEffect(() => {
     2.  **Recepção e Processamento (Backend):** Ler o dado, usá-lo na lógica e incluí-lo na resposta.
     3.  **Recepção e Armazenamento (Hook Frontend):** Ler o dado da resposta e armazená-lo no estado.
     4.  **Utilização (UI Frontend):** Acessar o dado do estado e usá-lo para renderização condicional.
-*   **Aprendizado:** O desenvolvimento de funcionalidades em aplicações cliente-servidor requer atenção cuidadosa ao fluxo completo de dados. É importante mapear e implementar as alterações necessárias em cada camada (UI, estado do cliente, comunicação, lógica do servidor) para garantir que a informação correta esteja disponível onde e quando for necessária. 
+*   **Aprendizado:** O desenvolvimento de funcionalidades em aplicações cliente-servidor requer atenção cuidadosa ao fluxo completo de dados. É importante mapear e implementar as alterações necessárias em cada camada (UI, estado do cliente, comunicação, lógica do servidor) para garantir que a informação correta esteja disponível onde e quando for necessária.
+
+### 4. Sincronização Proativa de Valores Padrão Definidos na UI
+
+*   **Contexto:** Ao introduzir assinaturas de kill com valores padrão sugeridos na UI (`GameController`), o backend não utilizava esses padrões, pois eles só existiam localmente no frontend até que o usuário interagisse e salvasse.
+*   **Solução:** O componente frontend (`GameController`) foi modificado para, ao detectar que precisa usar os valores padrão (porque o usuário não tem valores salvos), enviar proativamente esses padrões para o servidor via evento Socket.IO (`setCustomKillSignatures`) durante sua inicialização (`useEffect`).
+*   **Aprendizado:** Quando a UI define valores padrão que devem impactar a lógica centralizada no backend (fonte da verdade), é necessário um mecanismo para sincronizar esses padrões iniciais com o servidor, garantindo que o estado do servidor reflita a configuração padrão desejada desde o início, mesmo sem interação explícita do usuário para salvar.
+
+### 5. Diferença entre Placeholders e Valores Padrão Ativos (UX)
+
+*   **Contexto:** O usuário inicialmente esperava que as sugestões visíveis nos campos de assinatura (placeholders) fossem usadas automaticamente se os campos fossem deixados vazios.
+*   **Solução:** A lógica foi ajustada para tratar as sugestões como valores padrão *ativos*: se o usuário não tem assinaturas salvas, as sugestões são carregadas nos campos *e* salvas automaticamente no servidor.
+*   **Aprendizado:** É importante considerar a expectativa do usuário em relação a valores padrão e placeholders. Um placeholder é apenas uma dica visual, enquanto um valor padrão ativo deve ser funcionalmente utilizado se nenhuma outra entrada for fornecida. Alinhar o comportamento da aplicação com essa expectativa (neste caso, fazendo os placeholders agirem como padrões ativos iniciais) melhora a usabilidade. 

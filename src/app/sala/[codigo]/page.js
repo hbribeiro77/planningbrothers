@@ -111,8 +111,8 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
         weaponIcon = <IconKeyboard size="1.1rem" style={{ marginRight: '5px' }} />;
       } // Adicionar else if para outras armas aqui...
       
-      // Monta a mensagem (pode ser um fragmento JSX agora)
-      const notificationMessage = (
+      // Monta a mensagem do CORPO da notificação
+      const notificationBody = (
         <>
           {lastKillInfo.attackerName} {weaponIcon} {lastKillInfo.targetName}!
         </>
@@ -120,7 +120,8 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
 
       const newNotification = {
         id: uniqueId, 
-        message: notificationMessage // Armazena o JSX da mensagem
+        title: lastKillInfo.killTitle,
+        message: notificationBody 
       };
       
       console.log("KILL FEED: Adicionando:", newNotification);
@@ -354,7 +355,7 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
               key={notification.id} 
               icon={<IconSkull size="1.2rem" />} 
               color="red" 
-              title="Eliminação!"
+              title={notification.title} 
               withCloseButton={false}
               styles={{
                 root: {
@@ -363,7 +364,7 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
                 }
               }}
             >
-              {/* Renderiza a mensagem (que agora pode ser JSX com o ícone) */}
+              {/* Renderiza o corpo (message) da notificação */}
               {notification.message}
             </Notification>
           ))}

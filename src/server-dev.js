@@ -8,6 +8,12 @@ const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
+// Define o título padrão para kills
+const DEFAULT_KILL_TITLE = 'Eliminação!';
+
+const MAX_KILL_MESSAGE_LENGTH = 50; // Garante que o backend use o mesmo limite
+const MAX_SIGNATURES = 3; // Limite de assinaturas
+
 app.prepare().then(() => {
   const server = express();
   const httpServer = createServer(server);
@@ -62,7 +68,8 @@ app.prepare().then(() => {
         valorVotado: null,
         isModerador,
         keyboardMode: isModerador ? true : false, // Define o keyboardMode inicial
-        life: GAME_CONFIG.LIFE.MAX // Adiciona vida inicial
+        life: GAME_CONFIG.LIFE.MAX, // Adiciona vida inicial
+        customKillSignatures: [] // <-- Mudar para array vazio
       });
 
       // Se não for o primeiro participante, copia o modo PVP do moderador
@@ -135,12 +142,27 @@ app.prepare().then(() => {
           currentLife: vidaDepois
         };
 
-        // Se foi kill NESTA TRANSIÇÃO, adiciona nomes e TIPO DA ARMA ao payload
+        // Se foi kill NESTA TRANSIÇÃO, adiciona nomes, TIPO DA ARMA e TÍTULO da kill
         if (isKill) {
+          // --- Seleção da Assinatura/Título ---
+          const signatures = participanteAtacante.customKillSignatures;
+          let killTitle = DEFAULT_KILL_TITLE; // Título padrão
+          
+          // Se houver assinaturas válidas no array, escolhe uma aleatoriamente
+          if (Array.isArray(signatures) && signatures.length > 0) {
+            const validSignatures = signatures.filter(s => typeof s === 'string' && s.trim() !== ''); // Garante que não pegue vazias por engano
+            if (validSignatures.length > 0) {
+              const randomIndex = Math.floor(Math.random() * validSignatures.length);
+              killTitle = validSignatures[randomIndex];
+            }
+          }
+          // --- Fim da Seleção ---
+          
           payload.attackerName = participanteAtacante.nome;
           payload.targetName = participanteAlvo.nome;
-          payload.weaponType = objectType;
-          console.log(`[${codigo}] KILL EVENT (Transição): ${payload.attackerName} eliminou ${payload.targetName} com ${payload.weaponType}`);
+          payload.weaponType = objectType; 
+          payload.killTitle = killTitle; // Usa o título selecionado (aleatório ou padrão)
+          console.log(`[${codigo}] KILL EVENT (Transição): ${killTitle} - ${payload.attackerName} eliminou ${payload.targetName} com ${payload.weaponType}`);
         } else if (vidaDepois <= GAME_CONFIG.LIFE.MIN) {
            console.log(`[${codigo}] Dano aplicado em ${nomeAlvoLog}, que já estava com vida <= ${GAME_CONFIG.LIFE.MIN}.`);
         }
@@ -286,6 +308,30 @@ app.prepare().then(() => {
         );
       }
     });
+
+    // --- Listener para Definir MÚLTIPLAS Assinaturas --- 
+    socket.on('setCustomKillSignatures', ({ codigo, signatures }) => {
+      if (!salas.has(codigo)) return;
+      const sala = salas.get(codigo);
+      const participante = sala.participantes.get(socket.id);
+      
+      if (participante && Array.isArray(signatures)) {
+        // Validar e limpar CADA assinatura no array
+        const validatedSignatures = signatures
+          .slice(0, MAX_SIGNATURES) // Limita a quantidade de assinaturas
+          .map(sig => (sig || "").trim().slice(0, MAX_KILL_MESSAGE_LENGTH))
+          .filter(sig => sig !== ""); // Remove strings vazias após validação
+          
+        participante.customKillSignatures = validatedSignatures;
+        console.log(`[${codigo}] Usuário ${participante.nome} (${socket.id}) definiu customKillSignatures para:`, validatedSignatures);
+        
+        // Informar todos da atualização para consistência (importante para o GameController)
+        io.to(codigo).emit('atualizarParticipantes', Array.from(sala.participantes.values()));
+      } else {
+         console.warn(`[${codigo}] Dados inválidos ou participante não encontrado para setCustomKillSignatures.`);
+      }
+    });
+    // --- Fim do Listener Múltiplo ---
 
     // Desconexão
     socket.on('disconnect', () => {

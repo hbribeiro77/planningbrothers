@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { 
   Container, 
@@ -56,7 +56,8 @@ function PedirNome({ codigoSala, nomeSugerido, onNomeDefinido }) {
 function SalaConteudo({ codigoSala, nomeUsuario }) {
   // Estados da UI e animação
   const [entradaAnimada, setEntradaAnimada] = useState(false);
-  const [novaRodadaAnimada, setNovaRodadaAnimada] = useState(false);
+  // Renomear estado para animação de pulso genérica
+  const [isPulsing, setIsPulsing] = useState(false);
   // Adicionando de volta o estado para a arma selecionada
   const [armaSelecionada, setArmaSelecionada] = useState('keyboard');
 
@@ -73,7 +74,7 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     handleCancelarVoto,
     handleRevelarVotos,
     handleNovaRodada,
-    toggleModoObservador,
+    toggleModoObservador: originalToggleModoObservador,
     socket,
     lastDamageTimestamp
   } = useSalaSocket(codigoSala, nomeUsuario);
@@ -131,26 +132,40 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     }
   }, [conectado]);
 
-  // Animar nova rodada
+  // Função helper para disparar a animação de pulso
+  const triggerPulse = useCallback(() => {
+    setIsPulsing(true);
+    const timer = setTimeout(() => {
+      setIsPulsing(false);
+    }, 800); // Duração da animação pulseEffect
+    // Não precisamos retornar a limpeza aqui, pois queremos que ela termine
+    // A menos que seja chamada rapidamente de novo, o que reiniciaria
+  }, []); // Sem dependências, a função em si não muda
+
+  // NOVO: Efeito para disparar pulso ao REVELAR votos
   useEffect(() => {
-    if (revelarVotos === false) {
-      // Quando revelarVotos muda para false, significa que começou uma nova rodada
-      setNovaRodadaAnimada(true);
-      const timer = setTimeout(() => {
-        setNovaRodadaAnimada(false);
-      }, 1000); // Duração da animação
-      return () => clearTimeout(timer);
+    if (revelarVotos === true) {
+      console.log("PULSE: Votos Revelados");
+      triggerPulse();
     }
-  }, [revelarVotos]);
+    // Depende apenas de revelarVotos
+  }, [revelarVotos, triggerPulse]);
 
   // Handler personalizado para nova rodada com animação
   const handleNovaRodadaComAnimacao = () => {
-    // Iniciar a animação de nova rodada
-    setNovaRodadaAnimada(true);
-    // Chamar o handler original após um pequeno delay
-    setTimeout(() => {
-      handleNovaRodada();
-    }, 500);
+    console.log("PULSE: Nova Rodada");
+    triggerPulse();
+    // Chama o handler original do hook após um pequeno delay ou imediatamente?
+    // Vamos chamar imediatamente para a lógica não atrasar.
+    handleNovaRodada(); 
+  };
+
+  // Handler personalizado para modo observador com animação
+  const toggleModoObservadorComAnimacao = () => {
+    console.log("PULSE: Toggle Modo Observador");
+    triggerPulse();
+    // Chama o handler original do hook
+    originalToggleModoObservador();
   };
 
   // NOVO Handler para receber mudança da configuração do GameController
@@ -197,8 +212,9 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     transition: 'opacity 0.8s ease-out, transform 0.8s ease-out'
   };
 
-  const animacaoNovaRodada = {
-    animation: novaRodadaAnimada ? 'pulseEffect 0.8s ease-out' : 'none'
+  // Renomear objeto de estilo da animação
+  const pulseAnimation = {
+    animation: isPulsing ? 'pulseEffect 0.8s ease-out' : 'none'
   };
 
   return (
@@ -236,7 +252,7 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
             </CopyButton>
             <Button 
               variant={modoObservador ? 'light' : 'filled'}
-              onClick={toggleModoObservador}
+              onClick={toggleModoObservadorComAnimacao}
             >
               {modoObservador ? 'Sair do Modo Observador' : 'Modo Observador'}
             </Button>
@@ -269,7 +285,7 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
             shadow="sm" 
             p="md" 
             mb="xl" 
-            style={animacaoNovaRodada}
+            style={pulseAnimation}
             className="nova-rodada-transition"
           >
             <Mesa 

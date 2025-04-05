@@ -53,3 +53,53 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+/* Animações do Kill Feed - RESTAURADAS */
+.killfeed-notification {
+  /* Estado inicial antes da animação de entrada (fora da tela à direita) */
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.killfeed-notification.entering {
+  /* Aplica a animação de entrada - 300ms */
+  animation: slideInRight 0.1s ease-out forwards;
+}
+
+.killfeed-notification.exiting {
+  /* Aplica a animação de saída - 600ms */
+  animation: slideOutDown 0.6s ease-out forwards;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutDown {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+    /* Começa da posição atual */
+  }
+  to {
+    opacity: 0;
+    transform: translateY(100%);
+    /* Termina fora da tela abaixo */
+  }
+}
+
+/* Removendo definições de animação do Kill Feed */
+/* 
+.killfeed-notification { ... }
+.killfeed-notification.entering { ... }
+.killfeed-notification.exiting { ... }
+@keyframes slideInRight { ... }
+@keyframes slideOutDown { ... }
+*/

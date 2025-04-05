@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { 
   Container, 
@@ -17,7 +17,7 @@ import {
   Box,
   Notification
 } from '@mantine/core';
-import { IconCopy, IconCheck, IconX, IconSkull, IconKeyboard } from '@tabler/icons-react';
+import { IconCopy, IconCheck, IconX, IconKeyboard } from '@tabler/icons-react';
 
 import Mesa from '@/components/Mesa/Mesa';
 import OpcoesVotacao from '@/components/Sala/OpcoesVotacao';
@@ -26,6 +26,7 @@ import { useSalaUiEffects } from '@/hooks/useSalaUiEffects';
 import FormularioEntrada, { LOCALSTORAGE_NOME_KEY } from '@/components/Auth/FormularioEntrada';
 import { GameController } from '@/components/GameElements/GameController';
 import { InventoryDisplay } from '@/components/GameElements/InventoryDisplay';
+import { KillFeedDisplay } from '@/components/GameElements/KillFeedDisplay';
 import { LifeBarProvider } from '@/contexts/LifeBarContext';
 import { PvpProvider } from '@/contexts/PvpContext';
 
@@ -96,62 +97,29 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     shouldShowAttentionOverlay
   );
 
-  // --- Kill Feed como Array ---
-  const [killFeed, setKillFeed] = useState([]); // Agora é um array
+  // --- Lógica de formatação da mensagem do Kill Feed --- 
+  // Movido para cá para passar a mensagem formatada como prop
+  const formattedLastKillInfo = useMemo(() => {
+    if (!lastKillInfo) return null;
 
-  // Efeito para adicionar notificações de eliminação
-  useEffect(() => {
-    if (lastKillInfo) {
-      // Gera ID único, mensagem e determina o ícone da arma
-      const uniqueId = `${lastKillInfo.timestamp}-${Math.random().toString(36).substring(2, 9)}`;
-      
-      // Escolher o ícone da arma
-      let weaponIcon = null;
-      if (lastKillInfo.weaponType === 'keyboard') {
-        weaponIcon = <IconKeyboard size="1.1rem" style={{ marginRight: '5px' }} />;
-      } // Adicionar else if para outras armas aqui...
-      
-      // Monta a mensagem do CORPO da notificação
-      const notificationBody = (
-        <>
-          {lastKillInfo.attackerName} {weaponIcon} {lastKillInfo.targetName}!
-        </>
-      );
-
-      const newNotification = {
-        id: uniqueId, 
-        title: lastKillInfo.killTitle,
-        message: notificationBody 
-      };
-      
-      console.log("KILL FEED: Adicionando:", newNotification);
-      
-      // Adiciona a nova notificação ao array
-      setKillFeed(prevFeed => [...prevFeed, newNotification]);
-
-      // Agenda a remoção
-      setTimeout(() => {
-        setKillFeed(prevFeed => prevFeed.filter(n => n.id !== uniqueId)); 
-        console.log("KILL FEED: Removendo:", uniqueId);
-      }, 5000);
+    let weaponIcon = null;
+    if (lastKillInfo.weaponType === 'keyboard') {
+      weaponIcon = <IconKeyboard size="1.1rem" style={{ marginRight: '5px' }} />;
     }
-  }, [lastKillInfo]);
+    // Adicionar mais ícones aqui...
 
-  // Opcional, mas recomendado: Limpeza geral ao desmontar o componente
-  useEffect(() => {
-    // Este effect não faz nada na montagem/atualização, 
-    // mas sua função de limpeza será chamada quando SalaConteudo for desmontado.
-    // Isso evita potenciais warnings de state update em componente desmontado,
-    // embora os timers individuais devam funcionar corretamente.
-    // Nota: Isso limparia timers que ainda não dispararam se o usuário SAIR da sala.
-    const killFeedTimeouts = []; // Precisaríamos armazenar os IDs dos timers se quiséssemos fazer isso.
-                                 // Por simplicidade e dado que o problema principal é outro, vamos omitir por agora.
-                                 // A remoção da limpeza no effect [lastKillInfo] é o ponto crucial.
-    return () => {
-      // console.log("SalaConteudo desmontando - limpar timers pendentes se necessário");
-      // Código para limpar timers pendentes iria aqui, se gerenciados externamente.
+    const body = (
+      <>
+        {lastKillInfo.attackerName} {weaponIcon} {lastKillInfo.targetName}!
+      </>
+    );
+
+    return {
+      ...lastKillInfo,
+      message: body // Substitui a mensagem original pela formatada
     };
-  }, []); // Array vazio para rodar limpeza apenas no unmount
+  }, [lastKillInfo]);
+  // -----------------------------------------------------
 
   const handleNovaRodadaComAnimacao = () => {
     console.log("PULSE: Nova Rodada");
@@ -336,39 +304,9 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
           }} />
         )}
 
-        {/* --- Container para empilhar as notificações --- */}
-        <Box
-          style={{
-            position: 'fixed',
-            bottom: '20px',
-            right: '20px',
-            zIndex: 1050, 
-            display: 'flex',
-            flexDirection: 'column-reverse', // Empilha de baixo para cima
-            alignItems: 'flex-end',
-            gap: '10px' // Espaço entre notificações
-          }}
-        >
-          {/* Mapeia o array killFeed e renderiza cada notificação */}
-          {killFeed.map((notification, index) => (
-            <Notification 
-              key={notification.id} 
-              icon={<IconSkull size="1.2rem" />} 
-              color="red" 
-              title={notification.title} 
-              withCloseButton={false}
-              styles={{
-                root: {
-                  minWidth: '300px',
-                  textAlign: 'center' 
-                }
-              }}
-            >
-              {/* Renderiza o corpo (message) da notificação */}
-              {notification.message}
-            </Notification>
-          ))}
-        </Box>
+        {/* --- Renderiza o componente KillFeedDisplay --- */}
+        <KillFeedDisplay lastKillInfo={formattedLastKillInfo} />
+        {/* --- FIM KillFeedDisplay --- */}
 
       </LifeBarProvider>
     </PvpProvider>

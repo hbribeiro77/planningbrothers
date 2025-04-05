@@ -1,5 +1,5 @@
 import { Paper, Text, Badge, useMantineTheme } from '@mantine/core';
-import { IconEye } from '@tabler/icons-react';
+import { IconEye, IconSkull } from '@tabler/icons-react';
 import { LifeBar } from '../GameElements/LifeBar';
 
 export default function CartaParticipante({ 
@@ -11,10 +11,12 @@ export default function CartaParticipante({
   isObservador = false,
   id,
   life = 100,
-  maxLife = 100
+  maxLife = 100,
 }) {
   const theme = useMantineTheme();
   const isDark = theme.colorScheme === 'dark';
+
+  const isDead = life <= 0;
 
   return (
     <Paper
@@ -47,6 +49,7 @@ export default function CartaParticipante({
               : undefined),
         transition: 'all 0.3s ease',
         opacity: isObservador ? 0.85 : 1,
+        minHeight: 'clamp(68px, 5vw, 80px)',
       }}
     >
       {/* Barra de vida */}
@@ -75,7 +78,28 @@ export default function CartaParticipante({
         </Badge>
       )}
       
-      <Text fw={500} ta="center" size="xs" style={{ marginBottom: 5, fontSize: '0.75rem' }}>
+      {isDead && (
+        <IconSkull 
+          size={14} 
+          style={{
+            position: 'absolute',
+            bottom: 3,
+            right: 3,
+            color: theme.colors.red[7],
+            filter: 'drop-shadow(1px 1px 1px rgba(0,0,0,0.5))'
+          }}
+        />
+      )}
+      
+      <Text 
+        fw={500} 
+        ta="center" 
+        size="xs" 
+        style={{ 
+          marginBottom: 5, 
+          fontSize: '0.75rem',
+        }}
+      >
         {nome}
       </Text>
       

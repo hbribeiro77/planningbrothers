@@ -15,9 +15,10 @@ import {
   Loader,
   Center,
   Box,
-  Notification
+  Notification,
+  Badge
 } from '@mantine/core';
-import { IconCopy, IconCheck, IconX, IconKeyboard } from '@tabler/icons-react';
+import { IconCopy, IconCheck, IconX, IconKeyboard, IconCoin, IconSkull } from '@tabler/icons-react';
 
 import Mesa from '@/components/Mesa/Mesa';
 import OpcoesVotacao from '@/components/Sala/OpcoesVotacao';
@@ -78,7 +79,9 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     lastKillInfo
   } = useSalaSocket(codigoSala, nomeUsuario);
 
-  const currentUser = participantes.find(p => p.nome === nomeUsuario) || { id: '', nome: nomeUsuario };
+  const currentUser = participantes.find(p => p.nome === nomeUsuario) || { id: '', nome: nomeUsuario, score: 0, kills: 0 };
+  const currentUserScore = currentUser.score || 0;
+  const currentUserKills = currentUser.kills || 0;
 
   const shouldShowAttentionOverlay = currentUser?.life <= 0 && 
                                      !currentUser?.isObservador && 
@@ -220,8 +223,32 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
               {modoObservador ? 'Sair do Modo Observador' : 'Modo Observador'}
             </Button>
             
-            {/* GameController permanece no canto */}
-            <Group ml="auto" spacing="md" align="center">
+            {/* Controles à direita (Placar Pessoal + Configurações) */}
+            <Group ml="auto" spacing="xs" align="center" wrap="nowrap">
+              {/* --- Placar Pessoal: Kills --- */} 
+              <Badge 
+                size="lg" 
+                variant="light" // Usar light para consistência?
+                color="red" 
+                radius="sm"
+                leftSection={<IconSkull size={14} />}
+              >
+                {currentUserKills}
+              </Badge>
+              {/* -------------------------- */}
+
+              {/* --- Placar Pessoal: Pontos --- */} 
+              <Badge 
+                size="lg" 
+                variant="light" 
+                color="yellow" 
+                radius="sm"
+                leftSection={<IconCoin size={14} />}
+              >
+                {currentUserScore}
+              </Badge>
+              {/* -------------------------- */}
+
               <GameController 
                 socket={socket}
                 codigoSala={codigoSala}

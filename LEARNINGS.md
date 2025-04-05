@@ -400,3 +400,18 @@ useEffect(() => {
 *   **Contexto:** Corrigimos um bug de timer (notificação presa) causado pela limpeza incorreta do `useEffect` ao usar `<Transition>`. Mais tarde, ao refatorar para usar animações CSS customizadas, reintroduzimos o mesmo bug por colocar a limpeza no `useEffect` errado novamente.
 *   **Solução:** A solução foi a mesma em ambos os casos: remover a função de limpeza do `useEffect` que dependia do gatilho do evento (`lastKillInfo`), permitindo que os timers de cada notificação rodassem independentemente.
 *   **Aprendizado:** Refatorações ou mudanças na abordagem de implementação (ex: trocar biblioteca de animação por CSS puro) carregam o risco de reintroduzir bugs já corrigidos se os padrões lógicos fundamentais não forem cuidadosamente reavaliados no novo contexto. É crucial prestar atenção especial a aspectos sensíveis como o ciclo de vida de efeitos (`useEffect`) e o gerenciamento de operações assíncronas para garantir que as correções anteriores persistam. 
+
+## Refinamento da Lógica e Estado no Backend
+
+1.  **Evolução do Modelo de Dados e Lógica de Eventos:**
+    *   *Lição:* À medida que os requisitos da aplicação evoluem (ex: adicionar contador de `kills`, alterar o momento de conceder pontos por voto), é necessário refinar tanto o modelo de dados no servidor quanto a lógica nos manipuladores de eventos Socket.IO (`server-dev.js`).
+    *   *Exemplos Técnicos:*
+        *   **Extensão do Estado:** Adicionar novas propriedades (`kills`) ao objeto do participante no evento `entrarSala` e garantir sua persistência (não resetar em `reiniciarVotacao`).
+        *   **Modificação da Lógica:** Remover o incremento de `score` do evento `votar` e adicioná-lo ao evento `revelarVotos`, iterando sobre os participantes para aplicar a lógica condicionalmente (`if (participante.jaVotou)`).
+    *   *Padrão Reforçado:* O backend continua sendo a fonte da verdade para o estado e as regras. As alterações são feitas centralmente e depois propagadas para os clientes através de eventos de atualização (ex: `atualizarParticipantes`).
+
+## Detalhes Técnicos de Bibliotecas (Mantine UI)
+
+1.  **Funções Auxiliares (`theme.fn`):**
+    *   *Lição:* Verificar a disponibilidade e o comportamento de funções auxiliares específicas da biblioteca (`theme.fn.variant` neste caso) na versão/configuração utilizada, pois podem não existir ou funcionar como esperado.
+    *   *Alternativa Robusta:* Acessar valores diretamente da estrutura do tema (`theme.colors.red[7]`) tende a ser mais seguro e menos propenso a quebras entre versões ou configurações diferentes ao buscar cores específicas. 

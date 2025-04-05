@@ -257,6 +257,22 @@ npm run dev
        - `page.js` (`SalaConteudo`): Obtém `lastKillInfo` do hook, formata a mensagem com ícone, e passa os dados formatados como prop para `<KillFeedDisplay>`. 
        - `globals.css`: Contém as definições `@keyframes` e classes CSS para as animações de entrada/saída da notificação.
 
+7. **Placar Pessoal (Pontos e Kills):**
+   *   **Pontuação:** Acumulada pelo jogador durante a sessão.
+       *   `+1 ponto` por cada eliminação (`kill`) realizada.
+       *   `+10 pontos` por participar da votação (concedidos ao revelar os votos da rodada).
+       *   A pontuação não é resetada entre as rodadas de votação.
+   *   **Kills:** Contagem de eliminações realizadas pelo jogador.
+       *   Incrementada a cada eliminação realizada.
+       *   A contagem não é resetada entre as rodadas de votação.
+   *   **Exibição:** A contagem de Kills (ícone de caveira) e a Pontuação (ícone de moeda) do usuário atual são exibidas no canto superior direito da tela (`page.js`).
+   *   **Implementação:** Lógica de incremento e persistência no `server-dev.js`; exibição no `page.js`.
+
+8. **Indicador Visual de Morte:**
+   *   Quando a vida de um participante (incluindo observadores) chega a 0 ou menos, um ícone de caveira vermelha (`IconSkull`) é exibido no canto inferior direito do seu card (`CartaParticipante.jsx`).
+   *   Isso indica visualmente quem está fora de combate na rodada atual do modo PVP.
+   *   **Implementação:** Condição e ícone adicionados ao `CartaParticipante.jsx`.
+
 ## Próximos Passos
 1. **Melhorias de UX**
    - Adicionar animações de transição

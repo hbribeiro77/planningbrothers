@@ -69,7 +69,9 @@ app.prepare().then(() => {
         isModerador,
         keyboardMode: isModerador ? true : false, // Define o keyboardMode inicial
         life: GAME_CONFIG.LIFE.MAX, // Adiciona vida inicial
-        customKillSignatures: [] // <-- Mudar para array vazio
+        customKillSignatures: [],
+        score: 0,
+        kills: 0 // <-- Inicializa kills
       });
 
       // Se não for o primeiro participante, copia o modo PVP do moderador
@@ -162,6 +164,15 @@ app.prepare().then(() => {
           payload.targetName = participanteAlvo.nome;
           payload.weaponType = objectType; 
           payload.killTitle = killTitle; // Usa o título selecionado (aleatório ou padrão)
+          
+          // --- Adiciona ponto por Kill ---
+          participanteAtacante.score = (participanteAtacante.score || 0) + 1;
+          console.log(`[${codigo}] Score de ${participanteAtacante.nome} atualizado para: ${participanteAtacante.score} (+1 kill)`);
+          // --- Incrementa Kills ---
+          participanteAtacante.kills = (participanteAtacante.kills || 0) + 1;
+          console.log(`[${codigo}] Kills de ${participanteAtacante.nome} atualizado para: ${participanteAtacante.kills}`);
+          // -----------------------------
+          
           console.log(`[${codigo}] KILL EVENT (Transição): ${killTitle} - ${payload.attackerName} eliminou ${payload.targetName} com ${payload.weaponType}`);
         } else if (vidaDepois <= GAME_CONFIG.LIFE.MIN) {
            console.log(`[${codigo}] Dano aplicado em ${nomeAlvoLog}, que já estava com vida <= ${GAME_CONFIG.LIFE.MIN}.`);
@@ -188,19 +199,21 @@ app.prepare().then(() => {
     // Votar
     socket.on('votar', ({ codigo, usuario, voto }) => {
       if (!salas.has(codigo)) return;
-      
       const sala = salas.get(codigo);
       const participante = sala.participantes.get(socket.id);
       
-      if (participante) {
+      // Verifica se participante existe E se AINDA não votou nesta rodada
+      if (participante && !participante.jaVotou) { 
         participante.jaVotou = true;
         participante.valorVotado = voto;
         
+        // Emitir só o voto recebido
         io.to(codigo).emit('votoRecebido', { 
-          usuario: participante,
+          usuario: participante, // Envia dados do participante (incluindo jaVotou)
           voto 
         });
         
+        // Manter para atualizar status visual "Votou" imediatamente
         io.to(codigo).emit('atualizarParticipantes', 
           Array.from(sala.participantes.values())
         );
@@ -231,6 +244,25 @@ app.prepare().then(() => {
       const sala = salas.get(codigo);
       sala.revelarVotos = true;
       
+      // --- Adicionar Pontos por Voto AQUI ---
+      console.log(`[${codigo}] Revelando votos e aplicando pontos...`);
+      let participantesAtualizados = false;
+      for (const participante of sala.participantes.values()) {
+        // Pontua apenas quem efetivamente votou nesta rodada
+        if (participante.jaVotou) {
+          participante.score = (participante.score || 0) + 10;
+          console.log(`[${codigo}] Score de ${participante.nome} atualizado para: ${participante.score} (+10 voto revelado)`);
+          participantesAtualizados = true;
+        }
+      }
+      // ------------------------------------
+
+      // Emitir atualização de participantes PRIMEIRO (com scores atualizados)
+      if (participantesAtualizados) {
+          io.to(codigo).emit('atualizarParticipantes', Array.from(sala.participantes.values()));
+      }
+
+      // Depois, emitir evento específico de votos revelados
       io.to(codigo).emit('votosRevelados');
     });
 
@@ -244,10 +276,13 @@ app.prepare().then(() => {
       for (const participante of sala.participantes.values()) {
         participante.jaVotou = false;
         participante.valorVotado = null;
-        participante.life = GAME_CONFIG.LIFE.MAX; // Restaura a vida ao máximo
+        participante.life = GAME_CONFIG.LIFE.MAX; // Restaura a vida
+        // NÃO resetar participante.score
+        // NÃO resetar participante.kills <-- Garantir que não reseta kills
       }
       
       io.to(codigo).emit('votacaoReiniciada');
+      // Atualiza participantes com vida/voto resetado, mas score mantido
       io.to(codigo).emit('atualizarParticipantes', 
         Array.from(sala.participantes.values())
       );

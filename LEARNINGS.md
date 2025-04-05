@@ -387,4 +387,16 @@ useEffect(() => {
 
 *   **Contexto:** O usuário inicialmente esperava que as sugestões visíveis nos campos de assinatura (placeholders) fossem usadas automaticamente se os campos fossem deixados vazios.
 *   **Solução:** A lógica foi ajustada para tratar as sugestões como valores padrão *ativos*: se o usuário não tem assinaturas salvas, as sugestões são carregadas nos campos *e* salvas automaticamente no servidor.
-*   **Aprendizado:** É importante considerar a expectativa do usuário em relação a valores padrão e placeholders. Um placeholder é apenas uma dica visual, enquanto um valor padrão ativo deve ser funcionalmente utilizado se nenhuma outra entrada for fornecida. Alinhar o comportamento da aplicação com essa expectativa (neste caso, fazendo os placeholders agirem como padrões ativos iniciais) melhora a usabilidade. 
+*   **Aprendizado:** É importante considerar a expectativa do usuário em relação a valores padrão e placeholders. Um placeholder é apenas uma dica visual, enquanto um valor padrão ativo deve ser funcionalmente utilizado se nenhuma outra entrada for fornecida. Alinhar o comportamento da aplicação com essa expectativa (neste caso, fazendo os placeholders agirem como padrões ativos iniciais) melhora a usabilidade.
+
+### 6. Separação de Concerns: Animação CSS vs. Estilos de Componentes UI
+
+*   **Contexto:** Ao tentar aplicar classes CSS de animação diretamente a um componente de biblioteca UI (`<Notification>`), encontramos conflitos que impediram a aplicação correta dos estilos de fundo da variante (`light`) do componente.
+*   **Solução:** Separamos as responsabilidades envolvendo o componente `<Notification>` em um `<div>` wrapper. As classes CSS de animação foram aplicadas ao wrapper (controlando `opacity` e `transform`), enquanto o `<Notification>` interno ficou responsável apenas pela sua aparência (usando props como `variant`, `color` ou `styles` para definir `backgroundColor`, `border`, etc.).
+*   **Aprendizado:** Ao integrar animações CSS customizadas com bibliotecas de componentes, pode ser necessário isolar a animação em um elemento wrapper para evitar conflitos de especificidade ou sobrescrita de estilos. Isso permite que o componente UI interno funcione como esperado, enquanto o wrapper controla a transição na tela.
+
+### 7. Reincidência de Bugs em Refatorações e Mudanças de Abordagem
+
+*   **Contexto:** Corrigimos um bug de timer (notificação presa) causado pela limpeza incorreta do `useEffect` ao usar `<Transition>`. Mais tarde, ao refatorar para usar animações CSS customizadas, reintroduzimos o mesmo bug por colocar a limpeza no `useEffect` errado novamente.
+*   **Solução:** A solução foi a mesma em ambos os casos: remover a função de limpeza do `useEffect` que dependia do gatilho do evento (`lastKillInfo`), permitindo que os timers de cada notificação rodassem independentemente.
+*   **Aprendizado:** Refatorações ou mudanças na abordagem de implementação (ex: trocar biblioteca de animação por CSS puro) carregam o risco de reintroduzir bugs já corrigidos se os padrões lógicos fundamentais não forem cuidadosamente reavaliados no novo contexto. É crucial prestar atenção especial a aspectos sensíveis como o ciclo de vida de efeitos (`useEffect`) e o gerenciamento de operações assíncronas para garantir que as correções anteriores persistam. 

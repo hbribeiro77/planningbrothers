@@ -34,7 +34,8 @@ planningbrothers/
 │   │   ├── GameElements/     # Componentes de gamificação
 │   │   │   ├── KeyboardThrower.jsx # Sistema de arremesso de teclado
 │   │   │   ├── GameController.jsx # Controlador de elementos de gamificação
-│   │   │   └── LifeBar.jsx   # Barra de vida dos participantes
+│   │   │   ├── LifeBar.jsx   # Barra de vida dos participantes
+│   │   │   └── KillFeedDisplay.jsx # Exibe as notificações de eliminação com animações
 │   │   ├── Mesa/             # Componentes da mesa de Planning Poker
 │   │   │   └── Mesa.jsx      # Componente principal da mesa
 │   │   ├── Participante/     # Componentes de participante
@@ -252,7 +253,9 @@ npm run dev
        - `KeyboardThrower.jsx`: Envia `objectType` no evento `damage`.
        - `server-dev.js`: Armazena `customKillSignatures` (array) para cada participante. No evento `damage`, se for kill, seleciona aleatoriamente uma assinatura do atacante (ou uma padrão se vazio) e a envia como `killTitle` no evento `damageReceived`.
        - `useSalaSocket.js`: Recebe `damageReceived` com `killTitle` e atualiza `lastKillInfo`.
-       - `page.js` (`SalaConteudo`): Usa `lastKillInfo` para exibir e gerenciar as notificações, usando `killTitle` como título e montando o corpo da mensagem.
+       - **`KillFeedDisplay.jsx`**: Componente dedicado que recebe `lastKillInfo`, gerencia o estado local das notificações (array `killFeed` com `isExiting`), aplica animações CSS e renderiza as `<Notification>`.**
+       - `page.js` (`SalaConteudo`): Obtém `lastKillInfo` do hook, formata a mensagem com ícone, e passa os dados formatados como prop para `<KillFeedDisplay>`. 
+       - `globals.css`: Contém as definições `@keyframes` e classes CSS para as animações de entrada/saída da notificação.
 
 ## Próximos Passos
 1. **Melhorias de UX**

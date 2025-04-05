@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, useContext } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { 
   Container, 
@@ -16,9 +16,11 @@ import {
   Center,
   Box,
   Notification,
-  Badge
+  Badge,
+  Drawer
 } from '@mantine/core';
-import { IconCopy, IconCheck, IconX, IconKeyboard, IconCoin, IconSkull } from '@tabler/icons-react';
+import { IconCopy, IconCheck, IconX, IconKeyboard, IconCoin, IconSkull, IconShoppingCart, IconSettings, IconKeyboardOff, IconEye, IconEyeOff, IconVolume, IconVolumeOff, IconMessageCircle, IconColorSwatch } from '@tabler/icons-react';
+import { useDisclosure } from '@mantine/hooks';
 
 import Mesa from '@/components/Mesa/Mesa';
 import OpcoesVotacao from '@/components/Sala/OpcoesVotacao';
@@ -29,7 +31,8 @@ import { GameController } from '@/components/GameElements/GameController';
 import { InventoryDisplay } from '@/components/GameElements/InventoryDisplay';
 import { KillFeedDisplay } from '@/components/GameElements/KillFeedDisplay';
 import { LifeBarProvider } from '@/contexts/LifeBarContext';
-import { PvpProvider } from '@/contexts/PvpContext';
+import { PvpProvider, PvpContext } from '@/contexts/PvpContext';
+import ShopDrawer from '@/components/Shop/ShopDrawer';
 
 // Componente que pede o nome do usuário - mantém a aparência original
 function PedirNome({ codigoSala, nomeSugerido, onNomeDefinido }) {
@@ -58,6 +61,8 @@ function PedirNome({ codigoSala, nomeSugerido, onNomeDefinido }) {
 
 // Componente da sala - só renderizado quando temos nome definido
 function SalaConteudo({ codigoSala, nomeUsuario }) {
+  // Mover useDisclosure para o topo, junto com outros hooks
+  const [shopOpened, { open: openShop, close: closeShop }] = useDisclosure(false);
   const [armaSelecionada, setArmaSelecionada] = useState('keyboard');
   const [isFlashEffectEnabled, setIsFlashEffectEnabled] = useState(true); 
 
@@ -79,7 +84,7 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     lastKillInfo
   } = useSalaSocket(codigoSala, nomeUsuario);
 
-  const currentUser = participantes.find(p => p.nome === nomeUsuario) || { id: '', nome: nomeUsuario, score: 0, kills: 0 };
+  const currentUser = participantes.find(p => p.nome === nomeUsuario) || { id: '', nome: nomeUsuario, score: 0, kills: 0, inventory: [] };
   const currentUserScore = currentUser.score || 0;
   const currentUserKills = currentUser.kills || 0;
 
@@ -140,6 +145,28 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     console.log("SalaConteudo: Recebeu mudança na configuração de piscada:", isEnabled);
     setIsFlashEffectEnabled(isEnabled);
   };
+
+  // --- Função para lidar com a compra de itens --- 
+  const handleBuyItem = useCallback((itemId, itemPrice) => {
+    if (!socket) {
+      console.error("Socket não conectado, não é possível comprar.");
+      return;
+    }
+    if (!currentUser || !currentUser.id) {
+      console.error("Usuário atual não encontrado, não é possível comprar.");
+      return;
+    }
+    console.log(`[UI] Emitindo evento buyItem: { userId: ${currentUser.id}, itemId: ${itemId}, itemPrice: ${itemPrice} }`);
+    socket.emit('buyItem', { 
+      codigo: codigoSala, // Lembre-se de usar 'codigo'
+      userId: currentUser.id, // ID do usuário que está comprando
+      itemId: itemId,      // ID do item
+      itemPrice: itemPrice // Preço (para validação no backend)
+    });
+    // Idealmente, fechar o drawer ou dar um feedback visual aqui
+    // closeShop(); // Opcional: fechar a loja após tentar comprar
+  }, [socket, codigoSala, currentUser?.id]); // Incluir currentUser.id nas dependências
+  // ----------------------------------------------
 
   // Se houver erro de entrada, mostra mensagem (verificar antes da conexão)
   if (erroEntrada) {
@@ -225,6 +252,12 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
             
             {/* Controles à direita (Placar Pessoal + Configurações) */}
             <Group ml="auto" spacing="xs" align="center" wrap="nowrap">
+              {/* --- Botão da Loja --- */}
+              <ActionIcon variant="default" size="lg" title="Abrir Loja" onClick={openShop}>
+                <IconShoppingCart size="1.1rem" />
+              </ActionIcon>
+              {/* ------------------- */}
+
               {/* --- Placar Pessoal: Kills --- */} 
               <Badge 
                 size="lg" 
@@ -281,6 +314,7 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
             <Mesa 
               participantes={participantes}
               revelarVotos={revelarVotos}
+              currentUser={currentUser}
               onRevelarVotos={handleRevelarVotos}
               onNovaRodada={handleNovaRodadaComAnimacao}
             />
@@ -292,6 +326,7 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
               meuVoto={meuVoto}
               onVotar={handleVotar}
               onCancelarVoto={handleCancelarVoto}
+              currentUser={currentUser}
               style={{
                 opacity: entradaAnimada ? 1 : 0,
                 transform: entradaAnimada ? 'translateY(0)' : 'translateY(20px)',
@@ -334,6 +369,14 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
         {/* --- Renderiza o componente KillFeedDisplay --- */}
         <KillFeedDisplay lastKillInfo={formattedLastKillInfo} />
         {/* --- FIM KillFeedDisplay --- */}
+
+        {/* Renderizar o Drawer da Loja, passando currentUser e onBuyItem */}
+        <ShopDrawer 
+          opened={shopOpened} 
+          onClose={closeShop} 
+          currentUser={currentUser} 
+          onBuyItem={handleBuyItem} 
+        />
 
       </LifeBarProvider>
     </PvpProvider>

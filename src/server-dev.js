@@ -14,6 +14,12 @@ const DEFAULT_KILL_TITLE = 'Eliminação!';
 const MAX_KILL_MESSAGE_LENGTH = 50; // Garante que o backend use o mesmo limite
 const MAX_SIGNATURES = 3; // Limite de assinaturas
 
+// Definição de itens (pode ser movida para um arquivo separado no futuro)
+const itemsData = {
+  vest: { name: 'Colete DPE', price: 1 },
+  // Adicionar mais itens aqui
+};
+
 app.prepare().then(() => {
   const server = express();
   const httpServer = createServer(server);
@@ -71,7 +77,8 @@ app.prepare().then(() => {
         life: GAME_CONFIG.LIFE.MAX, // Adiciona vida inicial
         customKillSignatures: [],
         score: 0,
-        kills: 0 // <-- Inicializa kills
+        kills: 0, // <-- Inicializa kills
+        inventory: [], // <<<<< ADICIONAR INVENTÁRIO INICIAL
       });
 
       // Se não for o primeiro participante, copia o modo PVP do moderador
@@ -367,6 +374,68 @@ app.prepare().then(() => {
       }
     });
     // --- Fim do Listener Múltiplo ---
+
+    // --- Listener para Compra de Item ---
+    socket.on('buyItem', ({ codigo, userId, itemId, itemPrice }) => {
+      console.log(`[Server] Recebido buyItem: user=${userId}, item=${itemId}, price=${itemPrice}, sala=${codigo}`);
+      if (!salas.has(codigo)) {
+        console.log(`[Server] buyItem falhou: Sala ${codigo} não encontrada.`);
+        return; // Sala não existe
+      }
+
+      const sala = salas.get(codigo);
+      const participante = Array.from(sala.participantes.values()).find(p => p.id === userId);
+
+      if (!participante) {
+        console.log(`[Server] buyItem falhou: Participante ${userId} não encontrado na sala ${codigo}.`);
+        return; // Participante não encontrado
+      }
+
+      const item = itemsData[itemId]; // Busca a definição do item
+
+      if (!item) {
+        console.log(`[Server] buyItem falhou: Item ${itemId} desconhecido.`);
+        return; // Item não existe na definição do servidor
+      }
+
+      // Validação crucial do preço (evita trapaça no frontend)
+      if (item.price !== itemPrice) {
+         console.log(`[Server] buyItem falhou: Preço inválido para ${itemId}. Esperado: ${item.price}, Recebido: ${itemPrice}`);
+         // Poderia emitir um erro de volta para o usuário aqui
+         return; 
+      }
+
+      if (participante.inventory.includes(itemId)) {
+        console.log(`[Server] buyItem falhou: Participante ${userId} já possui o item ${itemId}.`);
+        // Poderia emitir um erro/aviso de volta para o usuário
+        return; // Usuário já tem o item
+      }
+
+      if (participante.score < item.price) {
+        console.log(`[Server] buyItem falhou: Score insuficiente para ${userId} comprar ${itemId}. Score: ${participante.score}, Preço: ${item.price}`);
+        // Poderia emitir um erro de volta para o usuário
+        return; // Score insuficiente
+      }
+
+      // Todas as validações passaram! Processar a compra.
+      try {
+        participante.score -= item.price;
+        participante.inventory.push(itemId);
+        console.log(`[Server] Compra bem-sucedida: ${userId} comprou ${itemId} por ${item.price}. Novo score: ${participante.score}. Inventário:`, participante.inventory);
+
+        // Notificar todos na sala sobre a atualização dos participantes (novo score e inventário)
+        io.to(codigo).emit('atualizarParticipantes', Array.from(sala.participantes.values()));
+        console.log(`[Server] Emitido atualizarParticipantes para sala ${codigo} após compra.`);
+
+        // Poderia emitir um evento de sucesso específico para o comprador
+        // socket.emit('buyItemSuccess', { itemId });
+
+      } catch (error) {
+        console.error(`[Server] Erro ao processar compra para ${userId}:`, error);
+        // Reverter transação? (Neste caso simples, talvez não necessário, mas em cenários complexos sim)
+      }
+    });
+    // -------------------------------------
 
     // Desconexão
     socket.on('disconnect', () => {

@@ -6,7 +6,8 @@ import { InventoryDisplay } from '../GameElements/InventoryDisplay';
 export default function OpcoesVotacao({ 
   onVotar, 
   onCancelarVoto, 
-  meuVoto = null
+  meuVoto = null,
+  currentUser
 }) {
   const [valorSelecionado, setValorSelecionado] = useState(null);
   const opcoesDeVoto = ['1', '2', '3', '4', '5', '?'];
@@ -68,7 +69,7 @@ export default function OpcoesVotacao({
           </Group>
         </Box>
 
-        <InventoryDisplay />
+        <InventoryDisplay currentUser={currentUser} />
       </Group>
     </Paper>
   );

@@ -13,12 +13,16 @@ const DEFAULT_KILL_TITLE = 'Eliminação!';
 
 const MAX_KILL_MESSAGE_LENGTH = 50; // Garante que o backend use o mesmo limite
 const MAX_SIGNATURES = 3; // Limite de assinaturas
+const COLETE_DPE_ID = 'vest'; // Definir ID constante no servidor
 
 // Definição de itens (pode ser movida para um arquivo separado no futuro)
 const itemsData = {
-  vest: { name: 'Colete DPE', price: 1 },
+  [COLETE_DPE_ID]: { name: 'Colete DPE', price: 1 },
   // Adicionar mais itens aqui
 };
+
+// Helper para verificar quais itens são acessórios (simplificado por enquanto)
+const isAccessory = (itemId) => itemId === COLETE_DPE_ID;
 
 app.prepare().then(() => {
   const server = express();
@@ -59,8 +63,12 @@ app.prepare().then(() => {
       if (!salas.has(codigo)) {
         salas.set(codigo, {
           participantes: new Map(),
-          revelarVotos: false
+          moderadorId: null,
+          revelarVotos: false,
+          pvpAtivo: false, // Adiciona estado PVP inicial para a sala
+          // Adiciona mais estados da sala se necessário
         });
+        console.log(`Sala ${codigo} criada por ${usuario.nome}`);
       }
       
       const salaAtual = salas.get(codigo);
@@ -79,6 +87,7 @@ app.prepare().then(() => {
         score: 0,
         kills: 0, // <-- Inicializa kills
         inventory: [], // <<<<< ADICIONAR INVENTÁRIO INICIAL
+        equippedAccessory: null, // <<<< Novo estado para acessório equipado
       });
 
       // Se não for o primeiro participante, copia o modo PVP do moderador
@@ -370,6 +379,34 @@ app.prepare().then(() => {
     });
     // --- Fim do Listener Múltiplo ---
 
+    // --- Listener para Equipar/Desequipar Acessório ---
+    socket.on('toggleEquipAccessory', ({ codigo, itemId }) => {
+      if (!salas.has(codigo)) return;
+      const sala = salas.get(codigo);
+      const participante = sala.participantes.get(socket.id);
+
+      if (participante && participante.inventory?.includes(itemId)) {
+        // Se o item clicado já está equipado, desequipa.
+        if (participante.equippedAccessory === itemId) {
+          participante.equippedAccessory = null;
+          console.log(`[${codigo}] ${participante.nome} desequipou ${itemId}`);
+        } 
+        // Se nenhum item está equipado ou outro item está equipado, equipa o novo item.
+        else {
+          // Por enquanto, só permitimos 1 acessório (o colete), então podemos simplesmente equipar.
+          // No futuro, pode precisar de lógica para desequipar o anterior se houver slots.
+          participante.equippedAccessory = itemId;
+          console.log(`[${codigo}] ${participante.nome} equipou ${itemId}`);
+        }
+        
+        // Notifica todos sobre a mudança no estado do participante
+        io.to(codigo).emit('atualizarParticipantes', Array.from(sala.participantes.values()));
+      } else {
+        console.warn(`[${codigo}] Participante ${socket.id} tentou equipar item inválido (${itemId}) ou não encontrado.`);
+      }
+    });
+    // --- Fim do Listener Equipar/Desequipar ---
+
     // --- Listener para Compra de Item ---
     socket.on('buyItem', ({ codigo, userId, itemId, itemPrice }) => {
       console.log(`[Server] Recebido buyItem: user=${userId}, item=${itemId}, price=${itemPrice}, sala=${codigo}`);
@@ -416,18 +453,27 @@ app.prepare().then(() => {
       try {
         participante.score -= item.price;
         participante.inventory.push(itemId);
+
+        // --- Lógica de Auto-Equipar --- 
+        // Conta quantos acessórios o participante tem AGORA
+        const currentAccessoryCount = participante.inventory.filter(isAccessory).length;
+        
+        // Se o item comprado é um acessório E é o único acessório que ele possui,
+        // equipa automaticamente.
+        if (isAccessory(itemId) && currentAccessoryCount === 1) {
+          participante.equippedAccessory = itemId;
+          console.log(`[${codigo}] ${participante.nome} equipou automaticamente ${itemId} por ser o único acessório.`);
+        }
+        // --- Fim da Lógica de Auto-Equipar ---
+
         console.log(`[Server] Compra bem-sucedida: ${userId} comprou ${itemId} por ${item.price}. Novo score: ${participante.score}. Inventário:`, participante.inventory);
 
         // Notificar todos na sala sobre a atualização dos participantes (novo score e inventário)
         io.to(codigo).emit('atualizarParticipantes', Array.from(sala.participantes.values()));
         console.log(`[Server] Emitido atualizarParticipantes para sala ${codigo} após compra.`);
 
-        // Poderia emitir um evento de sucesso específico para o comprador
-        // socket.emit('buyItemSuccess', { itemId });
-
       } catch (error) {
         console.error(`[Server] Erro ao processar compra para ${userId}:`, error);
-        // Reverter transação? (Neste caso simples, talvez não necessário, mas em cenários complexos sim)
       }
     });
     // -------------------------------------

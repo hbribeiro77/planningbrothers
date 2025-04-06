@@ -19,7 +19,7 @@ import {
   Badge,
   Drawer
 } from '@mantine/core';
-import { IconCopy, IconCheck, IconX, IconKeyboard, IconCoin, IconSkull, IconShoppingCart, IconSettings, IconKeyboardOff, IconEye, IconEyeOff, IconVolume, IconVolumeOff, IconMessageCircle, IconColorSwatch } from '@tabler/icons-react';
+import { IconCopy, IconCheck, IconX, IconKeyboard, IconCoin, IconSkull, IconShoppingCart, IconSettings, IconKeyboardOff, IconEye, IconEyeOff, IconVolume, IconVolumeOff, IconMessageCircle, IconColorSwatch, IconShirt } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 
 import Mesa from '@/components/Mesa/Mesa';
@@ -33,6 +33,12 @@ import { KillFeedDisplay } from '@/components/GameElements/KillFeedDisplay';
 import { LifeBarProvider } from '@/contexts/LifeBarContext';
 import { PvpProvider, PvpContext } from '@/contexts/PvpContext';
 import ShopDrawer from '@/components/Shop/ShopDrawer';
+
+// Mover a definição para fora para poder usar no useEffect
+const accessoryIcons = {
+  vest: IconShirt,
+  // Adicionar outros acessórios aqui
+};
 
 // Componente que pede o nome do usuário - mantém a aparência original
 function PedirNome({ codigoSala, nomeSugerido, onNomeDefinido }) {
@@ -84,7 +90,7 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     lastKillInfo
   } = useSalaSocket(codigoSala, nomeUsuario);
 
-  const currentUser = participantes.find(p => p.nome === nomeUsuario) || { id: '', nome: nomeUsuario, score: 0, kills: 0, inventory: [] };
+  const currentUser = participantes.find(p => p.nome === nomeUsuario) || { id: '', nome: nomeUsuario, score: 0, kills: 0, inventory: [], equippedAccessory: null };
   const currentUserScore = currentUser.score || 0;
   const currentUserKills = currentUser.kills || 0;
 
@@ -145,6 +151,28 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     console.log("SalaConteudo: Recebeu mudança na configuração de piscada:", isEnabled);
     setIsFlashEffectEnabled(isEnabled);
   };
+
+  // NOVA FUNÇÃO para emitir evento para o servidor
+  const handleToggleEquipAccessory = useCallback((itemId) => {
+    if (!socket) {
+      console.error("Socket não conectado, não é possível equipar/desequipar.");
+      return;
+    }
+    if (!itemId) {
+        console.warn("Tentativa de equipar/desequipar item nulo.");
+        // Se clicar no selecionado, o InventoryDisplay deve passar null?
+        // A lógica atual no servidor trata isso: se equipar null ou item diferente, equipa o novo.
+        // Se equipar o mesmo, desequipa. Mas o clique deve sempre mandar o itemId.
+        // Ajustaremos o InventoryDisplay para sempre enviar o itemId.
+        return;
+    }
+    
+    console.log(`[UI] Emitindo toggleEquipAccessory: { itemId: ${itemId} }`);
+    socket.emit('toggleEquipAccessory', { 
+      codigo: codigoSala,
+      itemId: itemId
+    });
+  }, [socket, codigoSala]);
 
   // --- Função para lidar com a compra de itens --- 
   const handleBuyItem = useCallback((itemId, itemPrice) => {
@@ -327,6 +355,7 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
               onVotar={handleVotar}
               onCancelarVoto={handleCancelarVoto}
               currentUser={currentUser}
+              onToggleEquip={handleToggleEquipAccessory}
               style={{
                 opacity: entradaAnimada ? 1 : 0,
                 transform: entradaAnimada ? 'translateY(0)' : 'translateY(20px)',

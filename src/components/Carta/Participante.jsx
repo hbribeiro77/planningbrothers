@@ -1,20 +1,32 @@
 import { Paper, Text, Badge, useMantineTheme } from '@mantine/core';
 import { IconEye, IconSkull } from '@tabler/icons-react';
 import { LifeBar } from '../GameElements/LifeBar';
+// import { ITEMS } from '@/constants/items'; // << Importar constantes (quando existirem)
+const COLETE_DPE_ID = 'vest'; // << Usar ID constante (simulado por enquanto)
 
 export default function CartaParticipante({ 
-  nome, 
-  jaVotou = false, 
-  valorVotado = null, 
+  participante,
   revelarVotos = false,
-  isModerador = false,
-  isObservador = false,
-  id,
-  life = 100,
-  maxLife = 100,
+  showVest = false,
+  // hasVest = false, // << Prop removida, verificaremos aqui
 }) {
   const theme = useMantineTheme();
   const isDark = theme.colorScheme === 'dark';
+
+  const {
+    id,
+    nome,
+    jaVotou = false,
+    valorVotado = null,
+    isModerador = false,
+    isObservador = false,
+    life = 100,
+    maxLife = 100,
+    inventory = []
+  } = participante || {};
+
+  // Não precisamos mais verificar o inventário aqui
+  // const hasVest = inventory.includes(COLETE_DPE_ID);
 
   const isDead = life <= 0;
 
@@ -50,17 +62,36 @@ export default function CartaParticipante({
         transition: 'all 0.3s ease',
         opacity: isObservador ? 0.85 : 1,
         minHeight: 'clamp(68px, 5vw, 80px)',
+        overflow: 'hidden',
       }}
     >
-      {/* Barra de vida */}
       {!isObservador && <LifeBar currentLife={life} maxLife={maxLife} avatarId={id} />}
+
+      {/* Ícone do Colete (renderizado condicionalmente) */}
+      {showVest && (
+        <img 
+          src="/images/game-objects/vest.svg"
+          alt="Colete DPE"
+          style={{
+            position: 'absolute',
+            top: '60%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '140%',
+            height: 'auto',
+            opacity: 0.6,
+            pointerEvents: 'none',
+            zIndex: 1,
+          }}
+        />
+      )}
 
       {isModerador && (
         <Badge 
           size="xs" 
           color="blue" 
           radius="sm" 
-          style={{ position: 'absolute', top: 2, right: 2 }}
+          style={{ position: 'absolute', top: 2, right: 2, zIndex: 2 }}
         >
           M
         </Badge>
@@ -71,7 +102,7 @@ export default function CartaParticipante({
           size="xs" 
           color="teal" 
           radius="sm" 
-          style={{ position: 'absolute', top: 2, left: 2 }}
+          style={{ position: 'absolute', top: 2, left: 2, zIndex: 2 }}
           leftSection={<IconEye size={10} />}
         >
           O
@@ -86,7 +117,8 @@ export default function CartaParticipante({
             bottom: 3,
             right: 3,
             color: theme.colors.red[7],
-            filter: 'drop-shadow(1px 1px 1px rgba(0,0,0,0.5))'
+            filter: 'drop-shadow(1px 1px 1px rgba(0,0,0,0.5))',
+            zIndex: 2
           }}
         />
       )}
@@ -98,31 +130,33 @@ export default function CartaParticipante({
         style={{ 
           marginBottom: 5, 
           fontSize: '0.75rem',
+          position: 'relative',
+          zIndex: 3,
         }}
       >
         {nome}
       </Text>
       
       {jaVotou && revelarVotos && !isObservador && (
-        <Text fw={700} size="md" c={isDark ? 'blue.4' : 'blue'}>
+        <Text fw={700} size="md" c={isDark ? 'blue.4' : 'blue'} style={{ position: 'relative', zIndex: 3 }}>
           {valorVotado === "?" ? "?" : valorVotado}
         </Text>
       )}
       
       {jaVotou && !revelarVotos && !isObservador && (
-        <Text size="xs" c="dimmed" style={{ fontSize: '0.75rem' }}>
+        <Text size="xs" c="dimmed" style={{ fontSize: '0.75rem', position: 'relative', zIndex: 3 }}>
           Votou
         </Text>
       )}
       
       {!jaVotou && !isObservador && (
-        <Text size="xs" c="dimmed" style={{ fontSize: '0.75rem' }}>
+        <Text size="xs" c="dimmed" style={{ fontSize: '0.75rem', position: 'relative', zIndex: 3 }}>
           ...
         </Text>
       )}
       
       {isObservador && (
-        <IconEye size={16} color={isDark ? '#2d5640' : '#20c997'} style={{ opacity: 0.7 }} />
+        <IconEye size={16} color={isDark ? '#2d5640' : '#20c997'} style={{ opacity: 0.7, position: 'relative', zIndex: 3 }} />
       )}
     </Paper>
   );

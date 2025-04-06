@@ -1,6 +1,8 @@
 import { Box, Paper, Group, Stack, Text, Flex, Badge, Title, Button } from '@mantine/core';
 import { IconCheck } from '@tabler/icons-react';
 import CartaParticipante from '../Carta/Participante';
+// import { ITEMS } from '@/constants/items'; // << Importar constantes (quando existirem)
+const COLETE_DPE_ID = 'vest'; // << Usar ID constante (simulado por enquanto)
 
 export default function Mesa({ 
   participantes = [], 
@@ -246,20 +248,19 @@ export default function Mesa({
               zIndex: 10
             }}
           >
-            {lados.superior.map((participante, idx) => (
-              <CartaParticipante
-                key={`top-${idx}`}
-                id={participante.id}
-                nome={participante.nome}
-                jaVotou={participante.jaVotou}
-                valorVotado={participante.valorVotado}
-                revelarVotos={revelarVotos}
-                isModerador={participante.isModerador}
-                isObservador={participante.isObservador}
-                life={participante.life}
-                maxLife={participante.maxLife}
-              />
-            ))}
+            {lados.superior.map((participante, idx) => {
+              // Mostrar colete SE o participante tiver o COLETE_DPE_ID como equipado
+              const showVestOnThisParticipant = participante.equippedAccessory === COLETE_DPE_ID;
+              
+              return (
+                <CartaParticipante
+                  key={participante.id || idx}
+                  participante={participante}
+                  revelarVotos={revelarVotos}
+                  showVest={showVestOnThisParticipant}
+                />
+              );
+            })}
           </div>
           
           {/* Participantes - Parte inferior */}
@@ -278,20 +279,19 @@ export default function Mesa({
               zIndex: 10
             }}
           >
-            {lados.inferior.map((participante, idx) => (
-              <CartaParticipante
-                key={`bottom-${idx}`}
-                id={participante.id}
-                nome={participante.nome}
-                jaVotou={participante.jaVotou}
-                valorVotado={participante.valorVotado}
-                revelarVotos={revelarVotos}
-                isModerador={participante.isModerador}
-                isObservador={participante.isObservador}
-                life={participante.life}
-                maxLife={participante.maxLife}
-              />
-            ))}
+            {lados.inferior.map((participante, idx) => {
+               // Mostrar colete SE o participante tiver o COLETE_DPE_ID como equipado
+              const showVestOnThisParticipant = participante.equippedAccessory === COLETE_DPE_ID;
+
+              return (
+                <CartaParticipante
+                  key={participante.id || idx}
+                  participante={participante}
+                  revelarVotos={revelarVotos}
+                  showVest={showVestOnThisParticipant}
+                />
+              );
+            })}
           </div>
         </div>
       </Paper>

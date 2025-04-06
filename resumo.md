@@ -1,7 +1,7 @@
 # Resumo do Projeto Planning Poker
 
 ## Visão Geral
-Aplicação web para facilitar sessões de Planning Poker em equipes ágeis, permitindo votação em tempo real através de WebSocket.
+Aplicação web para facilitar sessões de Planning Poker em equipes ágeis, permitindo votação em tempo real através de WebSocket, com elementos de gamificação.
 
 ## Requisitos do Sistema
 - Node.js 18.x ou superior
@@ -31,29 +31,34 @@ planningbrothers/
 │   ├── components/            # Componentes React
 │   │   ├── Auth/             # Componentes de autenticação
 │   │   │   └── FormularioEntrada.jsx # Formulário de entrada na sala
+│   │   ├── Carta/            # Componentes de carta (Votação, Participante)
+│   │   │   ├── Participante.jsx # Card de Participante (Avatar)
+│   │   │   └── Votacao.jsx      # Card de Votação clicável
 │   │   ├── GameElements/     # Componentes de gamificação
 │   │   │   ├── KeyboardThrower.jsx # Sistema de arremesso de teclado
-│   │   │   ├── GameController.jsx # Controlador de elementos de gamificação
+│   │   │   ├── GameController.jsx # Controlador de elementos de gamificação e configurações
 │   │   │   ├── LifeBar.jsx   # Barra de vida dos participantes
-│   │   │   └── KillFeedDisplay.jsx # Exibe as notificações de eliminação com animações
+│   │   │   ├── KillFeedDisplay.jsx # Exibe as notificações de eliminação
+│   │   │   └── InventoryDisplay.jsx # Exibe inventário de armas e acessórios
 │   │   ├── Mesa/             # Componentes da mesa de Planning Poker
 │   │   │   └── Mesa.jsx      # Componente principal da mesa
-│   │   ├── Participante/     # Componentes de participante
-│   │   │   └── Card.jsx      # Card de participante
-│   │   └── Sala/             # Componentes da sala
-│   │       └── OpcoesVotacao.jsx # Opções de votação
+│   │   ├── Sala/             # Componentes da sala
+│   │   │   └── OpcoesVotacao.jsx # Agrupa opções de voto e inventário
+│   │   └── Shop/             # Componentes da Loja
+│   │       └── ShopDrawer.jsx  # Painel lateral da loja de itens
 │   ├── contexts/             # Contextos React
 │   │   ├── SocketContext.js  # Gerenciamento do Socket.io
-│   │   └── LifeBarContext.jsx # Gerenciamento da visibilidade da barra de vida
+│   │   ├── LifeBarContext.jsx # Gerenciamento da visibilidade da barra de vida
 │   │   └── PvpContext.jsx    # Gerenciamento do estado PVP compartilhado
 │   ├── hooks/                # Hooks personalizados
-│   │   └── useSalaSocket.js  # Lógica de eventos da sala
+│   │   ├── useSalaSocket.js  # Lógica de eventos da sala
 │   │   └── useSalaUiEffects.js # Lógica de efeitos visuais da sala (animações, piscada)
 │   ├── constants/            # Constantes e configurações
-│   │   ├── socketEvents.js   # Eventos do Socket.io
+│   │   ├── socketEvents.js   # Eventos do Socket.io (idealmente)
 │   │   └── gameConfig.js     # Configurações do jogo (vida, dano, tempos)
+│   │   └── itemsData.js      # Dados dos itens (Loja, Inventário) (idealmente)
 │   ├── services/             # Serviços da aplicação
-│   │   └── AnimationService.js # Serviço de animações centralizado
+│   │   └── AnimationService.jsx # Serviço de animações centralizado (agora .jsx)
 │   ├── styles/               # Estilos CSS
 │   │   └── animations.css    # Animações e efeitos visuais
 │   ├── utils/                # Utilitários e funções auxiliares
@@ -63,10 +68,13 @@ planningbrothers/
 │   ├── pages/                # Páginas legadas (em migração)
 │   └── server-dev.js         # Servidor de desenvolvimento
 ├── public/                   # Arquivos estáticos
+│   ├── audio/                # Arquivos de áudio
+│   │   └── beat.wav
 │   ├── images/              # Imagens e recursos gráficos
 │   │   └── game-objects/    # Recursos para elementos de gamificação
 │   │       ├── keyboard.svg # Ícone de teclado para arremesso
-│   │       └── collision.svg # Efeito de explosão
+│   │       ├── collision.svg # Efeito de explosão
+│   │       └── vest.svg      # Ícone do Colete DPE
 ├── .env.example             # Template de variáveis de ambiente
 ├── render.yaml              # Configuração de deploy no Render
 └── package.json             # Dependências e scripts
@@ -80,12 +88,13 @@ planningbrothers/
 
 2. **Votação em Tempo Real**
    - Sistema de votação usando Socket.io
-   - Atualização instantânea dos votos
-   - Revelação de votos controlada
+   - Atualização instantânea dos votos (incluindo mudança de voto antes e após revelação)
+   - Revelação de votos controlada pelo moderador
+   - Exibição de estatísticas (média, moda, consenso) após revelação
 
 3. **Interface do Usuário**
    - Design responsivo com Mantine UI
-   - Feedback visual das ações
+   - Feedback visual das ações (voto, dano, etc.)
    - Identificação de moderador da sala
    - Modo observador para stakeholders
 
@@ -95,37 +104,54 @@ planningbrothers/
    - Identificação única de participantes
    - Fluxos diferentes para criação e convites
 
-5. **Elementos de Gamificação**
-   - Sistema de arremesso de teclado para interação divertida entre participantes
-   - Efeitos visuais de animação, explosão e ricochete
-   - Feedback tátil com efeito de tremor no avatar atingido
-   - Sistema de vida com barra de status visual
-   - Dano baseado no tipo de objeto arremessado
-   - Comunicação em tempo real via WebSockets para sincronização multiplayer
-   - **Estado PVP (Modo Diversão) compartilhado via Context API (`PvpContext`)** para sincronização entre componentes.
-   - `GameController` para interação com elementos de gamificação e **controle de ativação do modo PVP (via contexto)**.
-   - **Configuração de efeitos visuais (Som, Piscada de Dano)** na interface do `GameController`.
-   - Sistema de configuração centralizado para ajuste fácil de parâmetros do jogo
-   - Barra de vida que aparece apenas quando o participante recebe dano
-   - Feedback visual de dano com cores dinâmicas na barra de vida
-   - **Seleção de arma desabilitada visualmente quando o modo PVP está desligado.**
+5. **Elementos de Gamificação** (Expandido)
+   - **Combate PvP:**
+     - Sistema de arremesso de teclado para interação entre participantes (requer Modo PvP ativo).
+     - Efeitos visuais de animação (voo, explosão, ricochete) e tremor no avatar atingido.
+     - Sistema de vida com barra de status visual.
+     - Dano baseado no tipo de objeto arremessado, configurável.
+     - Comunicação em tempo real via WebSockets para sincronização multiplayer.
+     - Estado PVP (Modo Diversão) compartilhado via Context API (`PvpContext`).
+   - **Loja e Inventário:**
+     - Loja acessível via painel lateral (`ShopDrawer`).
+     - Jogadores podem gastar pontos (score) ganhos para comprar itens (ex: Colete DPE).
+     - Itens comprados são adicionados ao inventário do jogador (estado no servidor).
+     - `InventoryDisplay` mostra os itens possuídos (Armas, Acessórios).
+   - **Acessórios Equipáveis:**
+     - Certos acessórios (como o Colete DPE) podem ser "equipados" clicando no seu ícone no inventário (se for o único acessório possuído).
+     - O estado "equipado" é sincronizado via servidor (`equippedAccessory` no estado do participante).
+     - O acessório equipado é exibido visualmente no avatar (`CartaParticipante`) do jogador, visível para todos na sala.
+   - **Controles e Configurações (`GameController`):**
+     - Ativação/desativação do Modo PVP (via contexto).
+     - Configuração de efeitos visuais/sonoros (Som, Piscada de Dano).
+     - Configuração de assinaturas de eliminação personalizadas para o Kill Feed.
+   - **Kill Feed (Notificação de Eliminação) com Assinaturas:**
+     - Notificações visuais quando um jogador elimina outro.
+     - Exibe mensagens personalizadas (assinaturas) definidas pelo atacante.
 
 ## Fluxo de Dados
 1. **Conexão**
    - Cliente conecta ao servidor Socket.io via WebSocket
    - Gerenciamento de reconexão automática
 
-2. **Eventos da Sala**
-   - Entrada/saída de participantes
-   - Votação e cancelamento de votos
-   - Revelação de votos
-   - Atualização de status
-   - Alternância de modo observador
-   - Interações de gamificação (arremesso de objetos)
+2. **Eventos da Sala (Socket.io)**
+   - Entrada/saída de participantes (`entrarSala`, `disconnect`, `usuarioSaiu`)
+   - Votação e cancelamento de votos (`votar`, `cancelarVoto`)
+   - Revelação de votos (`revelarVotos`)
+   - Reinício de votação (`reiniciarVotacao`)
+   - Atualização de estado geral (`atualizarParticipantes`)
+   - Alternância de modo observador (`alternarModoObservador`)
+   - Interações de gamificação:
+     - Arremesso de objeto (`throwObject`)
+     - Aplicação de dano (`damage`)
+     - Compra de item (`buyItem`)
+     - Equipar/Desequipar acessório (`toggleEquipAccessory`)
+     - Mudança de modo PvP (`funModeChanged`)
+     - Definição de assinaturas (`setCustomKillSignatures`)
 
 3. **Estado da Aplicação**
-   - Gerenciamento via Context API (Socket.io, Barra de Vida, **Estado PVP**)
-   - Persistência de estado durante a sessão
+   - **Servidor:** Fonte única da verdade para estado compartilhado (participantes, votos, inventários, acessório equipado, estado da sala).
+   - **Cliente:** Gerenciamento de UI local e reflexo do estado do servidor via Context API (Socket.io, Barra de Vida, Estado PVP) e hooks (`useSalaSocket`, `useSalaUiEffects`).
 
 ## Segurança
 1. **Variáveis de Ambiente**

@@ -7,7 +7,8 @@ export default function OpcoesVotacao({
   onVotar, 
   onCancelarVoto, 
   meuVoto = null,
-  currentUser
+  currentUser,
+  onToggleEquip
 }) {
   const [valorSelecionado, setValorSelecionado] = useState(null);
   const opcoesDeVoto = ['1', '2', '3', '4', '5', '?'];
@@ -69,7 +70,10 @@ export default function OpcoesVotacao({
           </Group>
         </Box>
 
-        <InventoryDisplay currentUser={currentUser} />
+        <InventoryDisplay 
+          currentUser={currentUser} 
+          onToggleEquip={onToggleEquip}
+        />
       </Group>
     </Paper>
   );

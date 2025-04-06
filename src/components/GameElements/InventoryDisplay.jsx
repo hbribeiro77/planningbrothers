@@ -9,13 +9,31 @@ const accessoryIcons = {
   // Adicionar outros acessórios aqui
 };
 
-export function InventoryDisplay({ currentUser }) {
+// Definição dos dados dos itens (nome para o tooltip)
+// TODO: Mover para um arquivo de constantes compartilhado (e.g., src/constants/itemsData.js)
+const itemsData = {
+  vest: { 
+    name: 'Colete DPE', 
+    // outras props se necessário, como descrição, etc.
+  },
+  // Adicionar outros itens aqui
+};
+
+const COLETE_DPE_ID = 'vest'; // << Usar ID constante
+
+export function InventoryDisplay({ 
+  currentUser, 
+  onToggleEquip
+}) {
   const { pvpStatus } = usePvpStatus();
   
   const [armaSelecionada, setArmaSelecionada] = useState('keyboard');
   const armasDisponiveis = [{ id: 'keyboard', nome: 'Teclado', icon: IconKeyboard }];
   // Obter acessórios do inventário do currentUser passado via prop
   const userAccessories = currentUser?.inventory?.filter(itemId => accessoryIcons[itemId]) || [];
+  
+  // Acessório clicável SE tiver exatamente um E ele for o Colete DPE
+  const isColeteDPEClicable = userAccessories.length === 1 && userAccessories[0] === COLETE_DPE_ID;
 
   const handleSelecionarArma = (armaId) => {
     console.log("Seleção de arma (futuro):", armaId);
@@ -58,14 +76,25 @@ export function InventoryDisplay({ currentUser }) {
           <Group position="center" spacing="xs" style={{ minHeight: 42 }}>
             {userAccessories.map((itemId) => {
               const AccessoryIcon = accessoryIcons[itemId];
-              const itemName = itemId; // Usar o ID como nome por enquanto
+              const itemName = itemsData[itemId]?.name || itemId; 
+              
+              // Verifica se ESTE item é o Colete DPE
+              const isThisColeteDPE = itemId === COLETE_DPE_ID;
+              
+              // Está selecionado SE este for o Colete DPE E ele estiver equipado no currentUser
+              const isSelected = isThisColeteDPE && currentUser?.equippedAccessory === COLETE_DPE_ID;
+              
+              // Define se ESTE ícone específico é clicável (é Colete DPE e o único acessório)
+              const isClickable = isColeteDPEClicable && isThisColeteDPE;
+              
               return (
                 <Tooltip key={itemId} label={itemName} openDelay={300}>
                   <ActionIcon
-                    variant="outline"
-                    color="gray"
+                    variant={isSelected ? 'filled' : 'outline'} 
+                    color={isSelected ? 'blue' : 'gray'} // << Mudar para 'blue' quando selecionado
                     size="lg"
-                    disabled
+                    disabled={!isClickable} 
+                    onClick={() => isClickable && onToggleEquip(itemId)} // Chama onToggleEquip SÓ se clicável
                   >
                     <AccessoryIcon size={20} />
                   </ActionIcon>

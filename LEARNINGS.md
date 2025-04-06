@@ -129,6 +129,18 @@ useEffect(() => {
   ```
 - Isso evita a necessidade de estados locais adicionais apenas para refletir informações que já estão disponíveis no estado sincronizado, simplificando o fluxo de dados no componente.
 
+### Sincronização de Estado Visual de Itens Equipados (Novo)
+
+- **Problema:** Tentar controlar a visibilidade de um item equipado (ex: um colete no avatar) usando apenas o estado local do cliente (ex: qual item está 'selecionado' no inventário) causa inconsistências visuais. O jogador que equipa vê o item no avatar, mas os outros jogadores não, pois o estado de seleção local não é compartilhado.
+- **Solução:** O estado de qual item está ativamente "equipado" para exibição visual deve ser parte do estado do participante no **servidor** (ex: `participante.equippedAccessory: string | null`).
+- **Fluxo:**
+    1. O cliente emite um evento (`toggleEquipAccessory`) quando o usuário clica para equipar/desequipar um item.
+    2. O servidor recebe o evento, valida a ação (ex: se o jogador possui o item), atualiza o campo `participante.equippedAccessory` (com o ID do item ou `null`).
+    3. O servidor emite a atualização completa do estado dos participantes (`atualizarParticipantes`) para todos na sala.
+    4. **Todos** os clientes recebem a atualização. A renderização do avatar de *qualquer* participante (ex: `CartaParticipante`) verifica o `participante.equippedAccessory` daquele participante específico para decidir se mostra ou não o visual do item equipado (ex: o SVG do colete).
+    5. O estado visual do inventário do *próprio* usuário (ex: cor do ícone do item) também é baseado no `currentUser.equippedAccessory` recebido do servidor.
+- **Benefício:** Garante que a aparência visual dos itens equipados nos avatares seja consistente para todos os jogadores, refletindo o estado real gerenciado pelo servidor.
+
 ## Sincronização de Eventos e Animações em Multiplayer
 
 ### Padrão de Separação de Eventos de Animação e Lógica

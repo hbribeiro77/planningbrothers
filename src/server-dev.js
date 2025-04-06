@@ -3,6 +3,7 @@ const { createServer } = require('http');
 const next = require('next');
 const { Server } = require('socket.io');
 const { GAME_CONFIG } = require('./constants/gameConfig');
+const { ITEMS_DATA, KEYBOARD_ID } = require('./constants/itemsData');
 
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
@@ -13,18 +14,37 @@ const DEFAULT_KILL_TITLE = 'Eliminação!';
 
 const MAX_KILL_MESSAGE_LENGTH = 50; // Garante que o backend use o mesmo limite
 const MAX_SIGNATURES = 3; // Limite de assinaturas
-const COLETE_DPE_ID = 'vest';
-const COLETE_BLUE_ID = 'vest_blue'; // << Novo ID
-
-// Definição de itens
-const itemsData = {
-  [COLETE_DPE_ID]: { name: 'Colete DPE', price: 1 },
-  [COLETE_BLUE_ID]: { name: 'Colete Blue', price: 1 }, // << Adicionar novo colete
-  // Adicionar mais itens aqui
-};
 
 // Helper para verificar quais itens são acessórios
-const isAccessory = (itemId) => itemId === COLETE_DPE_ID || itemId === COLETE_BLUE_ID;
+const isAccessory = (itemId) => itemId && ITEMS_DATA[itemId]?.type === 'accessory';
+
+/**
+ * Rola dados baseado na notação NdS (ex: '1d6', '2d4').
+ * Retorna a soma dos resultados ou 0 se a notação for inválida.
+ */
+function rollDice(diceString) {
+  if (!diceString || typeof diceString !== 'string') {
+    return 0;
+  }
+  const match = diceString.toLowerCase().match(/^(\d+)d(\d+)$/);
+  if (!match) {
+    return 0; // Retorna 0 se a notação não for 'NdS'
+  }
+
+  const numDice = parseInt(match[1], 10);
+  const numSides = parseInt(match[2], 10);
+
+  if (isNaN(numDice) || isNaN(numSides) || numDice <= 0 || numSides <= 0) {
+    return 0; // Dados inválidos
+  }
+
+  let total = 0;
+  for (let i = 0; i < numDice; i++) {
+    total += Math.floor(Math.random() * numSides) + 1;
+  }
+  // console.log(`[DiceRoller] Rolled ${diceString}: ${total}`); // Log opcional
+  return total;
+}
 
 app.prepare().then(() => {
   const server = express();
@@ -88,7 +108,7 @@ app.prepare().then(() => {
         customKillSignatures: [],
         score: 0,
         kills: 0, // <-- Inicializa kills
-        inventory: [], // <<<<< ADICIONAR INVENTÁRIO INICIAL
+        inventory: [KEYBOARD_ID], // <<< INICIALIZAR COM TECLADO
         equippedAccessory: null, // <<<< Novo estado para acessório equipado
       });
 
@@ -121,12 +141,10 @@ app.prepare().then(() => {
     });
 
     // Aplicar dano após a animação
-    socket.on('damage', (data) => {
-      // Receber objectType do payload
-      const { codigo, fromUserId, targetId, damage, objectType } = data;
+    socket.on('attack', (data) => {
+      const { codigo, fromUserId, targetId, objectType } = data;
       
-      // Log inicial para depuração (incluindo objectType)
-      console.log(`[${codigo}] Evento 'damage' recebido: fromUserId=${fromUserId}, targetId=${targetId}, damage=${damage}, objectType=${objectType}`);
+      console.log(`[${codigo}] Evento 'attack' recebido: fromUserId=${fromUserId}, targetId=${targetId}, objectType=${objectType}`);
       
       if (!salas.has(codigo)) return;
       
@@ -135,74 +153,108 @@ app.prepare().then(() => {
         .find(p => p.id === targetId);
       const participanteAtacante = sala.participantes.get(fromUserId);
 
-      // Log após buscar participantes
       const nomeAlvoLog = participanteAlvo ? participanteAlvo.nome : 'NÃO ENCONTRADO';
       const nomeAtacanteLog = participanteAtacante ? participanteAtacante.nome : 'NÃO ENCONTRADO';
-      console.log(`[${codigo}] Participantes encontrados: Atacante=${nomeAtacanteLog} (${fromUserId}), Alvo=${nomeAlvoLog} (${targetId})`);
 
-      // Verifica se os participantes foram encontrados E se o atacante é diferente do alvo
       if (participanteAlvo && participanteAtacante && fromUserId !== targetId) {
-        const danoRecebido = damage;
         
-        // Guarda a vida ANTES do dano
+        // --- Obter Dados da Arma --- 
+        const weaponData = ITEMS_DATA[objectType];
+        if (!weaponData || weaponData.type !== 'weapon') {
+          console.warn(`[${codigo}] Tipo de objeto inválido ou não é arma: ${objectType}`);
+          return; // Ignora se não for uma arma válida
+        }
+        
+        // --- Calcular Poder de Ataque Total ---
+        const baseDamageFixed = weaponData.baseDamageFixed || 0;
+        const baseDamageRolled = rollDice(weaponData.baseDamageDice);
+        console.log(`[${codigo}] Arma '${objectType}': ${baseDamageFixed} fixo + ${baseDamageRolled} (rolado de ${weaponData.baseDamageDice})`);
+
+        let attackerBonusFixed = 0;
+        let attackerBonusRolled = 0;
+        const attackerEquippedId = participanteAtacante.equippedAccessory;
+        const attackerAccessoryData = attackerEquippedId ? ITEMS_DATA[attackerEquippedId] : null;
+        if (attackerAccessoryData && attackerAccessoryData.type === 'accessory') { // Verifica se é acessório
+          attackerBonusFixed = attackerAccessoryData.attackBonusFixed || 0;
+          attackerBonusRolled = rollDice(attackerAccessoryData.attackBonusDice);
+          console.log(`[${codigo}] Atacante ${nomeAtacanteLog} acessório '${attackerEquippedId}': +${attackerBonusFixed} fixo, +${attackerBonusRolled} (rolado de ${attackerAccessoryData.attackBonusDice})`);
+        } else {
+          console.log(`[${codigo}] Atacante ${nomeAtacanteLog} sem acessório de bônus de ataque.`);
+        }
+        const totalAttackPower = baseDamageFixed + baseDamageRolled + attackerBonusFixed + attackerBonusRolled;
+        console.log(`[${codigo}] Poder de Ataque Total: ${totalAttackPower}`);
+
+        // --- Calcular Dano (Considerando Crítico da Arma) ---
+        let finalDamage = 0;
+        let isCriticalHit = false;
+        const critChance = weaponData.criticalChance || 0; // << Pega chance de crítico da ARMA
+
+        if (Math.random() < critChance) {
+          isCriticalHit = true;
+          finalDamage = participanteAlvo.life; 
+          console.log(`[${codigo}] *** CRITICAL HIT pela arma ${objectType}! ***`);
+        } else {
+          // Calcular Defesa Total do Alvo
+          let targetDefenseFixed = 0;
+          let targetDefenseRolled = 0;
+          const targetEquippedId = participanteAlvo.equippedAccessory;
+          const targetAccessoryData = targetEquippedId ? ITEMS_DATA[targetEquippedId] : null;
+          if (targetAccessoryData && targetAccessoryData.type === 'accessory') { // Verifica se é acessório
+            targetDefenseFixed = targetAccessoryData.defenseFixed || 0;
+            targetDefenseRolled = rollDice(targetAccessoryData.defenseDice);
+            console.log(`[${codigo}] Alvo ${nomeAlvoLog} acessório '${targetEquippedId}': +${targetDefenseFixed} fixa, +${targetDefenseRolled} (rolada de ${targetAccessoryData.defenseDice})`);
+          } else {
+            console.log(`[${codigo}] Alvo ${nomeAlvoLog} sem acessório de defesa.`);
+          }
+          const totalDefense = targetDefenseFixed + targetDefenseRolled;
+          console.log(`[${codigo}] Defesa Total do Alvo: ${totalDefense}`);
+
+          // Calcular Dano Normal
+          finalDamage = Math.max(0, totalAttackPower - totalDefense);
+          console.log(`[${codigo}] Dano Normal calculado: ${totalAttackPower} (ataque) - ${totalDefense} (defesa) = ${finalDamage}`);
+        }
+        
+        // --- Aplicar Dano e Verificar Kill ---
         const vidaAntes = participanteAlvo.life;
-
-        // Atualiza a vida do participante
-        participanteAlvo.life = Math.max(GAME_CONFIG.LIFE.MIN, participanteAlvo.life - danoRecebido);
+        participanteAlvo.life = Math.max(GAME_CONFIG.LIFE.MIN, vidaAntes - finalDamage);
         const vidaDepois = participanteAlvo.life;
-        console.log(`[${codigo}] Vida de ${nomeAlvoLog} atualizada de ${vidaAntes} para: ${vidaDepois}`);
+        console.log(`[${codigo}] Vida de ${nomeAlvoLog} atualizada de ${vidaAntes} para: ${vidaDepois} (dano aplicado: ${finalDamage}, crítico: ${isCriticalHit})`);
+        
+        const isKill = vidaDepois <= GAME_CONFIG.LIFE.MIN && vidaAntes > GAME_CONFIG.LIFE.MIN;
 
-        // Verifica se foi uma eliminação NESTE ATAQUE ESPECÍFICO
-        const isKill = vidaAntes > GAME_CONFIG.LIFE.MIN && vidaDepois <= GAME_CONFIG.LIFE.MIN;
-
-        // Prepara o payload base do evento
         const payload = {
           targetId: targetId,
-          damage: danoRecebido, 
-          currentLife: vidaDepois
+          damage: finalDamage, 
+          currentLife: vidaDepois,
+          isCritical: isCriticalHit
         };
 
-        // Se foi kill NESTA TRANSIÇÃO, adiciona nomes, TIPO DA ARMA e TÍTULO da kill
         if (isKill) {
-          // --- Seleção da Assinatura/Título ---
           const signatures = participanteAtacante.customKillSignatures;
-          let killTitle = DEFAULT_KILL_TITLE; // Título padrão
-          
-          // Se houver assinaturas válidas no array, escolhe uma aleatoriamente
+          let killTitle = DEFAULT_KILL_TITLE;
           if (Array.isArray(signatures) && signatures.length > 0) {
-            const validSignatures = signatures.filter(s => typeof s === 'string' && s.trim() !== ''); // Garante que não pegue vazias por engano
+            const validSignatures = signatures.filter(s => typeof s === 'string' && s.trim() !== '');
             if (validSignatures.length > 0) {
               const randomIndex = Math.floor(Math.random() * validSignatures.length);
               killTitle = validSignatures[randomIndex];
             }
           }
-          // --- Fim da Seleção ---
-          
           payload.attackerName = participanteAtacante.nome;
           payload.targetName = participanteAlvo.nome;
           payload.weaponType = objectType; 
-          payload.killTitle = killTitle; // Usa o título selecionado (aleatório ou padrão)
+          payload.killTitle = killTitle;
           
-          // --- Adiciona ponto por Kill ---
-          participanteAtacante.score = (participanteAtacante.score || 0) + 1;
-          console.log(`[${codigo}] Score de ${participanteAtacante.nome} atualizado para: ${participanteAtacante.score} (+1 kill)`);
-          // --- Incrementa Kills ---
+          const pointsForKill = GAME_CONFIG.POINTS.KILL || 0;
+          participanteAtacante.score = (participanteAtacante.score || 0) + pointsForKill;
           participanteAtacante.kills = (participanteAtacante.kills || 0) + 1;
-          console.log(`[${codigo}] Kills de ${participanteAtacante.nome} atualizado para: ${participanteAtacante.kills}`);
-          // -----------------------------
-          
-          console.log(`[${codigo}] KILL EVENT (Transição): ${killTitle} - ${payload.attackerName} eliminou ${payload.targetName} com ${payload.weaponType}`);
+          console.log(`[${codigo}] KILL EVENT... (Crítico: ${isCriticalHit})`);
         } else if (vidaDepois <= GAME_CONFIG.LIFE.MIN) {
            console.log(`[${codigo}] Dano aplicado em ${nomeAlvoLog}, que já estava com vida <= ${GAME_CONFIG.LIFE.MIN}.`);
         }
 
-        // Emite evento de dano para todos na sala
         io.to(codigo).emit('damageReceived', payload);
+        io.to(codigo).emit('atualizarParticipantes', Array.from(sala.participantes.values()));
 
-        // Atualiza a lista de participantes (importante para a barra de vida refletir)
-        io.to(codigo).emit('atualizarParticipantes', 
-          Array.from(sala.participantes.values())
-        );
       } else {
           // Log caso atacante seja igual ao alvo ou participantes não encontrados
           if (fromUserId === targetId) {
@@ -424,7 +476,7 @@ app.prepare().then(() => {
         return; // Participante não encontrado
       }
 
-      const item = itemsData[itemId]; // Busca a definição do item
+      const item = ITEMS_DATA[itemId]; // Busca a definição do item
 
       if (!item) {
         console.log(`[Server] buyItem falhou: Item ${itemId} desconhecido.`);

@@ -129,7 +129,7 @@ useEffect(() => {
   ```
 - Isso evita a necessidade de estados locais adicionais apenas para refletir informações que já estão disponíveis no estado sincronizado, simplificando o fluxo de dados no componente.
 
-### Sincronização de Estado Visual de Itens Equipados (Novo)
+### Sincronização de Estado Visual de Itens Equipados
 
 - **Problema:** Tentar controlar a visibilidade de um item equipado (ex: um colete no avatar) usando apenas o estado local do cliente (ex: qual item está 'selecionado' no inventário) causa inconsistências visuais. O jogador que equipa vê o item no avatar, mas os outros jogadores não, pois o estado de seleção local não é compartilhado.
 - **Solução:** O estado de qual item está ativamente "equipado" para exibição visual deve ser parte do estado do participante no **servidor** (ex: `participante.equippedAccessory: string | null`).
@@ -427,3 +427,43 @@ useEffect(() => {
 1.  **Funções Auxiliares (`theme.fn`):**
     *   *Lição:* Verificar a disponibilidade e o comportamento de funções auxiliares específicas da biblioteca (`theme.fn.variant` neste caso) na versão/configuração utilizada, pois podem não existir ou funcionar como esperado.
     *   *Alternativa Robusta:* Acessar valores diretamente da estrutura do tema (`theme.colors.red[7]`) tende a ser mais seguro e menos propenso a quebras entre versões ou configurações diferentes ao buscar cores específicas. 
+
+## Centralização e Cálculo de Atributos de Combate (Novo)
+
+*   **Problema:** Lógica de dano, defesa e chance de crítico estava espalhada (parte em `gameConfig.js`, parte hardcoded, parte ausente). O cliente enviava o valor do dano, criando uma vulnerabilidade.
+*   **Solução Técnica:**
+    1.  **Centralizar Dados:** Mover *todos* os atributos de combate (dano base fixo/dado, bônus de ataque fixo/dado, defesa fixa/dada, chance de crítico) para um único arquivo (`src/constants/itemsData.js`). Tratar armas (`type: 'weapon'`) e acessórios (`type: 'accessory'`) como itens dentro desta estrutura.
+    2.  **Simplificar Config Geral:** Remover as configurações de `DAMAGE` e `COMBAT` de `src/constants/gameConfig.js`, deixando-o apenas com regras gerais (vida, pontos, etc.).
+    3.  **Cálculo no Servidor:** Refatorar o listener `attack` no servidor (`src/server-dev.js`) para:
+        *   Receber apenas o tipo de arma (`objectType`) do cliente.
+        *   Buscar os dados da arma e acessórios relevantes em `ITEMS_DATA`.
+        *   Rolar dados para componentes aleatórios (`rollDice` helper).
+        *   Calcular ataque total, verificar crítico, calcular defesa total e determinar o dano final.
+        *   Emitir o resultado (`damageReceived`) para os clientes.
+*   **Aprendizado:** Centralizar todos os atributos que definem o comportamento de itens (armas, armaduras, etc.) em uma única fonte de dados (`itemsData.js`) e fazer o servidor (fonte da verdade) realizar todos os cálculos de regras de combate aumenta a segurança, organização, manutenibilidade e facilita a adição de novos itens/armas com comportamentos complexos.
+
+## Compatibilidade de Módulos (CommonJS Backend vs. ESM Frontend)
+
+*   **Problema:** O servidor Node.js (`server-dev.js`, usa `require`) falhava ao tentar importar `itemsData.js` porque este usava `export` (ESM), formato esperado pelo frontend React/Next.js (`import`).
+*   **Solução Técnica:**
+    1.  Converter `itemsData.js` para usar `module.exports` (CommonJS), removendo referências diretas a componentes React (como `IconShirt`) que não podem ser serializados ou requeridos pelo Node.
+    2.  Adicionar um campo substituto nos dados (ex: `iconName: 'IconShirt'`).
+    3.  Ajustar os componentes frontend (`ShopDrawer.jsx`, `InventoryDisplay.jsx`) para:
+        *   Importar os componentes React necessários (`IconShirt`) diretamente.
+        *   Ler o `iconName` dos dados e renderizar o componente correspondente condicionalmente.
+*   **Aprendizado:** Em projetos full-stack com JavaScript, é vital estar ciente das diferenças entre os sistemas de módulos CommonJS (Node.js) e ES Modules (Navegador/React). Ao compartilhar arquivos de configuração/dados, pode ser necessário adotar o formato CommonJS para compatibilidade com o backend, o que exige refatoração no frontend para lidar com a perda de referências diretas a funções ou componentes nesses dados compartilhados.
+
+## Depuração de Renderização Visual de Estado Sincronizado
+
+*   **Problema:** Após implementar a sincronização do `equippedAccessory` via servidor, o avatar no frontend não refletia visualmente a mudança, apesar dos logs confirmarem que os dados corretos chegavam aos componentes.
+*   **Soluções Investigadas e Aplicadas:**
+    1.  **Propagação de Props:** Garantir que o componente pai (`Mesa.jsx`) recalculasse a distribuição dos participantes a cada renderização, usando a prop `participantes` atualizada, para que os dados corretos fossem passados para `CartaParticipante.jsx`.
+    2.  **Conflito de Módulos (Frontend):** Componentes do frontend (`CartaParticipante`, `InventoryDisplay`) tentavam usar uma função helper (`isAccessory`) importada de `itemsData.js` (que foi convertido para CommonJS). A solução foi remover a importação e fazer a verificação diretamente nos dados (`itemData?.type === 'accessory'`).
+    3.  **Ordem de Empilhamento (CSS):** O elemento visual do acessório (`VestIcon` dentro de `CartaParticipante`) estava sendo renderizado com `z-index` inferior a outros elementos (badges, texto). Aumentar o `z-index` do acessório resolveu a sobreposição.
+*   **Aprendizado:** Falhas na renderização visual de um estado que *parece* estar corretamente sincronizado podem ter múltiplas causas. É essencial depurar sistematicamente: (1) a propagação das props atualizadas na árvore de componentes, (2) a compatibilidade de importações/funções entre frontend/backend (especialmente após mudanças no sistema de módulos), e (3) fatores puramente visuais como CSS `z-index`.
+
+## Posicionamento CSS de Elementos Dinâmicos (Números de Dano)
+
+*   **Problema:** Um elemento (`div` com número de dano) criado dinamicamente via JavaScript e adicionado ao DOM com `position: absolute` estava aparecendo no local errado (canto da tela) em vez de sobre o elemento alvo (avatar).
+*   **Solução Técnica:** Adicionar `position: relative` via CSS (ou `style` inline) ao elemento pai (`div.carta-participante`) onde o número de dano estava sendo anexado (`appendChild`).
+*   **Aprendizado:** O contexto de posicionamento é fundamental para `position: absolute`. Um elemento posicionado absolutamente se alinha em relação ao ancestral posicionado mais próximo. Se nenhum ancestral tiver `position` definido (diferente de `static`), ele se alinha em relação ao `<body>` ou à viewport. Garantir que o pai direto tenha `position: relative` é a prática comum para conter elementos posicionados absolutamente dentro dele. 

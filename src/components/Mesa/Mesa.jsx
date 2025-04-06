@@ -10,23 +10,10 @@ export default function Mesa({
   onRevelarVotos = () => {}, // Nova prop para receber a função de revelar votos
   onNovaRodada = () => {} // Adicionando a prop que estava faltando
 }) {
-  // Distribui os participantes acima e abaixo da mesa, horizontalmente
-  const posicionarParticipantes = () => {
-    // Determina número de participantes
-    const numParticipantes = participantes.length;
-    
-    // Divide os participantes entre as partes superior e inferior
-    const meio = Math.ceil(numParticipantes / 2);
-    
-    // Faz a distribuição nas partes superior e inferior apenas
-    return {
-      superior: participantes.slice(0, meio),
-      inferior: participantes.slice(meio),
-      esquerdo: [],
-      direito: []
-    };
-  };
-  
+
+  // <<< ADICIONAR LOG
+  console.log('[Mesa] Recebeu participantes:', participantes);
+
   // Cálculo das estatísticas
   const calcularEstatisticas = () => {
     // Contagem dos votos
@@ -87,7 +74,6 @@ export default function Mesa({
     };
   };
   
-  const lados = posicionarParticipantes();
   const estatisticas = calcularEstatisticas();
   const tamanhoMesa = calcularTamanhoMesa();
   
@@ -101,200 +87,219 @@ export default function Mesa({
   
   return (
     <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <Paper
-        radius="md"
-        p={10}
-        withBorder
-        bg="#e7f5ff"
-        style={{
-          width: '100%',
-          maxWidth: '90vw',
-          height: '45vh',
-          minHeight: '380px',
-          maxHeight: '45vh',
-          position: 'relative',
-          boxShadow: '0 6px 12px rgba(0, 0, 0, 0.1)',
-          display: 'flex',
-          flexDirection: 'column',
-          margin: '0 auto' // Centralizar horizontalmente
-        }}
-      >
-        {/* Layout com posições absolutas */}
-        <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-          {/* Mesa */}
-          <Box
+      {(() => {
+        const numParticipantes = participantes.length;
+        const meio = Math.ceil(numParticipantes / 2);
+        const lados = {
+          superior: participantes.slice(0, meio),
+          inferior: participantes.slice(meio),
+        };
+        
+        return (
+          <Paper
+            radius="md"
+            p={10}
+            withBorder
+            bg="#e7f5ff"
             style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: tamanhoMesa.largura,
-              height: 'clamp(150px, 45%, 50%)',
-              minHeight: '150px',
-              backgroundColor: '#1c7ed6',
-              borderRadius: 8,
-              boxShadow: 'inset 0 0 10px rgba(0, 0, 0, 0.2)',
+              width: '100%',
+              maxWidth: '90vw',
+              height: '45vh',
+              minHeight: '380px',
+              maxHeight: '45vh',
+              position: 'relative',
+              boxShadow: '0 6px 12px rgba(0, 0, 0, 0.1)',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              overflow: 'hidden',
-              padding: 10,
-              zIndex: 1
+              flexDirection: 'column',
+              margin: '0 auto' // Centralizar horizontalmente
             }}
           >
-            {/* Conteúdo da mesa sempre com a mesma altura */}
-            <Flex direction="column" align="center" justify="center" style={{ width: '100%', height: '100%' }}>
-              {!revelarVotos ? (
-                /* Área vazia quando não está revelando votos */
-                <div></div>
-              ) : (
-                /* Conteúdo dos resultados */
-                <>
-                  <Text c="white" fw={700} size="md" mb={3}>Resultados</Text>
-                  
-                  {/* Distribuição de votos */}
-                  <Flex gap={5} mb={5} wrap="wrap" justify="center">
-                    {['1', '2', '3', '4', '5', '?'].map(valor => {
-                      const votantes = participantes.filter(p => p.valorVotado === valor);
-                      const quantidade = votantes.length;
-                      
-                      return (
-                        <Paper 
-                          key={valor} 
-                          withBorder 
-                          p={3}
-                          radius="sm"
-                          style={{
-                            width: 30,
-                            height: 40,
-                            textAlign: 'center',
-                            backgroundColor: quantidade > 0 ? '#e7f5ff' : 'rgba(255, 255, 255, 0.8)',
-                            borderColor: quantidade > 0 ? '#228be6' : undefined,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'center',
-                            alignItems: 'center'
-                          }}
-                        >
-                          <Text fw={700} size="sm" style={{ fontSize: '0.85rem' }}>{valor}</Text>
-                          <Text size="xs" c={quantidade > 0 ? 'blue' : 'dimmed'} fw={quantidade > 0 ? 700 : 400}>
-                            {quantidade}
-                          </Text>
-                        </Paper>
-                      );
-                    })}
-                  </Flex>
-                  
-                  <Flex gap="xs" mb={3} wrap="wrap" justify="center">
-                    <Paper p={5} radius="md" style={{ textAlign: 'center', minWidth: 70 }}>
-                      <Text fw={500} size="xs" style={{ fontSize: '0.75rem' }}>Moda</Text>
-                      <Text fw={700} size="md">{estatisticas.moda}</Text>
-                    </Paper>
-                    
-                    <Paper p={5} radius="md" style={{ textAlign: 'center', minWidth: 70 }}>
-                      <Text fw={500} size="xs" style={{ fontSize: '0.75rem' }}>Média</Text>
-                      <Text fw={700} size="md">{estatisticas.media}</Text>
-                    </Paper>
-                  </Flex>
-                  
-                  {estatisticas.consenso ? (
-                    <Badge size="sm" color="green" variant="filled">Consenso</Badge>
-                  ) : estatisticas.diversidade >= 3 ? (
-                    <Badge size="sm" color="red" variant="filled">Alta Divergência</Badge>
-                  ) : (
-                    <Badge size="sm" color="yellow" variant="filled">Divergência Moderada</Badge>
-                  )}
-                </>
-              )}
-            </Flex>
-          </Box>
-          
-          {/* Botão de revelar votos como elemento independente sobreposto à mesa */}
-          {!revelarVotos && votosRealizados > 0 && (
-            <Box
-              style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                zIndex: 50,
-                pointerEvents: 'auto'
-              }}
-            >
-              <Button 
-                color="green" 
-                size="sm"
-                leftSection={<IconCheck size={16} />}
-                onClick={onRevelarVotos}
+            {/* Layout com posições absolutas */}
+            <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+              {/* Mesa */}
+              <Box
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: tamanhoMesa.largura,
+                  height: 'clamp(150px, 45%, 50%)',
+                  minHeight: '150px',
+                  backgroundColor: '#1c7ed6',
+                  borderRadius: 8,
+                  boxShadow: 'inset 0 0 10px rgba(0, 0, 0, 0.2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                  padding: 10,
+                  zIndex: 1
+                }}
               >
-                Revelar Votos
-              </Button>
-            </Box>
-          )}
-          
-          {/* Participantes - Parte superior */}
-          <div
-            style={{ 
-              position: 'absolute',
-              top: 10,
-              left: '5%',
-              right: '5%',
-              width: '90%',
-              display: 'flex',
-              justifyContent: 'space-evenly',
-              flexWrap: 'wrap',
-              gap: 'clamp(15px, 3vw, 30px)',
-              padding: '0 25px',
-              zIndex: 10
-            }}
-          >
-            {lados.superior.map((participante, idx) => {
-              // Mostrar colete SE o participante tiver o COLETE_DPE_ID como equipado
-              const showVestOnThisParticipant = participante.equippedAccessory === COLETE_DPE_ID;
+                {/* Conteúdo da mesa sempre com a mesma altura */}
+                <Flex direction="column" align="center" justify="center" style={{ width: '100%', height: '100%' }}>
+                  {!revelarVotos ? (
+                    /* Área vazia quando não está revelando votos */
+                    <div></div>
+                  ) : (
+                    /* Conteúdo dos resultados */
+                    <>
+                      <Text c="white" fw={700} size="md" mb={3}>Resultados</Text>
+                      
+                      {/* Distribuição de votos */}
+                      <Flex gap={5} mb={5} wrap="wrap" justify="center">
+                        {['1', '2', '3', '4', '5', '?'].map(valor => {
+                          const votantes = participantes.filter(p => p.valorVotado === valor);
+                          const quantidade = votantes.length;
+                          
+                          return (
+                            <Paper 
+                              key={valor} 
+                              withBorder 
+                              p={3}
+                              radius="sm"
+                              style={{
+                                width: 30,
+                                height: 40,
+                                textAlign: 'center',
+                                backgroundColor: quantidade > 0 ? '#e7f5ff' : 'rgba(255, 255, 255, 0.8)',
+                                borderColor: quantidade > 0 ? '#228be6' : undefined,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                                alignItems: 'center'
+                              }}
+                            >
+                              <Text fw={700} size="sm" style={{ fontSize: '0.85rem' }}>{valor}</Text>
+                              <Text size="xs" c={quantidade > 0 ? 'blue' : 'dimmed'} fw={quantidade > 0 ? 700 : 400}>
+                                {quantidade}
+                              </Text>
+                            </Paper>
+                          );
+                        })}
+                      </Flex>
+                      
+                      <Flex gap="xs" mb={3} wrap="wrap" justify="center">
+                        <Paper p={5} radius="md" style={{ textAlign: 'center', minWidth: 70 }}>
+                          <Text fw={500} size="xs" style={{ fontSize: '0.75rem' }}>Moda</Text>
+                          <Text fw={700} size="md">{estatisticas.moda}</Text>
+                        </Paper>
+                        
+                        <Paper p={5} radius="md" style={{ textAlign: 'center', minWidth: 70 }}>
+                          <Text fw={500} size="xs" style={{ fontSize: '0.75rem' }}>Média</Text>
+                          <Text fw={700} size="md">{estatisticas.media}</Text>
+                        </Paper>
+                      </Flex>
+                      
+                      {estatisticas.consenso ? (
+                        <Badge size="sm" color="green" variant="filled">Consenso</Badge>
+                      ) : estatisticas.diversidade >= 3 ? (
+                        <Badge size="sm" color="red" variant="filled">Alta Divergência</Badge>
+                      ) : (
+                        <Badge size="sm" color="yellow" variant="filled">Divergência Moderada</Badge>
+                      )}
+                    </>
+                  )}
+                </Flex>
+              </Box>
               
-              return (
-                <CartaParticipante
-                  key={participante.id || idx}
-                  participante={participante}
-                  revelarVotos={revelarVotos}
-                  showVest={showVestOnThisParticipant}
-                />
-              );
-            })}
-          </div>
-          
-          {/* Participantes - Parte inferior */}
-          <div
-            style={{ 
-              position: 'absolute',
-              bottom: 10,
-              left: '5%',
-              right: '5%',
-              width: '90%',
-              display: 'flex',
-              justifyContent: 'space-evenly',
-              flexWrap: 'wrap',
-              gap: 'clamp(15px, 3vw, 30px)',
-              padding: '0 25px',
-              zIndex: 10
-            }}
-          >
-            {lados.inferior.map((participante, idx) => {
-               // Mostrar colete SE o participante tiver o COLETE_DPE_ID como equipado
-              const showVestOnThisParticipant = participante.equippedAccessory === COLETE_DPE_ID;
-
-              return (
-                <CartaParticipante
-                  key={participante.id || idx}
-                  participante={participante}
-                  revelarVotos={revelarVotos}
-                  showVest={showVestOnThisParticipant}
-                />
-              );
-            })}
-          </div>
-        </div>
-      </Paper>
+              {/* Botão de revelar votos como elemento independente sobreposto à mesa */}
+              {!revelarVotos && votosRealizados > 0 && (
+                <Box
+                  style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: 50,
+                    pointerEvents: 'auto'
+                  }}
+                >
+                  <Button 
+                    color="green" 
+                    size="sm"
+                    leftSection={<IconCheck size={16} />}
+                    onClick={onRevelarVotos}
+                  >
+                    Revelar Votos
+                  </Button>
+                </Box>
+              )}
+              
+              {/* Participantes - Parte superior */}
+              <div
+                style={{ 
+                  position: 'absolute',
+                  top: 10,
+                  left: '5%',
+                  right: '5%',
+                  width: '90%',
+                  display: 'flex',
+                  justifyContent: 'space-evenly',
+                  flexWrap: 'wrap',
+                  gap: 'clamp(15px, 3vw, 30px)',
+                  padding: '0 25px',
+                  zIndex: 10
+                }}
+              >
+                {lados.superior.map((participante, idx) => {
+                  // <<< ADICIONAR LOG
+                  console.log(`[Mesa] Mapeando participante (superior) ${participante.nome}:`, participante);
+                  return (
+                    <div 
+                      key={participante.id} 
+                      data-user-id={participante.id} 
+                      className="carta-participante"
+                      style={{ position: 'relative' }}
+                    >
+                      <CartaParticipante
+                        participante={participante}
+                        revelarVotos={revelarVotos}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+              
+              {/* Participantes - Parte inferior */}
+              <div
+                style={{ 
+                  position: 'absolute',
+                  bottom: 10,
+                  left: '5%',
+                  right: '5%',
+                  width: '90%',
+                  display: 'flex',
+                  justifyContent: 'space-evenly',
+                  flexWrap: 'wrap',
+                  gap: 'clamp(15px, 3vw, 30px)',
+                  padding: '0 25px',
+                  zIndex: 10
+                }}
+              >
+                {lados.inferior.map((participante, idx) => {
+                  // <<< ADICIONAR LOG
+                  console.log(`[Mesa] Mapeando participante (inferior) ${participante.nome}:`, participante);
+                  return (
+                    <div 
+                      key={participante.id} 
+                      data-user-id={participante.id} 
+                      className="carta-participante"
+                      style={{ position: 'relative' }}
+                    >
+                      <CartaParticipante
+                        participante={participante}
+                        revelarVotos={revelarVotos}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </Paper>
+        );
+      })()}
     </div>
   );
 }

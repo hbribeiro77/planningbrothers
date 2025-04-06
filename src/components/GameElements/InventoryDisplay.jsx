@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Stack, Group, Text, Tooltip, ActionIcon, Divider, Box } from '@mantine/core';
-import { IconKeyboard } from '@tabler/icons-react';
+import { IconKeyboard, IconShirt } from '@tabler/icons-react';
 import { usePvpStatus } from '@/contexts/PvpContext';
-import { COLETE_DPE_ID, COLETE_BLUE_ID, ITEMS_DATA, isAccessory, accessoryIcons } from '@/constants/itemsData';
+import { COLETE_DPE_ID, COLETE_BLUE_ID, ITEMS_DATA } from '@/constants/itemsData';
 
 export function InventoryDisplay({ 
   currentUser, 
@@ -12,10 +12,10 @@ export function InventoryDisplay({
   
   const [armaSelecionada, setArmaSelecionada] = useState('keyboard');
   const armasDisponiveis = [{ id: 'keyboard', nome: 'Teclado', icon: IconKeyboard }];
-  const userAccessories = currentUser?.inventory?.filter(itemId => ITEMS_DATA[itemId] && isAccessory(itemId)) || [];
+  const userAccessories = currentUser?.inventory?.filter(itemId => ITEMS_DATA[itemId]?.type === 'accessory') || [];
   
   const isAccessoryClickable = (itemId) => 
-    isAccessory(itemId) && userAccessories.includes(itemId);
+    ITEMS_DATA[itemId]?.type === 'accessory' && userAccessories.includes(itemId);
 
   const handleSelecionarArma = (armaId) => {
     console.log("Seleção de arma (futuro):", armaId);
@@ -56,7 +56,6 @@ export function InventoryDisplay({
               const itemData = ITEMS_DATA[itemId];
               if (!itemData) return null;
               
-              const AccessoryIcon = itemData.icon;
               const itemName = itemData.name || itemId;
               const accessoryColor = itemData.iconColor || 'gray';
               
@@ -75,7 +74,7 @@ export function InventoryDisplay({
                     disabled={!isClickable}
                     onClick={() => isClickable && onToggleEquip(itemId)}
                   >
-                    <AccessoryIcon size={20} color={iconRenderColor} />
+                    {itemData.iconName === 'IconShirt' && <IconShirt size={20} color={iconRenderColor} />}
                   </ActionIcon>
                 </Tooltip>
               );

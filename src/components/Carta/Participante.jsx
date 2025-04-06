@@ -2,13 +2,15 @@ import { Paper, Text, Badge, useMantineTheme } from '@mantine/core';
 import { IconEye, IconSkull } from '@tabler/icons-react';
 import { LifeBar } from '../GameElements/LifeBar';
 // Importar constantes e o novo ícone
-import { COLETE_DPE_ID, COLETE_BLUE_ID, ITEMS_DATA, isAccessory } from '@/constants/itemsData';
-import VestIcon from '../Icons/VestIcon'; // << Importar novo componente
+import { ITEMS_DATA } from '@/constants/itemsData';
+import VestIcon from '../Icons/VestIcon';
 
 export default function CartaParticipante({ 
   participante,
   revelarVotos = false,
 }) {
+  console.log(`[CartaParticipante] Recebeu participante ${participante?.nome}:`, participante);
+
   const theme = useMantineTheme();
   const isDark = theme.colorScheme === 'dark';
 
@@ -27,8 +29,11 @@ export default function CartaParticipante({
 
   // Obter dados do item equipado
   const equippedItemData = equippedAccessory ? ITEMS_DATA[equippedAccessory] : null;
-  // Verifica se o item equipado é um acessório (para decidir se mostra o VestIcon)
-  const showAccessory = equippedItemData && isAccessory(equippedAccessory);
+  // Verifica se o item equipado é um acessório (USANDO TYPE)
+  const showAccessory = equippedItemData?.type === 'accessory';
+  
+  console.log(`[CartaParticipante] ${participante?.nome} - equippedAccessory: ${equippedAccessory}, showAccessory: ${showAccessory}`);
+
   // Obter as cores do item equipado (ou defaults)
   const accessoryMainColor = showAccessory ? equippedItemData.mainColor : undefined;
   const accessoryDarkColor = showAccessory ? equippedItemData.darkColor : undefined;
@@ -72,7 +77,7 @@ export default function CartaParticipante({
     >
       {!isObservador && <LifeBar currentLife={life} maxLife={maxLife} avatarId={id} />}
 
-      {/* Ícone do Acessório Equipado (como componente React) */}
+      {/* Ícone do Acessório Equipado */}
       {showAccessory && (
         <VestIcon 
           mainColor={accessoryMainColor}
@@ -86,7 +91,7 @@ export default function CartaParticipante({
             height: 'auto',
             opacity: 0.8, // Manter opacidade
             pointerEvents: 'none',
-            zIndex: 1,
+            zIndex: 5,
           }}
         />
       )}

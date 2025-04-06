@@ -33,6 +33,7 @@ import { KillFeedDisplay } from '@/components/GameElements/KillFeedDisplay';
 import { LifeBarProvider } from '@/contexts/LifeBarContext';
 import { PvpProvider, PvpContext } from '@/contexts/PvpContext';
 import ShopDrawer from '@/components/Shop/ShopDrawer';
+import { AnimationService } from '@/services/AnimationService';
 
 // Mover a definição para fora para poder usar no useEffect
 const accessoryIcons = {
@@ -195,6 +196,31 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     // closeShop(); // Opcional: fechar a loja após tentar comprar
   }, [socket, codigoSala, currentUser?.id]); // Incluir currentUser.id nas dependências
   // ----------------------------------------------
+
+  // Efeito para lidar com a recepção de dano
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleDamageReceived = ({ targetId, damage, currentLife, isCritical }) => {
+      console.log(`[Cliente] Recebido damageReceived: targetId=${targetId}, damage=${damage}, isCritical=${isCritical}`);
+      
+      const targetElement = document.querySelector(`.carta-participante[data-user-id="${targetId}"]`);
+
+      if (targetElement && (damage > 0 || isCritical)) {
+        AnimationService.showDamageNumber(targetElement, damage, isCritical);
+      } else {
+        console.warn(`[Cliente] Avatar para targetId=${targetId} não encontrado ou dano foi 0 e não era crítico.`);
+      }
+    };
+
+    socket.on('damageReceived', handleDamageReceived);
+
+    // Limpeza ao desmontar
+    return () => {
+      socket.off('damageReceived', handleDamageReceived);
+    };
+
+  }, [socket]); // Dependência apenas no socket
 
   // Se houver erro de entrada, mostra mensagem (verificar antes da conexão)
   if (erroEntrada) {

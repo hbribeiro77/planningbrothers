@@ -1,7 +1,8 @@
-import { IconShirt } from '@tabler/icons-react'; // Apenas IconShirt necessário agora
+// import { IconShirt } from '@tabler/icons-react'; // Apenas IconShirt necessário agora
 
-export const COLETE_DPE_ID = 'vest';
-export const COLETE_BLUE_ID = 'vest_blue';
+const COLETE_DPE_ID = 'vest';
+const COLETE_BLUE_ID = 'vest_blue';
+const KEYBOARD_ID = 'keyboard'; // << ID para a arma padrão
 
 // Definir cores principais e escuras
 const DPE_GREEN = '#2e8b57';
@@ -9,30 +10,63 @@ const DPE_GREEN_DARK = '#1e6e3c';
 const BLUE_MAIN = '#228be6'; // Exemplo: Mantine Blue 6
 const BLUE_DARK = '#1c7ed6'; // Exemplo: Mantine Blue 7
 
-export const ITEMS_DATA = {
+const ITEMS_DATA = {
+  // --- ARMAS ---
+  [KEYBOARD_ID]: { 
+    name: 'Teclado Padrão', 
+    price: 0, // Arma inicial
+    type: 'weapon', // << Tipo Arma
+    baseDamageFixed: 0, // << Dano base fixo
+    baseDamageDice: '1d6', // << Dano base em dado
+    criticalChance: 0.05, // << Chance de crítico da arma (5%)
+    // Armas geralmente não dão bônus passivos, mas a estrutura permite
+    attackBonusFixed: 0,
+    attackBonusDice: null,
+    defenseFixed: 0,
+    defenseDice: null,
+  },
+  // Adicionar outras armas aqui (ex: mouse, caneta...)
+
+  // --- ACESSÓRIOS ---
   [COLETE_DPE_ID]: { 
     name: 'Colete DPE', 
     price: 1, 
-    icon: IconShirt, 
+    type: 'accessory', // << Tipo Acessório
+    iconName: 'IconShirt', 
     iconColor: DPE_GREEN,
-    mainColor: DPE_GREEN, // Cor para o componente SVG
-    darkColor: DPE_GREEN_DARK, // Cor escura para o componente SVG
-    // svgPath: '/images/game-objects/vest.svg' // << REMOVER
+    mainColor: DPE_GREEN,
+    darkColor: DPE_GREEN_DARK,
+    defenseFixed: 1, 
+    defenseDice: null, 
+    attackBonusFixed: 0, 
+    attackBonusDice: null,
+    // Acessórios podem modificar crítico no futuro?
+    // criticalChanceModifier: 0,
   },
   [COLETE_BLUE_ID]: { 
     name: 'Colete Blue', 
     price: 1, 
-    icon: IconShirt, 
+    type: 'accessory',
+    iconName: 'IconShirt', 
     iconColor: BLUE_MAIN,
-    mainColor: BLUE_MAIN, // Cor para o componente SVG
-    darkColor: BLUE_DARK, // Cor escura para o componente SVG
-    // svgPath: '/images/game-objects/vest.svg' // << REMOVER
+    mainColor: BLUE_MAIN,
+    darkColor: BLUE_DARK,
+    defenseFixed: 1, 
+    defenseDice: null, 
+    attackBonusFixed: 0, 
+    attackBonusDice: null,
   },
-  // Adicionar outros itens aqui
+  // Adicionar outros acessórios aqui
 };
 
-// Helper para identificar acessórios, pode ser mais elaborado no futuro (ex: type: 'accessory')
-export const isAccessory = (itemId) => itemId === COLETE_DPE_ID || itemId === COLETE_BLUE_ID;
+// Helper para identificar tipos (se necessário, mas talvez não mais)
+// const isAccessory = (itemId) => ITEMS_DATA[itemId]?.type === 'accessory'; 
+// const isWeapon = (itemId) => ITEMS_DATA[itemId]?.type === 'weapon';
 
-// Mapeamento apenas de ícones (não mais necessário se usarmos itemsData diretamente)
-// export const accessoryIcons = { ... }; 
+module.exports = { 
+  COLETE_DPE_ID, 
+  COLETE_BLUE_ID, 
+  KEYBOARD_ID,
+  ITEMS_DATA, 
+  // isAccessory // Remover se não usado no servidor
+}; 

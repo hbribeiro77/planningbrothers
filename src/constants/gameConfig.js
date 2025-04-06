@@ -5,9 +5,10 @@ const GAME_CONFIG = {
     MIN: 0,   // Vida mínima
   },
 
-  // Configurações de dano
-  DAMAGE: {
-    KEYBOARD: 5, // Dano causado pelo teclado
+  // Configurações de Pontos
+  POINTS: {
+    KILL: 50, // Pontos por kill (exemplo)
+    // Adicionar outras pontuações aqui
   },
 
   // Configurações de tempo
@@ -18,7 +19,7 @@ const GAME_CONFIG = {
   // Configurações de animação
   ANIMATION: {
     LIFE_BAR_FADE_DURATION: 300, // Tempo em ms da animação de fade da barra de vida
-  }
+  },
 };
 
 module.exports = { GAME_CONFIG }; 

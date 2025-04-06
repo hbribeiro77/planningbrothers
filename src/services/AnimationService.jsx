@@ -51,21 +51,37 @@ export class AnimationService {
   }
 
   /**
-   * Mostra o número de dano em um elemento
+   * Mostra o número de dano ou texto crítico em um elemento
    */
-  static showDamageNumber(element, damage) {
+  static showDamageNumber(element, damage, isCritical = false) {
     if (!element) return;
 
     const damageNumber = document.createElement('div');
-    damageNumber.className = 'damage-number';
-    damageNumber.textContent = `-${damage}`;
-    damageNumber.style.left = `${element.offsetWidth / 2}px`;
-    damageNumber.style.top = `${element.offsetHeight / 2 - 20}px`;
+    
+    if (isCritical) {
+      damageNumber.textContent = 'CRITICAL!';
+      damageNumber.className = 'damage-number damage-critical';
+    } else {
+      damageNumber.textContent = `-${damage}`;
+      damageNumber.className = 'damage-number';
+    }
+    
+    damageNumber.style.position = 'absolute';
+    damageNumber.style.left = `50%`;
+    damageNumber.style.top = `40%`;
+    damageNumber.style.transform = 'translate(-50%, -100%)';
+    damageNumber.style.pointerEvents = 'none';
+    damageNumber.style.zIndex = '10';
+    
     element.appendChild(damageNumber);
 
+    const displayTime = isCritical ? 1200 : 800;
+
     setTimeout(() => {
-      damageNumber.remove();
-    }, 800);
+      if (damageNumber.parentNode) {
+          damageNumber.remove();
+      }
+    }, displayTime);
   }
 
   /**

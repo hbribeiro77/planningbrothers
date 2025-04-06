@@ -55,8 +55,8 @@ planningbrothers/
 │   │   └── useSalaUiEffects.js # Lógica de efeitos visuais da sala (animações, piscada)
 │   ├── constants/            # Constantes e configurações
 │   │   ├── socketEvents.js   # Eventos do Socket.io (idealmente)
-│   │   └── gameConfig.js     # Configurações do jogo (vida, dano, tempos)
-│   │   └── itemsData.js      # Dados dos itens (Loja, Inventário) (idealmente)
+│   │   └── gameConfig.js     # Configurações GERAIS do jogo (vida, pontos, tempos)
+│   │   └── itemsData.js      # Dados dos ITENS (armas, acessórios) com stats de combate
 │   ├── services/             # Serviços da aplicação
 │   │   └── AnimationService.jsx # Serviço de animações centralizado (agora .jsx)
 │   ├── styles/               # Estilos CSS
@@ -104,30 +104,39 @@ planningbrothers/
    - Identificação única de participantes
    - Fluxos diferentes para criação e convites
 
-5. **Elementos de Gamificação** (Expandido)
+5. **Elementos de Gamificação** (Expandido e Refatorado)
    - **Combate PvP:**
-     - Sistema de arremesso de teclado para interação entre participantes (requer Modo PvP ativo).
-     - Efeitos visuais de animação (voo, explosão, ricochete) e tremor no avatar atingido.
+     - Sistema de ataque (ex: arremesso de teclado) para interação (requer Modo PvP ativo).
+     - Efeitos visuais de animação (voo, explosão, ricochete, tremor).
      - Sistema de vida com barra de status visual.
-     - Dano baseado no tipo de objeto arremessado, configurável.
-     - Comunicação em tempo real via WebSockets para sincronização multiplayer.
-     - Estado PVP (Modo Diversão) compartilhado via Context API (`PvpContext`).
+     - Comunicação em tempo real via WebSockets para sincronização.
+     - Estado PVP compartilhado via Context API (`PvpContext`).
+   - **Sistema de Itens e Combate:**
+     - **Definição Centralizada (`itemsData.js`):** Armas (`type: 'weapon'`) e Acessórios (`type: 'accessory'`) são definidos com seus atributos:
+       - **Armas:** Dano base (fixo e/ou dado - ex: `'1d6'`), chance de crítico (`criticalChance`).
+       - **Acessórios:** Bônus de ataque (fixo/dado), Defesa (fixo/dado).
+     - **Cálculo de Dano no Servidor:**
+       - O servidor recebe o evento `attack` (com o tipo de arma usada).
+       - Calcula o ataque total: (Dano base da arma + Bônus de ataque do acessório do atacante), rolando dados conforme necessário.
+       - Verifica chance de crítico (da arma): Se crítico, dano = vida atual do alvo.
+       - Se não crítico, calcula defesa total: (Defesa do acessório do alvo), rolando dados.
+       - Dano final = `max(0, Ataque Total - Defesa Total)`.
+     - **Feedback Visual:** Exibição do dano final sofrido no avatar, com indicação especial ("CRITICAL!") para acertos críticos.
    - **Loja e Inventário:**
-     - Loja acessível via painel lateral (`ShopDrawer`).
-     - Jogadores podem gastar pontos (score) ganhos para comprar itens (ex: Colete DPE).
-     - Itens comprados são adicionados ao inventário do jogador (estado no servidor).
-     - `InventoryDisplay` mostra os itens possuídos (Armas, Acessórios).
+     - Loja (`ShopDrawer`) permite comprar itens definidos em `itemsData.js` usando score.
+     - Inventário (`InventoryDisplay`) mostra armas e acessórios possuídos.
+     - Teclado padrão (`type: 'weapon'`) é adicionado automaticamente ao inventário inicial.
    - **Acessórios Equipáveis:**
-     - Certos acessórios (como o Colete DPE) podem ser "equipados" clicando no seu ícone no inventário (se for o único acessório possuído).
-     - O estado "equipado" é sincronizado via servidor (`equippedAccessory` no estado do participante).
-     - O acessório equipado é exibido visualmente no avatar (`CartaParticipante`) do jogador, visível para todos na sala.
+     - Acessórios podem ser equipados/desequipados via inventário.
+     - Estado `equippedAccessory` sincronizado pelo servidor.
+     - Acessório equipado é exibido visualmente no avatar (`CartaParticipante`).
    - **Controles e Configurações (`GameController`):**
-     - Ativação/desativação do Modo PVP (via contexto).
-     - Configuração de efeitos visuais/sonoros (Som, Piscada de Dano).
-     - Configuração de assinaturas de eliminação personalizadas para o Kill Feed.
-   - **Kill Feed (Notificação de Eliminação) com Assinaturas:**
-     - Notificações visuais quando um jogador elimina outro.
-     - Exibe mensagens personalizadas (assinaturas) definidas pelo atacante.
+     - Ativação/desativação do Modo PVP.
+     - Configuração de efeitos visuais/sonoros (Som, Piscada de Dano Vermelha).
+     - Configuração de assinaturas de eliminação.
+   - **Kill Feed (Notificação de Eliminação):**
+     - Notificações visuais com pontuação (`POINTS.KILL` de `gameConfig.js`) e estatísticas (kills) atualizadas.
+     - Exibe mensagens personalizadas (assinaturas) e o tipo de arma usada na eliminação.
 
 ## Fluxo de Dados
 1. **Conexão**
@@ -142,16 +151,17 @@ planningbrothers/
    - Atualização de estado geral (`atualizarParticipantes`)
    - Alternância de modo observador (`alternarModoObservador`)
    - Interações de gamificação:
-     - Arremesso de objeto (`throwObject`)
-     - Aplicação de dano (`damage`)
+     - Arremesso de objeto (`throwObject`) - Apenas para sincronizar animação inicial.
+     - Aplicação de ataque (`attack`) - Enviado pelo atacante com o tipo de arma.
+     - Resposta de dano (`damageReceived`) - Enviado pelo servidor com dano final e flag de crítico.
      - Compra de item (`buyItem`)
      - Equipar/Desequipar acessório (`toggleEquipAccessory`)
      - Mudança de modo PvP (`funModeChanged`)
      - Definição de assinaturas (`setCustomKillSignatures`)
 
 3. **Estado da Aplicação**
-   - **Servidor:** Fonte única da verdade para estado compartilhado (participantes, votos, inventários, acessório equipado, estado da sala).
-   - **Cliente:** Gerenciamento de UI local e reflexo do estado do servidor via Context API (Socket.io, Barra de Vida, Estado PVP) e hooks (`useSalaSocket`, `useSalaUiEffects`).
+   - **Servidor:** Fonte única da verdade, realiza cálculos de combate (dano, crítico) com base nos dados de `itemsData.js`.
+   - **Cliente:** Reflete estado do servidor, inicia animações de ataque, ouve `damageReceived` para exibir dano final/crítico.
 
 ## Segurança
 1. **Variáveis de Ambiente**
@@ -223,35 +233,30 @@ npm run dev
 
 ## Recursos de Gamificação
 
-1. **Sistema de Arremesso de Teclado**
-   - Animação fluida do teclado voando pela tela
-   - Efeito de ricochete após impacto com rotação contínua
-   - Feedback visual com efeito de explosão no avatar atingido
-   - Animação de tremor no participante que recebe o arremesso
-   - Sistema de dano baseado no tipo de objeto
-   - Dano configurável via arquivo de configuração centralizado
-   - Exibição do valor de dano quando um avatar é atingido
-   - Animações centralizadas em um único arquivo CSS para melhor manutenção
-   - Prevenção de duplicação de animações para o atacante
+1. **Sistema de Arremesso e Ataque**
+   - Animação fluida do objeto de ataque (ex: teclado).
+   - Efeitos visuais de impacto (explosão, tremor, ricochete).
+   - Sistema de dano calculado no servidor:
+     - Considera ataque base da arma (fixo + dado).
+     - Considera bônus de ataque do acessório do atacante (fixo + dado).
+     - Considera defesa do acessório do alvo (fixo + dado).
+     - Inclui chance de acerto crítico (definida pela arma).
+   - Exibição do valor de dano final ou "CRITICAL!" no avatar atingido.
+   - Animações centralizadas.
 
-2. **Sistema de Vida**
-   - Barra de vida visual que aparece quando um participante recebe dano
-   - Visibilidade da barra de vida para todos os participantes quando um avatar é atingido
-   - Dano baseado no tipo de objeto arremessado
-   - Feedback visual de dano com cores dinâmicas (verde, amarelo, laranja, vermelho)
-   - Sincronização em tempo real entre todos os participantes
-   - Estado gerenciado pelo servidor para consistência
-   - Configurações centralizadas para vida máxima, dano e tempos de animação
-   - Transições suaves de visibilidade da barra de vida
-   - Tempo configurável para exibição da barra de vida após receber dano
+2. **Sistema de Vida e Feedback**
+   - Barra de vida visual dinâmica.
+   - Visibilidade da barra para todos ao receber dano.
+   - Feedback visual de dano crítico.
+   - Piscada vermelha na tela do jogador atingido (se condições aplicáveis).
+   - Sincronização em tempo real.
+   - Configurações de vida máxima e tempos em `gameConfig.js`.
 
-3. **Sistema de Ataque**
-   - Direção aleatória de ataque (esquerda/direita)
-   - Animações sincronizadas para todos os participantes
-   - Efeitos visuais otimizados para evitar duplicação
-   - Sistema de eventos para garantir consistência entre atacante e alvo
-   - Prevenção de ataques múltiplos simultâneos
-   - Feedback visual consistente para todos os participantes
+3. **Sistema de Itens (Armas e Acessórios)**
+   - Definição centralizada em `itemsData.js` com tipos (`weapon`, `accessory`) e atributos de combate.
+   - Loja para aquisição de itens.
+   - Inventário para visualização e gerenciamento (equipar/desequipar acessórios).
+   - Exibição visual de acessórios equipados nos avatares.
 
 4. **GameController**
    - Componente para interação com elementos de gamificação.

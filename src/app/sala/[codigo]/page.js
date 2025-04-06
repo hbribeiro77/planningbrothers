@@ -366,21 +366,7 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
           )}
         </Container>
 
-        {/* Overlay vermelho original (atenção) */}
-        {shouldShowAttentionOverlay && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(255, 0, 0, 0.3)',
-            zIndex: 1000, 
-            pointerEvents: 'none',
-          }} />
-        )}
-
-        {/* NOVO: Overlay branco para piscada */}
+        {/* Overlay da Piscada (agora vermelho) */}
         {isFlashing && (
           <div style={{
             position: 'fixed',
@@ -388,10 +374,9 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(255, 255, 255, 0.8)', // Branco semi-transparente
-            zIndex: 1001, // Acima do overlay vermelho
+            backgroundColor: 'rgba(255, 0, 0, 0.5)', // << Mudar para vermelho
+            zIndex: 1001, // Pode manter ou ajustar se necessário
             pointerEvents: 'none',
-            // Poderia adicionar uma animação de fade-out aqui se desejado
           }} />
         )}
 

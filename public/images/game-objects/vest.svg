@@ -1,29 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400">
   <!-- Parte esquerda do colete -->
   <path d="M100 50 L70 150 L70 350 L160 350 L160 50 Z" 
-        fill="#2e8b57" stroke="#000000" stroke-width="2"/>
+        fill="currentColor" stroke="#000000" stroke-width="2"/>
   
   <!-- Parte direita do colete -->
   <path d="M500 50 L530 150 L530 350 L440 350 L440 50 Z" 
-        fill="#2e8b57" stroke="#000000" stroke-width="2"/>
+        fill="currentColor" stroke="#000000" stroke-width="2"/>
   
   <!-- Gola esquerda -->
-  <path d="M100 50 L160 80 L160 50" stroke="#000000" stroke-width="2" fill="#2e8b57"/>
+  <path d="M100 50 L160 80 L160 50" stroke="#000000" stroke-width="2" fill="currentColor"/>
   
   <!-- Gola direita -->
-  <path d="M500 50 L440 80 L440 50" stroke="#000000" stroke-width="2" fill="#2e8b57"/>
+  <path d="M500 50 L440 80 L440 50" stroke="#000000" stroke-width="2" fill="currentColor"/>
   
   <!-- Cavas (aberturas para os braços) -->
   <path d="M100 50 L70 150 C80 160, 90 170, 110 155 L130 100 L100 50" 
-        fill="#1e6e3c" stroke="#000000" stroke-width="2"/>
+        fill="currentColor" style="opacity: 0.7;" stroke="#000000" stroke-width="2"/>
   <path d="M500 50 L530 150 C520 160, 510 170, 490 155 L470 100 L500 50" 
-        fill="#1e6e3c" stroke="#000000" stroke-width="2"/>
+        fill="currentColor" style="opacity: 0.7;" stroke="#000000" stroke-width="2"/>
   
   <!-- Casas dos botões (lado esquerdo) -->
-  <rect x="145" y="115" width="15" height="10" rx="5" fill="#1e6e3c" stroke="#000000" stroke-width="1"/>
-  <rect x="145" y="175" width="15" height="10" rx="5" fill="#1e6e3c" stroke="#000000" stroke-width="1"/>
-  <rect x="145" y="235" width="15" height="10" rx="5" fill="#1e6e3c" stroke="#000000" stroke-width="1"/>
-  <rect x="145" y="295" width="15" height="10" rx="5" fill="#1e6e3c" stroke="#000000" stroke-width="1"/>
+  <rect x="145" y="115" width="15" height="10" rx="5" fill="currentColor" style="opacity: 0.7;" stroke="#000000" stroke-width="1"/>
+  <rect x="145" y="175" width="15" height="10" rx="5" fill="currentColor" style="opacity: 0.7;" stroke="#000000" stroke-width="1"/>
+  <rect x="145" y="235" width="15" height="10" rx="5" fill="currentColor" style="opacity: 0.7;" stroke="#000000" stroke-width="1"/>
+  <rect x="145" y="295" width="15" height="10" rx="5" fill="currentColor" style="opacity: 0.7;" stroke="#000000" stroke-width="1"/>
   
   <!-- Botões (lado direito) -->
   <circle cx="455" cy="120" r="5" fill="#b8860b" stroke="#000000" stroke-width="1"/>

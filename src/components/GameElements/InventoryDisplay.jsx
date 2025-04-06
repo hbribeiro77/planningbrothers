@@ -1,25 +1,8 @@
 import { useState } from 'react';
 import { Stack, Group, Text, Tooltip, ActionIcon, Divider, Box } from '@mantine/core';
-import { IconKeyboard, IconShirt } from '@tabler/icons-react';
+import { IconKeyboard } from '@tabler/icons-react';
 import { usePvpStatus } from '@/contexts/PvpContext';
-
-// Definição dos acessórios conhecidos e seus ícones
-const accessoryIcons = {
-  vest: IconShirt,
-  // Adicionar outros acessórios aqui
-};
-
-// Definição dos dados dos itens (nome para o tooltip)
-// TODO: Mover para um arquivo de constantes compartilhado (e.g., src/constants/itemsData.js)
-const itemsData = {
-  vest: { 
-    name: 'Colete DPE', 
-    // outras props se necessário, como descrição, etc.
-  },
-  // Adicionar outros itens aqui
-};
-
-const COLETE_DPE_ID = 'vest'; // << Usar ID constante
+import { COLETE_DPE_ID, COLETE_BLUE_ID, ITEMS_DATA, isAccessory, accessoryIcons } from '@/constants/itemsData';
 
 export function InventoryDisplay({ 
   currentUser, 
@@ -29,21 +12,18 @@ export function InventoryDisplay({
   
   const [armaSelecionada, setArmaSelecionada] = useState('keyboard');
   const armasDisponiveis = [{ id: 'keyboard', nome: 'Teclado', icon: IconKeyboard }];
-  // Obter acessórios do inventário do currentUser passado via prop
-  const userAccessories = currentUser?.inventory?.filter(itemId => accessoryIcons[itemId]) || [];
+  const userAccessories = currentUser?.inventory?.filter(itemId => ITEMS_DATA[itemId] && isAccessory(itemId)) || [];
   
-  // Acessório clicável SE tiver exatamente um E ele for o Colete DPE
-  const isColeteDPEClicable = userAccessories.length === 1 && userAccessories[0] === COLETE_DPE_ID;
+  const isAccessoryClickable = (itemId) => 
+    isAccessory(itemId) && userAccessories.includes(itemId);
 
   const handleSelecionarArma = (armaId) => {
     console.log("Seleção de arma (futuro):", armaId);
   };
 
   return (
-    // Usar Box para agrupar armas e acessórios lado a lado
     <Box>
       <Group align="flex-start" spacing="lg">
-        {/* Seção Armas */}
         <Stack align="center" spacing="xs">
           <Text size="sm" weight={500} c="dimmed">Arma:</Text>
           <Group position="center" spacing="xs">
@@ -67,36 +47,35 @@ export function InventoryDisplay({
           </Group>
         </Stack>
 
-        {/* Divisor Vertical - Renderizar sempre para manter layout */}
         <Divider orientation="vertical" />
 
-        {/* --- Seção Acessórios - Renderizar sempre --- */}
         <Stack align="center" spacing="xs">
           <Text size="sm" weight={500} c="dimmed">Acessórios:</Text>
           <Group position="center" spacing="xs" style={{ minHeight: 42 }}>
             {userAccessories.map((itemId) => {
-              const AccessoryIcon = accessoryIcons[itemId];
-              const itemName = itemsData[itemId]?.name || itemId; 
+              const itemData = ITEMS_DATA[itemId];
+              if (!itemData) return null;
               
-              // Verifica se ESTE item é o Colete DPE
-              const isThisColeteDPE = itemId === COLETE_DPE_ID;
+              const AccessoryIcon = itemData.icon;
+              const itemName = itemData.name || itemId;
+              const accessoryColor = itemData.iconColor || 'gray';
               
-              // Está selecionado SE este for o Colete DPE E ele estiver equipado no currentUser
-              const isSelected = isThisColeteDPE && currentUser?.equippedAccessory === COLETE_DPE_ID;
+              const isSelected = currentUser?.equippedAccessory === itemId;
               
-              // Define se ESTE ícone específico é clicável (é Colete DPE e o único acessório)
-              const isClickable = isColeteDPEClicable && isThisColeteDPE;
+              const isClickable = isAccessoryClickable(itemId);
+              
+              const iconRenderColor = isSelected ? '#fff' : accessoryColor;
               
               return (
                 <Tooltip key={itemId} label={itemName} openDelay={300}>
                   <ActionIcon
                     variant={isSelected ? 'filled' : 'outline'} 
-                    color={isSelected ? 'blue' : 'gray'} // << Mudar para 'blue' quando selecionado
+                    color={isSelected ? 'blue' : 'gray'}
                     size="lg"
-                    disabled={!isClickable} 
-                    onClick={() => isClickable && onToggleEquip(itemId)} // Chama onToggleEquip SÓ se clicável
+                    disabled={!isClickable}
+                    onClick={() => isClickable && onToggleEquip(itemId)}
                   >
-                    <AccessoryIcon size={20} />
+                    <AccessoryIcon size={20} color={iconRenderColor} />
                   </ActionIcon>
                 </Tooltip>
               );
@@ -106,7 +85,6 @@ export function InventoryDisplay({
             )}
           </Group>
         </Stack>
-        {/* --------------------------- */}
       </Group>
     </Box>
   );

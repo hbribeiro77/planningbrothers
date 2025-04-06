@@ -1,14 +1,13 @@
 import { Paper, Text, Badge, useMantineTheme } from '@mantine/core';
 import { IconEye, IconSkull } from '@tabler/icons-react';
 import { LifeBar } from '../GameElements/LifeBar';
-// import { ITEMS } from '@/constants/items'; // << Importar constantes (quando existirem)
-const COLETE_DPE_ID = 'vest'; // << Usar ID constante (simulado por enquanto)
+// Importar constantes e o novo ícone
+import { COLETE_DPE_ID, COLETE_BLUE_ID, ITEMS_DATA, isAccessory } from '@/constants/itemsData';
+import VestIcon from '../Icons/VestIcon'; // << Importar novo componente
 
 export default function CartaParticipante({ 
   participante,
   revelarVotos = false,
-  showVest = false,
-  // hasVest = false, // << Prop removida, verificaremos aqui
 }) {
   const theme = useMantineTheme();
   const isDark = theme.colorScheme === 'dark';
@@ -22,11 +21,17 @@ export default function CartaParticipante({
     isObservador = false,
     life = 100,
     maxLife = 100,
-    inventory = []
+    inventory = [],
+    equippedAccessory = null // << Obter estado equipado
   } = participante || {};
 
-  // Não precisamos mais verificar o inventário aqui
-  // const hasVest = inventory.includes(COLETE_DPE_ID);
+  // Obter dados do item equipado
+  const equippedItemData = equippedAccessory ? ITEMS_DATA[equippedAccessory] : null;
+  // Verifica se o item equipado é um acessório (para decidir se mostra o VestIcon)
+  const showAccessory = equippedItemData && isAccessory(equippedAccessory);
+  // Obter as cores do item equipado (ou defaults)
+  const accessoryMainColor = showAccessory ? equippedItemData.mainColor : undefined;
+  const accessoryDarkColor = showAccessory ? equippedItemData.darkColor : undefined;
 
   const isDead = life <= 0;
 
@@ -67,19 +72,19 @@ export default function CartaParticipante({
     >
       {!isObservador && <LifeBar currentLife={life} maxLife={maxLife} avatarId={id} />}
 
-      {/* Ícone do Colete (renderizado condicionalmente) */}
-      {showVest && (
-        <img 
-          src="/images/game-objects/vest.svg"
-          alt="Colete DPE"
+      {/* Ícone do Acessório Equipado (como componente React) */}
+      {showAccessory && (
+        <VestIcon 
+          mainColor={accessoryMainColor}
+          darkColor={accessoryDarkColor}
           style={{
             position: 'absolute',
             top: '60%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            width: '140%',
+            width: '140%', // Manter tamanho ajustado
             height: 'auto',
-            opacity: 0.6,
+            opacity: 0.8, // Manter opacidade
             pointerEvents: 'none',
             zIndex: 1,
           }}

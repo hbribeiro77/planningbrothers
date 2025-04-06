@@ -13,16 +13,18 @@ const DEFAULT_KILL_TITLE = 'Eliminação!';
 
 const MAX_KILL_MESSAGE_LENGTH = 50; // Garante que o backend use o mesmo limite
 const MAX_SIGNATURES = 3; // Limite de assinaturas
-const COLETE_DPE_ID = 'vest'; // Definir ID constante no servidor
+const COLETE_DPE_ID = 'vest';
+const COLETE_BLUE_ID = 'vest_blue'; // << Novo ID
 
-// Definição de itens (pode ser movida para um arquivo separado no futuro)
+// Definição de itens
 const itemsData = {
   [COLETE_DPE_ID]: { name: 'Colete DPE', price: 1 },
+  [COLETE_BLUE_ID]: { name: 'Colete Blue', price: 1 }, // << Adicionar novo colete
   // Adicionar mais itens aqui
 };
 
-// Helper para verificar quais itens são acessórios (simplificado por enquanto)
-const isAccessory = (itemId) => itemId === COLETE_DPE_ID;
+// Helper para verificar quais itens são acessórios
+const isAccessory = (itemId) => itemId === COLETE_DPE_ID || itemId === COLETE_BLUE_ID;
 
 app.prepare().then(() => {
   const server = express();
@@ -385,16 +387,15 @@ app.prepare().then(() => {
       const sala = salas.get(codigo);
       const participante = sala.participantes.get(socket.id);
 
-      if (participante && participante.inventory?.includes(itemId)) {
+      // Verifica se participante existe, se o item é um acessório válido, e se o participante possui o item
+      if (participante && isAccessory(itemId) && participante.inventory?.includes(itemId)) {
         // Se o item clicado já está equipado, desequipa.
         if (participante.equippedAccessory === itemId) {
           participante.equippedAccessory = null;
           console.log(`[${codigo}] ${participante.nome} desequipou ${itemId}`);
         } 
-        // Se nenhum item está equipado ou outro item está equipado, equipa o novo item.
+        // Se um item diferente ou nenhum item estava equipado, equipa o NOVO item.
         else {
-          // Por enquanto, só permitimos 1 acessório (o colete), então podemos simplesmente equipar.
-          // No futuro, pode precisar de lógica para desequipar o anterior se houver slots.
           participante.equippedAccessory = itemId;
           console.log(`[${codigo}] ${participante.nome} equipou ${itemId}`);
         }
@@ -402,7 +403,7 @@ app.prepare().then(() => {
         // Notifica todos sobre a mudança no estado do participante
         io.to(codigo).emit('atualizarParticipantes', Array.from(sala.participantes.values()));
       } else {
-        console.warn(`[${codigo}] Participante ${socket.id} tentou equipar item inválido (${itemId}) ou não encontrado.`);
+        console.warn(`[${codigo}] Participante ${socket.id} tentou equipar item inválido (${itemId}) ou não encontrado no inventário.`);
       }
     });
     // --- Fim do Listener Equipar/Desequipar ---

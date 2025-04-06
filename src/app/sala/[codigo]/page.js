@@ -260,7 +260,7 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
             }
           `}</style>
           
-          <Group justify="flex-start" align="center" mb="xl" gap="xs">
+          <Group justify="flex-start" align="center" mb="md" gap="xs">
             <Title order={1}>Sala {codigoSala}</Title>
             <CopyButton value={salaURL}>
               {({ copied, copy }) => (
@@ -321,7 +321,7 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
           </Group>
 
           {/* Botão de Nova Rodada - sempre presente mas só visível quando necessário */}
-          <Box mb="xl" style={{ display: 'flex', justifyContent: 'center', visibility: revelarVotos ? 'visible' : 'hidden' }}>
+          <Box mb={0} style={{ display: 'flex', justifyContent: 'center', visibility: revelarVotos ? 'visible' : 'hidden' }}>
             <Button
               color="blue"
               size="sm"
@@ -334,8 +334,8 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
 
           <Paper 
             shadow="sm" 
-            p="md" 
-            mb="xl" 
+            px="md" py="xs"
+            mb="lg"
             style={pulseAnimation}
             className="nova-rodada-transition"
           >

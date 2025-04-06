@@ -209,18 +209,13 @@ app.prepare().then(() => {
       const sala = salas.get(codigo);
       const participante = sala.participantes.get(socket.id);
       
-      // Verifica se participante existe E se AINDA não votou nesta rodada
-      if (participante && !participante.jaVotou) { 
+      // Verifica apenas se participante existe.
+      if (participante) { 
+        // Define/sobrescreve o voto e marca que votou
         participante.jaVotou = true;
         participante.valorVotado = voto;
         
-        // Emitir só o voto recebido
-        io.to(codigo).emit('votoRecebido', { 
-          usuario: participante, // Envia dados do participante (incluindo jaVotou)
-          voto 
-        });
-        
-        // Manter para atualizar status visual "Votou" imediatamente
+        // Manter atualização completa para garantir consistência da UI
         io.to(codigo).emit('atualizarParticipantes', 
           Array.from(sala.participantes.values())
         );

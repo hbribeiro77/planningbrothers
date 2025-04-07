@@ -228,15 +228,13 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
           const flyingKeyboard = document.querySelector(`.keyboard-flying[data-target-id="${targetId}"]`);
           if (flyingKeyboard) {
             console.log(`[Cliente] Removendo teclado voador (HIT) para target ${targetId}.`);
-            flyingKeyboard.remove(); // Remove imediatamente no HIT
+            flyingKeyboard.remove(); 
           } else {
             console.warn(`[Cliente] Não foi possível encontrar teclado voador para target ${targetId} para remover (HIT).`);
           }
-          // ---------------------------------------
-
-          // Criar ricochete na MESMA direção do ataque original
-          const ricochetDirection = attackDirection || 'right';
-          console.log(`[Cliente] Chamando createRicochetKeyboard com a MESMA direção do ataque: ${ricochetDirection} (original: ${attackDirection})`);
+          
+          // RESTAURAR CHAMADA AO RICOCHETE AQUI (disparado pelo evento do servidor)
+          const ricochetDirection = attackDirection || 'right'; 
           AnimationService.createRicochetKeyboard(targetElement, ricochetDirection);
 
         } else {
@@ -247,15 +245,14 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
           const flyingKeyboard = document.querySelector(`.keyboard-flying[data-target-id="${targetId}"]`);
           if (flyingKeyboard) {
             console.log(`[Cliente] Removendo teclado voador (DODGE) para target ${targetId}.`);
-            flyingKeyboard.remove(); // Remove imediatamente no DODGE
+            flyingKeyboard.remove();
           } else {
             console.warn(`[Cliente] Não foi possível encontrar teclado voador para target ${targetId} para remover (DODGE).`);
           }
           // -------------------------------------------
 
-          // Chamar a NOVA função para criar a animação de atravessar
-          // Usa a direção original do ataque que recebemos
-          const passThroughDirection = attackDirection || 'right'; // Usa fallback se necessário
+          // Chamar diretamente, confiando no rAF interno e CSS opacity 0
+          const passThroughDirection = attackDirection || 'right'; 
           AnimationService.createPassingKeyboard(targetElement, passThroughDirection);
         }
 

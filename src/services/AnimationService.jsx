@@ -134,6 +134,7 @@ export class AnimationService {
    * Cria e mostra um teclado ricocheteando
    */
   static createRicochetKeyboard(element, direction) {
+    // VERSÃO SIMPLES (sem requestAnimationFrame, sem opacidade inicial 0)
     if (!element) return;
 
     const ricochetId = `ricochet-${Date.now()}`;
@@ -141,15 +142,13 @@ export class AnimationService {
     
     const ricochetDiv = document.createElement('div');
     ricochetDiv.id = ricochetId;
-    // NÃO aplicar classe de animação ainda
-    ricochetDiv.className = `keyboard-ricochet`; // Classe base apenas
+    // Aplicar classe de animação diretamente
+    ricochetDiv.className = `keyboard-ricochet keyboard-ricochet-${direction}`;
     
-    // Definir estilos, começando invisível
     ricochetDiv.style.position = 'fixed';
     ricochetDiv.style.zIndex = '15';
     ricochetDiv.style.left = `${rect.left + rect.width/2 - 17.5}px`;
     ricochetDiv.style.top = `${rect.top + rect.height/2 - 17.5}px`;
-    ricochetDiv.style.opacity = '0';
     ricochetDiv.style.pointerEvents = 'none';
     
     const ricochetImg = document.createElement('img');
@@ -158,16 +157,10 @@ export class AnimationService {
     ricochetImg.className = 'keyboard-image';
     ricochetDiv.appendChild(ricochetImg);
 
-    // Adicionar ao body (invisível)
+    // Adicionar ao body
     document.body.appendChild(ricochetDiv);
 
-    // Adicionar classe de animação no próximo frame
-    requestAnimationFrame(() => {
-      ricochetDiv.classList.add(`keyboard-ricochet-${direction}`);
-      ricochetDiv.style.opacity = ''; // Deixar animação controlar opacidade
-    });
-    
-    // Remover após animação CSS (forwards cuida do estado final)
+    // Remover após animação CSS (a animação CSS deve ter 'forwards')
     setTimeout(() => {
       const ricochetElement = document.getElementById(ricochetId);
       if (ricochetElement) {

@@ -233,9 +233,11 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
             console.warn(`[Cliente] Não foi possível encontrar teclado voador para target ${targetId} para remover (HIT).`);
           }
           
-          // RESTAURAR CHAMADA AO RICOCHETE AQUI (disparado pelo evento do servidor)
-          const ricochetDirection = attackDirection || 'right'; 
-          AnimationService.createRicochetKeyboard(targetElement, ricochetDirection);
+          // Adicionar delay antes de iniciar Animação 2 (Ricochete)
+          setTimeout(() => { 
+            const ricochetDirection = attackDirection || 'right'; 
+            AnimationService.createRicochetKeyboard(targetElement, ricochetDirection);
+          }, 50); // Atraso de 20ms
 
         } else {
           // --- ATAQUE ESQUIVADO --- 
@@ -251,9 +253,11 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
           }
           // -------------------------------------------
 
-          // Chamar diretamente, confiando no rAF interno e CSS opacity 0
-          const passThroughDirection = attackDirection || 'right'; 
-          AnimationService.createPassingKeyboard(targetElement, passThroughDirection);
+          // Adicionar delay antes de iniciar Animação 2 (Atravessar)
+          setTimeout(() => {
+            const passThroughDirection = attackDirection || 'right'; 
+            AnimationService.createPassingKeyboard(targetElement, passThroughDirection);
+          }, 50); // Atraso de 20ms
         }
 
       } else {

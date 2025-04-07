@@ -467,30 +467,3 @@ useEffect(() => {
 *   **Problema:** Um elemento (`div` com número de dano) criado dinamicamente via JavaScript e adicionado ao DOM com `position: absolute` estava aparecendo no local errado (canto da tela) em vez de sobre o elemento alvo (avatar).
 *   **Solução Técnica:** Adicionar `position: relative` via CSS (ou `style` inline) ao elemento pai (`div.carta-participante`) onde o número de dano estava sendo anexado (`appendChild`).
 *   **Aprendizado:** O contexto de posicionamento é fundamental para `position: absolute`. Um elemento posicionado absolutamente se alinha em relação ao ancestral posicionado mais próximo. Se nenhum ancestral tiver `position` definido (diferente de `static`), ele se alinha em relação ao `<body>` ou à viewport. Garantir que o pai direto tenha `position: relative` é a prática comum para conter elementos posicionados absolutamente dentro dele. 
-
-## Desafios de Depuração e Soluções
-
-### 1. "Flash" Visual em Animações Iniciadas Dinamicamente
-
-- **Problema:** Ao iniciar a animação de arremesso do teclado (`createFlyingKeyboard`), o elemento do teclado aparecia momentaneamente sobre o avatar alvo antes de começar a animação de voo (que iniciava fora da tela via `transform: translateX`).
-- **Causa Raiz:** O elemento do teclado era adicionado como filho direto do avatar alvo (`element.appendChild(keyboardDiv)`). O navegador renderizava brevemente o teclado em sua posição "natural" (dentro do avatar) antes que o CSS (`transform: translateX(...)` aplicado pela classe `keyboard-flying-*`) tivesse efeito para movê-lo para fora da tela.
-- **Solução Técnica:**
-    1. Alterar `createFlyingKeyboard` para adicionar o `keyboardDiv` diretamente ao `document.body` em vez do avatar alvo.
-    2. Definir `keyboardDiv.style.position = 'fixed'`. 
-    3. Calcular as coordenadas `top` e `left` iniciais do `keyboardDiv` (usando `element.getBoundingClientRect()` do avatar alvo) para que o ponto final da animação CSS (que termina em `transform: translateX(0)`) coincidisse com o centro do avatar alvo.
-    4. Garantir que todas as propriedades de estilo e classe fossem definidas no `keyboardDiv` *antes* de adicioná-lo ao `document.body`.
-    5. (Como segurança adicional) Forçar um reflow do navegador lendo `void keyboardDiv.offsetWidth;` imediatamente antes de adicionar ao `body` para garantir que os estilos iniciais fossem computados antes do início da animação CSS.
-- **Aprendizado:** A ordem de adição ao DOM e aplicação de estilos/classes CSS é crucial, especialmente para animações que dependem de `transform`. Adicionar elementos que serão animados fora da tela diretamente ao `body` com posição calculada pode evitar flashes indesejados.
-
-### 2. Sincronização de Feedback Visual Temporário (Barra de Vida)
-
-- **Problema:** A barra de vida, que deveria aparecer temporariamente para todos quando um jogador sofria dano, só estava visível para o jogador atacante.
-- **Processo de Depuração:**
-    - Inicialmente, a chamada `showLifeBarTemporarily` estava no lugar errado (no cliente do atacante, antes da confirmação do servidor).
-    - A chamada foi movida para o handler `damageReceived` (no `page.js`), que roda em todos os clientes após confirmação do servidor. O problema persistiu.
-    - Logs confirmaram que `showLifeBarTemporarily` estava sendo chamada em todos os clientes e que o estado do contexto (`visibleBars`) estava sendo atualizado corretamente.
-    - Foi necessário refatorar o `LifeBarContext`, que originalmente só rastreava a visibilidade de *uma* barra por vez, para usar um objeto (`visibleBars`) capaz de rastrear o estado de visibilidade de *múltiplas* barras independentemente, com timeouts individuais.
-    - O componente consumidor (`LifeBar`) foi atualizado para usar a nova API do contexto (`isBarVisible`). O problema *ainda* persistiu para os não-atacantes.
-- **Causa Raiz Final:** Mesmo com a lógica de estado e comunicação correta, o componente pai (`CartaParticipante`) possuía a propriedade CSS `overflow: hidden`. Como a `LifeBar` era posicionada *acima* dos limites visuais do `CartaParticipante` (usando `position: absolute` e `top: -10px`), ela estava sendo visualmente cortada pelo `overflow: hidden`.
-- **Solução Técnica:** Remover a propriedade `overflow: hidden` do estilo do componente `Paper` em `CartaParticipante.jsx`.
-- **Aprendizado:** A depuração de problemas de UI em aplicações real-time pode exigir investigação em múltiplas camadas: lógica de eventos, gerenciamento de estado (local e global/contexto), comunicação cliente-servidor, e finalmente, as propriedades CSS de layout e renderização (`position`, `overflow`). Logs detalhados em cada camada são essenciais para isolar a causa raiz. Mesmo com a lógica de estado correta, o CSS pode impedir o resultado visual esperado. 

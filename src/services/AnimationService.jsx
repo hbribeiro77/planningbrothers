@@ -100,43 +100,32 @@ export class AnimationService {
     
     const keyboardDiv = document.createElement('div');
     keyboardDiv.id = `keyboard-${animationId}`;
-    // NÃO aplicar classe de animação ainda
-    keyboardDiv.className = `keyboard-flying`; // Classe base apenas
+    keyboardDiv.className = `keyboard-flying keyboard-flying-${direction}`;
     keyboardDiv.setAttribute('data-target-id', targetId);
     
-    // Define todos os estilos ANTES de adicionar ao DOM
     keyboardDiv.style.position = 'fixed';
-    keyboardDiv.style.zIndex = '10'; 
-    keyboardDiv.style.pointerEvents = 'none'; 
-    // Começar invisível
-    keyboardDiv.style.opacity = '0';
+    keyboardDiv.style.zIndex = '10';
+    keyboardDiv.style.pointerEvents = 'none';
 
     const rect = element.getBoundingClientRect();
     const targetCenterX = rect.left + rect.width / 2;
     const targetCenterY = rect.top + rect.height / 2;
     
-    keyboardDiv.style.left = `${targetCenterX - 17.5}px`; 
-    keyboardDiv.style.top = `${targetCenterY - 17.5}px`; 
+    keyboardDiv.style.left = `${targetCenterX - 17.5}px`;
+    keyboardDiv.style.top = `${targetCenterY - 17.5}px`;
     
     const keyboardImg = document.createElement('img');
     keyboardImg.src = '/images/game-objects/keyboard.svg';
     keyboardImg.alt = 'Teclado';
     keyboardImg.className = 'keyboard-image';
+    
     keyboardDiv.appendChild(keyboardImg);
     
-    // Adiciona ao body (ainda invisível e sem animação)
+    // Forçar reflow para garantir que os estilos sejam aplicados antes da animação
+    void keyboardDiv.offsetWidth; 
+    
+    // Adiciona ao body DEPOIS de configurar tudo e forçar reflow
     document.body.appendChild(keyboardDiv);
-
-    // Força reflow (opcional, mas pode ajudar em alguns casos)
-    // void keyboardDiv.offsetWidth;
-
-    // No próximo quadro de animação, adiciona a classe de animação
-    requestAnimationFrame(() => {
-        // A animação CSS (keyboard-flying-left/right) deve começar com opacity: 1
-        keyboardDiv.classList.add(`keyboard-flying-${direction}`);
-        // Remove a opacidade 0 inline para permitir que a animação controle
-        keyboardDiv.style.opacity = ''; 
-    });
 
     return animationId;
   }
@@ -152,26 +141,39 @@ export class AnimationService {
     
     const ricochetDiv = document.createElement('div');
     ricochetDiv.id = ricochetId;
-    ricochetDiv.className = `keyboard-ricochet keyboard-ricochet-${direction}`;
+    // NÃO aplicar classe de animação ainda
+    ricochetDiv.className = `keyboard-ricochet`; // Classe base apenas
+    
+    // Definir estilos, começando invisível
     ricochetDiv.style.position = 'fixed';
     ricochetDiv.style.zIndex = '15';
     ricochetDiv.style.left = `${rect.left + rect.width/2 - 17.5}px`;
     ricochetDiv.style.top = `${rect.top + rect.height/2 - 17.5}px`;
+    ricochetDiv.style.opacity = '0';
+    ricochetDiv.style.pointerEvents = 'none';
     
     const ricochetImg = document.createElement('img');
     ricochetImg.src = '/images/game-objects/keyboard.svg';
     ricochetImg.alt = 'Teclado Ricocheteando';
     ricochetImg.className = 'keyboard-image';
-    
     ricochetDiv.appendChild(ricochetImg);
+
+    // Adicionar ao body (invisível)
     document.body.appendChild(ricochetDiv);
+
+    // Adicionar classe de animação no próximo frame
+    requestAnimationFrame(() => {
+      ricochetDiv.classList.add(`keyboard-ricochet-${direction}`);
+      ricochetDiv.style.opacity = ''; // Deixar animação controlar opacidade
+    });
     
+    // Remover após animação CSS (forwards cuida do estado final)
     setTimeout(() => {
       const ricochetElement = document.getElementById(ricochetId);
       if (ricochetElement) {
         ricochetElement.remove();
       }
-    }, 400);
+    }, 400); // Tempo da animação CSS
 
     return ricochetId;
   }
@@ -187,31 +189,39 @@ export class AnimationService {
     
     const passThroughDiv = document.createElement('div');
     passThroughDiv.id = passThroughId;
-    // Aplicar classe para animação de atravessar e direção
-    passThroughDiv.className = `keyboard-pass-through keyboard-pass-through-${direction}`; 
+    // NÃO aplicar classe de animação ainda
+    passThroughDiv.className = `keyboard-pass-through`; // Classe base apenas
     
+    // Definir estilos, começando invisível
     passThroughDiv.style.position = 'fixed';
-    passThroughDiv.style.zIndex = '10'; // zIndex similar ao teclado voador
-    // Posição inicial ligeiramente sobreposta ao centro do avatar
+    passThroughDiv.style.zIndex = '10'; 
     passThroughDiv.style.left = `${rect.left + rect.width/2 - 17.5}px`; 
     passThroughDiv.style.top = `${rect.top + rect.height/2 - 17.5}px`;
+    passThroughDiv.style.opacity = '0';
+    passThroughDiv.style.pointerEvents = 'none';
     
     const passThroughImg = document.createElement('img');
     passThroughImg.src = '/images/game-objects/keyboard.svg';
     passThroughImg.alt = 'Teclado Atravessando';
-    passThroughImg.className = 'keyboard-image'; // Reutilizar estilo da imagem
-    
+    passThroughImg.className = 'keyboard-image';
     passThroughDiv.appendChild(passThroughImg);
-    document.body.appendChild(passThroughDiv);
     
-    // Remover após a animação (ex: 500ms)
-    // Ajustar tempo conforme a duração da animação CSS
+    // Adicionar ao body (invisível)
+    document.body.appendChild(passThroughDiv);
+
+    // Adicionar classe de animação no próximo frame
+    requestAnimationFrame(() => {
+        passThroughDiv.classList.add(`keyboard-pass-through-${direction}`);
+        passThroughDiv.style.opacity = ''; // Deixar animação controlar opacidade
+    });
+    
+    // Remover após animação CSS
     setTimeout(() => {
       const passThroughElement = document.getElementById(passThroughId);
       if (passThroughElement) {
         passThroughElement.remove();
       }
-    }, 500);
+    }, 400); // Usar mesma duração da animação CSS de pass-through (0.4s)
 
     return passThroughId;
   }

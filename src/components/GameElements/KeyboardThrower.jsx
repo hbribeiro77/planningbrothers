@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Image } from '@mantine/core';
 import { useLifeBar } from '@/contexts/LifeBarContext';
 import { GAME_CONFIG } from '@/constants/gameConfig';
@@ -22,14 +22,29 @@ export function KeyboardThrower({
 
     const handleThrowObject = (data) => {
       const { fromUser, toUser, objectType } = data;
+      // Log para verificar recebimento e IDs
+      console.log(`[Socket Listener] Recebeu throwObject: from=${fromUser}, to=${toUser}, currentUser=${currentUser.id}`);
+      
       // Ignora o evento se o remetente for o próprio usuário
-      if (fromUser === currentUser.id) return;
+      if (fromUser === currentUser.id) {
+          console.log('[Socket Listener] Ignorando evento do próprio usuário.');
+          return;
+      }
       
       if (objectType === 'keyboard') {
         // Encontra o elemento do avatar alvo usando data-id
-        const targetElement = document.querySelector(`[data-id="${toUser}"]`);
+        // CORREÇÃO: Usar data-user-id como no page.js
+        const targetElement = document.querySelector(`.carta-participante[data-user-id="${toUser}"]`); 
+        console.log(`[Socket Listener] Tentando encontrar targetElement para user ${toUser}:`, targetElement);
+
         if (targetElement) {
-          throwKeyboardAtAvatar(targetElement, toUser);
+          console.log(`[Socket Listener] Chamando throwKeyboardAtAvatar para ${toUser}...`);
+          // Determina a direção (poderíamos receber isso do evento original? Por ora, aleatório)
+          const attackDirection = Math.random() < 0.5 ? 'left' : 'right';
+          throwKeyboardAtAvatar(targetElement, toUser, attackDirection);
+          console.log(`[Socket Listener] Chamada a throwKeyboardAtAvatar para ${toUser} concluída.`);
+        } else {
+            console.warn(`[Socket Listener] targetElement não encontrado para user ${toUser}. Animação não será exibida.`);
         }
       }
     };
@@ -42,11 +57,8 @@ export function KeyboardThrower({
   }, [socket, currentUser.id]);
 
   // Função para adicionar teclado voador e explosão a um avatar
-  const throwKeyboardAtAvatar = (element, userId) => {
+  const throwKeyboardAtAvatar = (element, userId, attackDirection) => {
     if (!element) return;
-    
-    // Escolhe uma direção aleatória
-    const attackDirection = Math.random() < 0.5 ? 'left' : 'right';
     
     // Cria IDs únicos para esta animação
     const animationId = Date.now().toString();
@@ -66,32 +78,19 @@ export function KeyboardThrower({
     }
     element.style.overflow = 'visible';
     
-    // Cria o teclado voador usando o serviço de animação
-    const keyboardId = AnimationService.createFlyingKeyboard(element, attackDirection);
+    // Cria o teclado voador usando o serviço de animação, passando a direção
+    const keyboardId = AnimationService.createFlyingKeyboard(element, attackDirection, userId);
     
-    // Rastreia teclados em voo
-    setFlyingKeyboards(prev => [...prev, { id: animationId, element, userId, direction: attackDirection }]);
+    // Rastreia teclados em voo (incluindo a direção)
+    const item = { id: animationId, element, userId, direction: attackDirection }; 
+    setFlyingKeyboards(prev => [...prev, item]);
     
     // Quando a animação do teclado terminar, mostre a explosão e o ricochete
     setTimeout(() => {
-      // Remove o teclado original
-      const keyboardElement = document.getElementById(`keyboard-${keyboardId}`);
-      if (keyboardElement) {
-        keyboardElement.remove();
-      }
+      // Deixar que o handleDamageReceived ou animações CSS limpem depois
       
-      // Adiciona efeito de tremor ao avatar e mostra a explosão simultaneamente
-      AnimationService.makeAvatarShake(element);
-      AnimationService.showExplosionInAvatar(element, userId, soundEnabled);
-      
-      // Adiciona efeito de ricochete imediatamente no mesmo instante
-      AnimationService.createRicochetKeyboard(element, attackDirection);
-      
-      // Remove da lista de teclados em voo
-      setFlyingKeyboards(prev => prev.filter(item => item.id !== animationId));
-
-      // Mostra a barra de vida do avatar atingido
-      showLifeBarTemporarily(userId);
+      // Remove da lista de teclados em voo (apenas estado interno)
+      setFlyingKeyboards(prev => prev.filter(i => i.id !== animationId));
 
       // Emitir o evento de ATAQUE (sem dano) após a animação
       if (socket) {
@@ -99,7 +98,8 @@ export function KeyboardThrower({
           codigo: codigoSala,
           targetId: userId,
           fromUserId: currentUser.id,
-          objectType: 'keyboard'
+          objectType: 'keyboard',
+          attackDirection: item.direction
         });
       }
     }, 400);
@@ -123,7 +123,8 @@ export function KeyboardThrower({
     e.preventDefault();
     
     // Lança teclado no avatar
-    throwKeyboardAtAvatar(targetElement, targetId);
+    const attackDirection = Math.random() < 0.5 ? 'left' : 'right';
+    throwKeyboardAtAvatar(targetElement, targetId, attackDirection);
     
     // Envia evento para outros participantes via socket.io
     if (socket) {

@@ -3,7 +3,7 @@ import { useLifeBar } from '@/contexts/LifeBarContext';
 import { GAME_CONFIG } from '@/constants/gameConfig';
 
 export function LifeBar({ currentLife, maxLife, avatarId }) {
-  const { showLifeBar, targetAvatarId } = useLifeBar();
+  const { isBarVisible, visibleBars } = useLifeBar();
   
   // Calcula a porcentagem de vida
   const lifePercentage = (currentLife / maxLife) * 100;
@@ -20,8 +20,11 @@ export function LifeBar({ currentLife, maxLife, avatarId }) {
     barColor = '#F44336'; // Vermelho
   }
 
-  // Só mostra a barra se showLifeBar for true e o avatarId corresponder ao targetAvatarId
-  const shouldShow = showLifeBar && avatarId === targetAvatarId;
+  // Mostrar a barra se isBarVisible retornar true para este avatarId
+  const shouldShow = isBarVisible(avatarId);
+
+  // LOG DE DEBUG:
+  console.log(`[LifeBar - Avatar: ${avatarId}] isBarVisible=${shouldShow}, Context visibleBars:`, visibleBars);
 
   return (
     <Box

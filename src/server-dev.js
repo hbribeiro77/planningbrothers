@@ -142,9 +142,9 @@ app.prepare().then(() => {
 
     // Aplicar dano após a animação
     socket.on('attack', (data) => {
-      const { codigo, fromUserId, targetId, objectType } = data;
+      const { codigo, fromUserId, targetId, objectType, attackDirection } = data;
       
-      console.log(`[${codigo}] Evento 'attack' recebido: fromUserId=${fromUserId}, targetId=${targetId}, objectType=${objectType}`);
+      console.log(`[${codigo}] Evento 'attack' recebido: fromUserId=${fromUserId}, targetId=${targetId}, objectType=${objectType}, direction=${attackDirection}`);
       
       if (!salas.has(codigo)) return;
       
@@ -157,6 +157,28 @@ app.prepare().then(() => {
       const nomeAtacanteLog = participanteAtacante ? participanteAtacante.nome : 'NÃO ENCONTRADO';
 
       if (participanteAlvo && participanteAtacante && fromUserId !== targetId) {
+        
+        // --- INÍCIO: Verificação de Esquiva (Dodge) ---
+        const targetEquippedId = participanteAlvo.equippedAccessory;
+        const targetAccessoryData = targetEquippedId ? ITEMS_DATA[targetEquippedId] : null;
+        const dodgeChance = targetAccessoryData?.dodgeChance || 0;
+
+        if (dodgeChance > 0 && Math.random() < dodgeChance) {
+          console.log(`[${codigo}] *** ATAQUE ESQUIVADO por ${nomeAlvoLog} (Item: ${targetEquippedId})! ***`);
+
+          // Emitir evento indicando a esquiva (sem dano)
+          io.to(codigo).emit('damageReceived', {
+            targetId: targetId,
+            damage: 0, 
+            currentLife: participanteAlvo.life, // Vida não muda
+            isCritical: false,
+            isDodge: true, // <<< Nova flag indicando esquiva
+            attackDirection: attackDirection // << INCLUIR DIREÇÃO AQUI
+          });
+          
+          return; // Interrompe o processamento do ataque
+        }
+        // --- FIM: Verificação de Esquiva (Dodge) ---
         
         // --- Obter Dados da Arma --- 
         const weaponData = ITEMS_DATA[objectType];
@@ -218,7 +240,7 @@ app.prepare().then(() => {
         const vidaAntes = participanteAlvo.life;
         participanteAlvo.life = Math.max(GAME_CONFIG.LIFE.MIN, vidaAntes - finalDamage);
         const vidaDepois = participanteAlvo.life;
-        console.log(`[${codigo}] Vida de ${nomeAlvoLog} atualizada de ${vidaAntes} para: ${vidaDepois} (dano aplicado: ${finalDamage}, crítico: ${isCriticalHit})`);
+        console.log(`[${codigo}] Vida de ${nomeAlvoLog} atualizada de ${vidaAntes} para: ${vidaDepois} (dano sofrido: ${finalDamage}, crítico: ${isCriticalHit})`);
         
         const isKill = vidaDepois <= GAME_CONFIG.LIFE.MIN && vidaAntes > GAME_CONFIG.LIFE.MIN;
 
@@ -226,7 +248,9 @@ app.prepare().then(() => {
           targetId: targetId,
           damage: finalDamage, 
           currentLife: vidaDepois,
-          isCritical: isCriticalHit
+          isCritical: isCriticalHit,
+          isDodge: false, // <<< Indicar que não houve esquiva
+          attackDirection: attackDirection // << INCLUIR DIREÇÃO AQUI
         };
 
         if (isKill) {

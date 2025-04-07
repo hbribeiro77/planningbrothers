@@ -1,8 +1,18 @@
 import React, { useState } from 'react';
 import { Stack, Group, Text, Tooltip, ActionIcon, Divider, Box } from '@mantine/core';
-import { IconKeyboard, IconShirt } from '@tabler/icons-react';
+import { IconKeyboard, IconShirt, IconHandNinja, IconStar, IconMask } from '@tabler/icons-react';
 import { usePvpStatus } from '@/contexts/PvpContext';
 import { COLETE_DPE_ID, COLETE_BLUE_ID, ITEMS_DATA } from '@/constants/itemsData';
+
+// <<< Criar Mapa de Ícones (mesmo mapa)
+const accessoryIconMap = {
+  IconShirt: IconShirt,
+  IconHandNinja: IconHandNinja,
+  IconKeyboard: IconKeyboard,
+  IconStar: IconStar,
+  IconMask: IconMask,
+  // Adicionar outros mapeamentos aqui conforme necessário
+};
 
 export function InventoryDisplay({ 
   currentUser, 
@@ -65,6 +75,9 @@ export function InventoryDisplay({
               
               const iconRenderColor = isSelected ? '#fff' : accessoryColor;
               
+              // <<< Usar mapa para obter o componente de ícone
+              const AccessoryIconComponent = accessoryIconMap[itemData.iconName];
+              
               return (
                 <Tooltip key={itemId} label={itemName} openDelay={300}>
                   <ActionIcon
@@ -74,7 +87,31 @@ export function InventoryDisplay({
                     disabled={!isClickable}
                     onClick={() => isClickable && onToggleEquip(itemId)}
                   >
-                    {itemData.iconName === 'IconShirt' && <IconShirt size={20} color={iconRenderColor} />}
+                    {
+                      itemData.iconSvgPath ? (
+                        // <<< Renderizar IMG se houver caminho SVG
+                        <img 
+                          src={itemData.iconSvgPath}
+                          alt={itemName} 
+                          style={{ 
+                            width: 20, // Ajustar tamanho para ActionIcon
+                            height: 20, 
+                            // Adicionar filtro? (considerar fundo do ActionIcon)
+                            // filter: isSelected ? 'brightness(0) invert(1)' : (theme.colorScheme === 'dark' ? 'invert(1)' : 'none'),
+                          }}
+                        />
+                      ) : (
+                        // <<< Lógica anterior com accessoryIconMap se NÃO houver SVG
+                        (() => {
+                          const AccessoryIconComponent = accessoryIconMap[itemData.iconName];
+                          return AccessoryIconComponent && <AccessoryIconComponent size={20} color={iconRenderColor} />;
+                        })()
+                      )
+                    }
+                    {/* Placeholder se não encontrar SVG nem Ícone Mapeado */}
+                    {!itemData.iconSvgPath && !accessoryIconMap[itemData.iconName] && itemData.iconName && (
+                      <Text size="xs" c="dimmed">?</Text>
+                    )}
                   </ActionIcon>
                 </Tooltip>
               );

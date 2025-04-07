@@ -128,6 +128,47 @@
   filter: brightness(1.3) saturate(0.8);
 }
 
+/* --- Novas Animações de Esquiva (Pass Through) --- */
+@keyframes keyboard-pass-through-left {
+  0% { transform: translateX(0) translateY(0) rotate(0deg); opacity: 1; }
+  /* Ficar invisível aos 20% */
+  20% { opacity: 0; }
+  /* Mantém o estado final, mas move para CIMA */
+  100% { transform: translateX(150vw) translateY(0vh) rotate(180deg); opacity: 0; }
+}
+
+@keyframes keyboard-pass-through-right {
+  0% { transform: translateX(0) translateY(0) rotate(0deg); opacity: 1; }
+  /* Ficar invisível aos 20% */
+  20% { opacity: 0; }
+  /* Mantém o estado final, mas move para CIMA */
+  100% { transform: translateX(-150vw) translateY(0vh) rotate(-180deg); opacity: 0; }
+}
+
+.keyboard-pass-through {
+  /* Tamanho igual aos outros teclados */
+  width: 35px;
+  height: 35px;
+  /* Usar position: fixed como definido no JS */
+  position: fixed;
+  pointer-events: none;
+  /* z-index igual ao flying para consistência inicial */
+  z-index: 10; 
+}
+
+.keyboard-pass-through-left {
+  /* Duração e timing function podem ser ajustados */
+  /* Reduzir duração para 0.4s */
+  animation: keyboard-pass-through-left 0.4s cubic-bezier(0.25, 0.1, 0.75, 0.5) forwards; 
+}
+
+.keyboard-pass-through-right {
+  /* Duração e timing function podem ser ajustados */
+  /* Reduzir duração para 0.4s */
+  animation: keyboard-pass-through-right 0.4s cubic-bezier(0.25, 0.1, 0.75, 0.5) forwards;
+}
+/* ------------------------------------------------- */
+
 /* Prevenção de seleção de texto */
 .carta-participante, 
 .carta-participante * {

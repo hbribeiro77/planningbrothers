@@ -7,7 +7,7 @@ const GAME_CONFIG = {
 
   // Configurações de Pontos
   POINTS: {
-    KILL: 50, // Pontos por kill (exemplo)
+    KILL: 1, // Pontos por kill (exemplo)
     // Adicionar outras pontuações aqui
   },
 

@@ -1,23 +1,45 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
 import { GAME_CONFIG } from '@/constants/gameConfig';
 
 const LifeBarContext = createContext();
 
 export function LifeBarProvider({ children }) {
-  const [showLifeBar, setShowLifeBar] = useState(false);
-  const [targetAvatarId, setTargetAvatarId] = useState(null);
+  const [visibleBars, setVisibleBars] = useState({});
+  const timeoutsRef = useRef({});
 
-  const showLifeBarTemporarily = (avatarId) => {
-    setTargetAvatarId(avatarId);
-    setShowLifeBar(true);
-    setTimeout(() => {
-      setShowLifeBar(false);
-      setTargetAvatarId(null);
+  const showLifeBarTemporarily = useCallback((avatarId) => {
+    if (timeoutsRef.current[avatarId]) {
+      clearTimeout(timeoutsRef.current[avatarId]);
+    }
+
+    setVisibleBars(prev => ({ ...prev, [avatarId]: true }));
+
+    timeoutsRef.current[avatarId] = setTimeout(() => {
+      setVisibleBars(prev => {
+        const newState = { ...prev };
+        delete newState[avatarId];
+        return newState;
+      });
+      delete timeoutsRef.current[avatarId];
     }, 3000);
-  };
+  }, []);
+
+  const isBarVisible = useCallback((avatarId) => {
+    return !!visibleBars[avatarId];
+  }, [visibleBars]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(timeoutsRef.current).forEach(clearTimeout);
+    };
+  }, []);
 
   return (
-    <LifeBarContext.Provider value={{ showLifeBar, targetAvatarId, showLifeBarTemporarily }}>
+    <LifeBarContext.Provider value={{ 
+      visibleBars,
+      isBarVisible,
+      showLifeBarTemporarily 
+    }}>
       {children}
     </LifeBarContext.Provider>
   );

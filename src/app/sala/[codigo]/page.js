@@ -30,7 +30,7 @@ import FormularioEntrada, { LOCALSTORAGE_NOME_KEY } from '@/components/Auth/Form
 import { GameController } from '@/components/GameElements/GameController';
 import { InventoryDisplay } from '@/components/GameElements/InventoryDisplay';
 import { KillFeedDisplay } from '@/components/GameElements/KillFeedDisplay';
-import { LifeBarProvider } from '@/contexts/LifeBarContext';
+import { LifeBarProvider, useLifeBar } from '@/contexts/LifeBarContext';
 import { PvpProvider, PvpContext } from '@/contexts/PvpContext';
 import ShopDrawer from '@/components/Shop/ShopDrawer';
 import { AnimationService } from '@/services/AnimationService';
@@ -72,6 +72,7 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
   const [shopOpened, { open: openShop, close: closeShop }] = useDisclosure(false);
   const [armaSelecionada, setArmaSelecionada] = useState('keyboard');
   const [isFlashEffectEnabled, setIsFlashEffectEnabled] = useState(true); 
+  const { showLifeBarTemporarily } = useLifeBar();
 
   const { 
     participantes, 
@@ -201,15 +202,65 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
   useEffect(() => {
     if (!socket) return;
 
-    const handleDamageReceived = ({ targetId, damage, currentLife, isCritical }) => {
-      console.log(`[Cliente] Recebido damageReceived: targetId=${targetId}, damage=${damage}, isCritical=${isCritical}`);
+    const handleDamageReceived = ({ targetId, damage, currentLife, isCritical, isDodge, attackDirection }) => {
+      console.log(`[Cliente] Recebido damageReceived: targetId=${targetId}, damage=${damage}, isCritical=${isCritical}, isDodge=${isDodge}, direction=${attackDirection}`);
       
       const targetElement = document.querySelector(`.carta-participante[data-user-id="${targetId}"]`);
 
-      if (targetElement && (damage > 0 || isCritical)) {
-        AnimationService.showDamageNumber(targetElement, damage, isCritical);
+      if (targetElement) { // Primeiro, garante que o alvo existe na tela
+        
+        // Sempre mostra o resultado (dano, crítico ou esquiva)
+        if (damage > 0 || isCritical || isDodge) {
+          AnimationService.showDamageNumber(targetElement, damage, isCritical, isDodge);
+          if (!isDodge) {
+              console.log(`[handleDamageReceived - Cliente: ${nomeUsuario}] Chamando showLifeBarTemporarily para ${targetId}`); 
+              showLifeBarTemporarily(targetId);
+          }
+        }
+
+        // Executa animações de HIT e RICOCHETE apenas se NÃO for esquiva
+        if (!isDodge) {
+          console.log(`[Cliente] HIT! Target: ${targetId}. Executando animações de impacto e ricochete.`);
+          AnimationService.showExplosionInAvatar(targetElement, targetId, true); 
+          AnimationService.makeAvatarShake(targetElement);
+
+          // --- Limpar Teclado Voador Específico --- 
+          const flyingKeyboard = document.querySelector(`.keyboard-flying[data-target-id="${targetId}"]`);
+          if (flyingKeyboard) {
+            console.log(`[Cliente] Removendo teclado voador (HIT) para target ${targetId}.`);
+            flyingKeyboard.remove(); // Remove imediatamente no HIT
+          } else {
+            console.warn(`[Cliente] Não foi possível encontrar teclado voador para target ${targetId} para remover (HIT).`);
+          }
+          // ---------------------------------------
+
+          // Criar ricochete na MESMA direção do ataque original
+          const ricochetDirection = attackDirection || 'right';
+          console.log(`[Cliente] Chamando createRicochetKeyboard com a MESMA direção do ataque: ${ricochetDirection} (original: ${attackDirection})`);
+          AnimationService.createRicochetKeyboard(targetElement, ricochetDirection);
+
+        } else {
+          // --- ATAQUE ESQUIVADO --- 
+          console.log(`[Cliente] DODGE! Target: ${targetId}. Acionando animação pass-through.`);
+          
+          // --- Limpar Teclado Voador Específico (DODGE) --- 
+          const flyingKeyboard = document.querySelector(`.keyboard-flying[data-target-id="${targetId}"]`);
+          if (flyingKeyboard) {
+            console.log(`[Cliente] Removendo teclado voador (DODGE) para target ${targetId}.`);
+            flyingKeyboard.remove(); // Remove imediatamente no DODGE
+          } else {
+            console.warn(`[Cliente] Não foi possível encontrar teclado voador para target ${targetId} para remover (DODGE).`);
+          }
+          // -------------------------------------------
+
+          // Chamar a NOVA função para criar a animação de atravessar
+          // Usa a direção original do ataque que recebemos
+          const passThroughDirection = attackDirection || 'right'; // Usa fallback se necessário
+          AnimationService.createPassingKeyboard(targetElement, passThroughDirection);
+        }
+
       } else {
-        console.warn(`[Cliente] Avatar para targetId=${targetId} não encontrado ou dano foi 0 e não era crítico.`);
+        console.warn(`[Cliente] Avatar para targetId=${targetId} não encontrado para animação de dano/esquiva.`);
       }
     };
 
@@ -220,7 +271,7 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
       socket.off('damageReceived', handleDamageReceived);
     };
 
-  }, [socket]); // Dependência apenas no socket
+  }, [socket, showLifeBarTemporarily]); // Dependência apenas no socket
 
   // Se houver erro de entrada, mostra mensagem (verificar antes da conexão)
   if (erroEntrada) {
@@ -266,159 +317,157 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
 
   return (
     <PvpProvider socket={socket} codigoSala={codigoSala} participantes={participantes}>
-      <LifeBarProvider>
-        <Container size="lg" py="xl" style={animacaoEntrada}>
-          {/* Estilo global para animações */}
-          <style jsx global>{`
-            @keyframes pulseEffect {
-              0% { transform: scale(1); }
-              50% { transform: scale(1.03); }
-              100% { transform: scale(1); }
-            }
-            
-            @keyframes fadeIn {
-              from { opacity: 0; }
-              to { opacity: 1; }
-            }
-            
-            .nova-rodada-transition {
-              transition: all 0.5s ease-out;
-            }
-          `}</style>
+      <Container size="lg" py="xl" style={animacaoEntrada}>
+        {/* Estilo global para animações */}
+        <style jsx global>{`
+          @keyframes pulseEffect {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+            100% { transform: scale(1); }
+          }
           
-          <Group justify="flex-start" align="center" mb="md" gap="xs">
-            <Title order={1}>Sala {codigoSala}</Title>
-            <CopyButton value={salaURL}>
-              {({ copied, copy }) => (
-                <Tooltip label={copied ? 'Link copiado!' : 'Copiar link da sala'}>
-                  <ActionIcon color={copied ? 'teal' : 'blue'} onClick={copy}>
-                    {copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
-                  </ActionIcon>
-                </Tooltip>
-              )}
-            </CopyButton>
-            <Button 
-              variant={modoObservador ? 'light' : 'filled'}
-              onClick={toggleModoObservadorComAnimacao}
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          
+          .nova-rodada-transition {
+            transition: all 0.5s ease-out;
+          }
+        `}</style>
+        
+        <Group justify="flex-start" align="center" mb="md" gap="xs">
+          <Title order={1}>Sala {codigoSala}</Title>
+          <CopyButton value={salaURL}>
+            {({ copied, copy }) => (
+              <Tooltip label={copied ? 'Link copiado!' : 'Copiar link da sala'}>
+                <ActionIcon color={copied ? 'teal' : 'blue'} onClick={copy}>
+                  {copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
+                </ActionIcon>
+              </Tooltip>
+            )}
+          </CopyButton>
+          <Button 
+            variant={modoObservador ? 'light' : 'filled'}
+            onClick={toggleModoObservadorComAnimacao}
+          >
+            {modoObservador ? 'Sair do Modo Observador' : 'Modo Observador'}
+          </Button>
+          
+          {/* Controles à direita (Placar Pessoal + Configurações) */}
+          <Group ml="auto" spacing="xs" align="center" wrap="nowrap">
+            {/* --- Botão da Loja --- */}
+            <ActionIcon variant="default" size="lg" title="Abrir Loja" onClick={openShop}>
+              <IconShoppingCart size="1.1rem" />
+            </ActionIcon>
+            {/* ------------------- */}
+
+            {/* --- Placar Pessoal: Kills --- */}
+            <Badge 
+              size="lg" 
+              variant="light" // Usar light para consistência?
+              color="red" 
+              radius="sm"
+              leftSection={<IconSkull size={14} />}
             >
-              {modoObservador ? 'Sair do Modo Observador' : 'Modo Observador'}
-            </Button>
-            
-            {/* Controles à direita (Placar Pessoal + Configurações) */}
-            <Group ml="auto" spacing="xs" align="center" wrap="nowrap">
-              {/* --- Botão da Loja --- */}
-              <ActionIcon variant="default" size="lg" title="Abrir Loja" onClick={openShop}>
-                <IconShoppingCart size="1.1rem" />
-              </ActionIcon>
-              {/* ------------------- */}
+              {currentUserKills}
+            </Badge>
+            {/* -------------------------- */}
 
-              {/* --- Placar Pessoal: Kills --- */} 
-              <Badge 
-                size="lg" 
-                variant="light" // Usar light para consistência?
-                color="red" 
-                radius="sm"
-                leftSection={<IconSkull size={14} />}
-              >
-                {currentUserKills}
-              </Badge>
-              {/* -------------------------- */}
+            {/* --- Placar Pessoal: Pontos --- */} 
+            <Badge 
+              size="lg" 
+              variant="light" 
+              color="yellow" 
+              radius="sm"
+              leftSection={<IconCoin size={14} />}
+            >
+              {currentUserScore}
+            </Badge>
+            {/* -------------------------- */}
 
-              {/* --- Placar Pessoal: Pontos --- */} 
-              <Badge 
-                size="lg" 
-                variant="light" 
-                color="yellow" 
-                radius="sm"
-                leftSection={<IconCoin size={14} />}
-              >
-                {currentUserScore}
-              </Badge>
-              {/* -------------------------- */}
-
-              <GameController 
-                socket={socket}
-                codigoSala={codigoSala}
-                currentUser={currentUser} 
-                armaSelecionada={armaSelecionada}
-                onFlashEnabledChange={handleFlashEnabledChange}
-              />
-            </Group>
+            <GameController 
+              socket={socket}
+              codigoSala={codigoSala}
+              currentUser={currentUser} 
+              armaSelecionada={armaSelecionada}
+              onFlashEnabledChange={handleFlashEnabledChange}
+            />
           </Group>
+        </Group>
 
-          {/* Botão de Nova Rodada - sempre presente mas só visível quando necessário */}
-          <Box mb={0} style={{ display: 'flex', justifyContent: 'center', visibility: revelarVotos ? 'visible' : 'hidden' }}>
-            <Button
-              color="blue"
-              size="sm"
-              onClick={handleNovaRodadaComAnimacao}
-              className="nova-rodada-transition"
-            >
-              Nova Rodada
-            </Button>
-          </Box>
-
-          <Paper 
-            shadow="sm" 
-            px="md" py="xs"
-            mb="lg"
-            style={pulseAnimation}
+        {/* Botão de Nova Rodada - sempre presente mas só visível quando necessário */}
+        <Box mb={0} style={{ display: 'flex', justifyContent: 'center', visibility: revelarVotos ? 'visible' : 'hidden' }}>
+          <Button
+            color="blue"
+            size="sm"
+            onClick={handleNovaRodadaComAnimacao}
             className="nova-rodada-transition"
           >
-            <Mesa 
-              participantes={participantes}
-              revelarVotos={revelarVotos}
-              currentUser={currentUser}
-              onRevelarVotos={handleRevelarVotos}
-              onNovaRodada={handleNovaRodadaComAnimacao}
-            />
-          </Paper>
+            Nova Rodada
+          </Button>
+        </Box>
 
-          {/* Renderiza apenas OpcoesVotacao (que agora contém o InventoryDisplay) */}
-          {!modoObservador && (
-            <OpcoesVotacao
-              meuVoto={meuVoto}
-              onVotar={handleVotar}
-              onCancelarVoto={handleCancelarVoto}
-              currentUser={currentUser}
-              onToggleEquip={handleToggleEquipAccessory}
-              style={{
-                opacity: entradaAnimada ? 1 : 0,
-                transform: entradaAnimada ? 'translateY(0)' : 'translateY(20px)',
-                transition: 'opacity 0.8s ease-out, transform 0.8s ease-out',
-                transitionDelay: '0.2s'
-              }}
-            />
-          )}
-        </Container>
+        <Paper 
+          shadow="sm" 
+          px="md" py="xs"
+          mb="lg"
+          style={pulseAnimation}
+          className="nova-rodada-transition"
+        >
+          <Mesa 
+            participantes={participantes}
+            revelarVotos={revelarVotos}
+            currentUser={currentUser}
+            onRevelarVotos={handleRevelarVotos}
+            onNovaRodada={handleNovaRodadaComAnimacao}
+          />
+        </Paper>
 
-        {/* Overlay da Piscada (agora vermelho) */}
-        {isFlashing && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(255, 0, 0, 0.5)', // << Mudar para vermelho
-            zIndex: 1001, // Pode manter ou ajustar se necessário
-            pointerEvents: 'none',
-          }} />
+        {/* Renderiza apenas OpcoesVotacao (que agora contém o InventoryDisplay) */}
+        {!modoObservador && (
+          <OpcoesVotacao
+            meuVoto={meuVoto}
+            onVotar={handleVotar}
+            onCancelarVoto={handleCancelarVoto}
+            currentUser={currentUser}
+            onToggleEquip={handleToggleEquipAccessory}
+            style={{
+              opacity: entradaAnimada ? 1 : 0,
+              transform: entradaAnimada ? 'translateY(0)' : 'translateY(20px)',
+              transition: 'opacity 0.8s ease-out, transform 0.8s ease-out',
+              transitionDelay: '0.2s'
+            }}
+          />
         )}
+      </Container>
 
-        {/* --- Renderiza o componente KillFeedDisplay --- */}
-        <KillFeedDisplay lastKillInfo={formattedLastKillInfo} />
-        {/* --- FIM KillFeedDisplay --- */}
+      {/* Overlay da Piscada (agora vermelho) */}
+      {isFlashing && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(255, 0, 0, 0.5)', // << Mudar para vermelho
+          zIndex: 1001, // Pode manter ou ajustar se necessário
+          pointerEvents: 'none',
+        }} />
+      )}
 
-        {/* Renderizar o Drawer da Loja, passando currentUser e onBuyItem */}
-        <ShopDrawer 
-          opened={shopOpened} 
-          onClose={closeShop} 
-          currentUser={currentUser} 
-          onBuyItem={handleBuyItem} 
-        />
+      {/* --- Renderiza o componente KillFeedDisplay --- */}
+      <KillFeedDisplay lastKillInfo={formattedLastKillInfo} />
+      {/* --- FIM KillFeedDisplay --- */}
 
-      </LifeBarProvider>
+      {/* Renderizar o Drawer da Loja, passando currentUser e onBuyItem */}
+      <ShopDrawer 
+        opened={shopOpened} 
+        onClose={closeShop} 
+        currentUser={currentUser} 
+        onBuyItem={handleBuyItem} 
+      />
+
     </PvpProvider>
   );
 }
@@ -489,5 +538,9 @@ export default function SalaPage() {
   }
 
   // Se chegou aqui, temos o nome definido e não é link de convite
-  return <SalaConteudo codigoSala={codigoSala} nomeUsuario={nomeUsuario} />;
+  return (
+    <LifeBarProvider>
+      <SalaConteudo codigoSala={codigoSala} nomeUsuario={nomeUsuario} />
+    </LifeBarProvider>
+  );
 } 

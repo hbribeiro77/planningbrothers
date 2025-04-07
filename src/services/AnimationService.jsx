@@ -16,6 +16,7 @@ export class AnimationService {
     const explosionDiv = document.createElement('div');
     explosionDiv.id = `explosion-${explosionId}`;
     explosionDiv.className = 'explosion-overlay';
+    explosionDiv.style.zIndex = '20';
     
     const explosionImg = document.createElement('img');
     explosionImg.src = '/images/game-objects/collision.svg';
@@ -51,31 +52,36 @@ export class AnimationService {
   }
 
   /**
-   * Mostra o número de dano ou texto crítico em um elemento
+   * Mostra o número de dano, texto crítico ou esquiva em um elemento
    */
-  static showDamageNumber(element, damage, isCritical = false) {
+  static showDamageNumber(element, damage, isCritical = false, isDodge = false) {
     if (!element) return;
 
     const damageNumber = document.createElement('div');
-    
-    if (isCritical) {
-      damageNumber.textContent = 'CRITICAL!';
-      damageNumber.className = 'damage-number damage-critical';
-    } else {
-      damageNumber.textContent = `-${damage}`;
-      damageNumber.className = 'damage-number';
-    }
-    
     damageNumber.style.position = 'absolute';
     damageNumber.style.left = `50%`;
     damageNumber.style.top = `40%`;
     damageNumber.style.transform = 'translate(-50%, -100%)';
     damageNumber.style.pointerEvents = 'none';
     damageNumber.style.zIndex = '10';
+
+    let displayTime = 800; // Tempo padrão
+
+    if (isDodge) { // Verificar esquiva primeiro
+      damageNumber.textContent = 'Errou!';
+      damageNumber.className = 'damage-number damage-dodge'; // Classe específica para esquiva
+      // Poderia ter um tempo de exibição diferente para esquiva, se desejado
+      // displayTime = 1000;
+    } else if (isCritical) { // Senão, verificar crítico
+      damageNumber.textContent = 'CRITICAL!';
+      damageNumber.className = 'damage-number damage-critical';
+      displayTime = 1200; // Tempo maior para crítico
+    } else { // Senão, exibir dano normal
+      damageNumber.textContent = `-${damage}`;
+      damageNumber.className = 'damage-number';
+    }
     
     element.appendChild(damageNumber);
-
-    const displayTime = isCritical ? 1200 : 800;
 
     setTimeout(() => {
       if (damageNumber.parentNode) {
@@ -87,7 +93,7 @@ export class AnimationService {
   /**
    * Cria e mostra um teclado voador
    */
-  static createFlyingKeyboard(element, direction) {
+  static createFlyingKeyboard(element, direction, targetId) {
     if (!element) return null;
 
     const animationId = Date.now().toString();
@@ -95,6 +101,18 @@ export class AnimationService {
     const keyboardDiv = document.createElement('div');
     keyboardDiv.id = `keyboard-${animationId}`;
     keyboardDiv.className = `keyboard-flying keyboard-flying-${direction}`;
+    keyboardDiv.setAttribute('data-target-id', targetId);
+    
+    keyboardDiv.style.position = 'fixed';
+    keyboardDiv.style.zIndex = '10';
+    keyboardDiv.style.pointerEvents = 'none';
+
+    const rect = element.getBoundingClientRect();
+    const targetCenterX = rect.left + rect.width / 2;
+    const targetCenterY = rect.top + rect.height / 2;
+    
+    keyboardDiv.style.left = `${targetCenterX - 17.5}px`;
+    keyboardDiv.style.top = `${targetCenterY - 17.5}px`;
     
     const keyboardImg = document.createElement('img');
     keyboardImg.src = '/images/game-objects/keyboard.svg';
@@ -102,7 +120,12 @@ export class AnimationService {
     keyboardImg.className = 'keyboard-image';
     
     keyboardDiv.appendChild(keyboardImg);
-    element.appendChild(keyboardDiv);
+    
+    // Forçar reflow para garantir que os estilos sejam aplicados antes da animação
+    void keyboardDiv.offsetWidth; 
+    
+    // Adiciona ao body DEPOIS de configurar tudo e forçar reflow
+    document.body.appendChild(keyboardDiv);
 
     return animationId;
   }
@@ -119,8 +142,8 @@ export class AnimationService {
     const ricochetDiv = document.createElement('div');
     ricochetDiv.id = ricochetId;
     ricochetDiv.className = `keyboard-ricochet keyboard-ricochet-${direction}`;
-    
     ricochetDiv.style.position = 'fixed';
+    ricochetDiv.style.zIndex = '15';
     ricochetDiv.style.left = `${rect.left + rect.width/2 - 17.5}px`;
     ricochetDiv.style.top = `${rect.top + rect.height/2 - 17.5}px`;
     
@@ -140,5 +163,45 @@ export class AnimationService {
     }, 400);
 
     return ricochetId;
+  }
+
+  /**
+   * Cria e mostra um teclado atravessando (para esquiva)
+   */
+  static createPassingKeyboard(element, direction) {
+    if (!element) return;
+
+    const passThroughId = `pass-through-${Date.now()}`;
+    const rect = element.getBoundingClientRect();
+    
+    const passThroughDiv = document.createElement('div');
+    passThroughDiv.id = passThroughId;
+    // Aplicar classe para animação de atravessar e direção
+    passThroughDiv.className = `keyboard-pass-through keyboard-pass-through-${direction}`; 
+    
+    passThroughDiv.style.position = 'fixed';
+    passThroughDiv.style.zIndex = '10'; // zIndex similar ao teclado voador
+    // Posição inicial ligeiramente sobreposta ao centro do avatar
+    passThroughDiv.style.left = `${rect.left + rect.width/2 - 17.5}px`; 
+    passThroughDiv.style.top = `${rect.top + rect.height/2 - 17.5}px`;
+    
+    const passThroughImg = document.createElement('img');
+    passThroughImg.src = '/images/game-objects/keyboard.svg';
+    passThroughImg.alt = 'Teclado Atravessando';
+    passThroughImg.className = 'keyboard-image'; // Reutilizar estilo da imagem
+    
+    passThroughDiv.appendChild(passThroughImg);
+    document.body.appendChild(passThroughDiv);
+    
+    // Remover após a animação (ex: 500ms)
+    // Ajustar tempo conforme a duração da animação CSS
+    setTimeout(() => {
+      const passThroughElement = document.getElementById(passThroughId);
+      if (passThroughElement) {
+        passThroughElement.remove();
+      }
+    }, 500);
+
+    return passThroughId;
   }
 } 

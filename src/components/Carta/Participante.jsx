@@ -1,9 +1,17 @@
+import React from 'react';
 import { Paper, Text, Badge, useMantineTheme } from '@mantine/core';
 import { IconEye, IconSkull } from '@tabler/icons-react';
 import { LifeBar } from '../GameElements/LifeBar';
 // Importar constantes e o novo ícone
 import { ITEMS_DATA } from '@/constants/itemsData';
+// Importar o componente de ícone diretamente aqui
 import VestIcon from '../Icons/VestIcon';
+
+// Definir o mapeamento de componentes visuais aqui, onde ele é usado
+const AVATAR_COMPONENTS = {
+    VestIcon: VestIcon,
+    // Adicionar outros mapeamentos se usar mais componentes visuais
+};
 
 export default function CartaParticipante({ 
   participante,
@@ -29,14 +37,8 @@ export default function CartaParticipante({
 
   // Obter dados do item equipado
   const equippedItemData = equippedAccessory ? ITEMS_DATA[equippedAccessory] : null;
-  // Verifica se o item equipado é um acessório (USANDO TYPE)
-  const showAccessory = equippedItemData?.type === 'accessory';
-  
-  console.log(`[CartaParticipante] ${participante?.nome} - equippedAccessory: ${equippedAccessory}, showAccessory: ${showAccessory}`);
-
-  // Obter as cores do item equipado (ou defaults)
-  const accessoryMainColor = showAccessory ? equippedItemData.mainColor : undefined;
-  const accessoryDarkColor = showAccessory ? equippedItemData.darkColor : undefined;
+  // Obter a configuração visual completa do item
+  const visualConfig = equippedItemData?.avatarVisual;
 
   const isDead = life <= 0;
 
@@ -72,28 +74,34 @@ export default function CartaParticipante({
         transition: 'all 0.3s ease',
         opacity: isObservador ? 0.85 : 1,
         minHeight: 'clamp(68px, 5vw, 80px)',
-        overflow: 'hidden',
       }}
     >
       {!isObservador && <LifeBar currentLife={life} maxLife={maxLife} avatarId={id} />}
 
-      {/* Ícone do Acessório Equipado */}
-      {showAccessory && (
-        <VestIcon 
-          mainColor={accessoryMainColor}
-          darkColor={accessoryDarkColor}
-          style={{
-            position: 'absolute',
-            top: '60%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: '140%', // Manter tamanho ajustado
-            height: 'auto',
-            opacity: 0.8, // Manter opacidade
-            pointerEvents: 'none',
-            zIndex: 5,
-          }}
-        />
+      {/* Renderização dinâmica do acessório com base na configuração */}
+      {visualConfig && ( // Renderiza apenas se visualConfig existir
+        <> 
+          {/* Caso 1: Renderiza Componente React */} 
+          {visualConfig.type === 'component' && visualConfig.componentName && AVATAR_COMPONENTS[visualConfig.componentName] && (
+            React.createElement(AVATAR_COMPONENTS[visualConfig.componentName], {
+              // Passa as props definidas na configuração do item
+              ...(visualConfig.props || {}),
+              // Aplica o estilo definido na configuração do item
+              style: visualConfig.style 
+            })
+          )}
+
+          {/* Caso 2: Renderiza Imagem SVG */} 
+          {visualConfig.type === 'svg' && visualConfig.path && (
+            <img
+              src={visualConfig.path}
+              alt={equippedItemData?.name || 'Acessório'}
+              // Aplicar uma classe CSS genérica ou específica se necessário
+              // className={`avatar-accessory-svg avatar-accessory-${equippedAccessory || 'default'}`}
+              style={visualConfig.style} // Aplica o estilo definido na configuração do item
+            />
+          )}
+        </>
       )}
 
       {isModerador && (

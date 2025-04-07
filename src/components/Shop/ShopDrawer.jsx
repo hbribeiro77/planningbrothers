@@ -1,7 +1,17 @@
 import { Drawer, Text, Title, Card, Group, Button, Badge, SimpleGrid, ActionIcon, Tooltip } from '@mantine/core';
-import { IconShoppingCart, IconCoin, IconShirt } from '@tabler/icons-react';
+import { IconShoppingCart, IconCoin, IconShirt, IconHandNinja, IconKeyboard, IconStar, IconMask } from '@tabler/icons-react';
 import { COLETE_DPE_ID, COLETE_BLUE_ID, ITEMS_DATA } from '@/constants/itemsData';
 import { useMantineTheme } from '@mantine/core';
+
+// <<< Criar Mapa de Ícones
+const iconMap = {
+  IconShirt: IconShirt,
+  IconHandNinja: IconHandNinja,
+  IconKeyboard: IconKeyboard,
+  IconStar: IconStar,
+  IconMask: IconMask,
+  // Adicionar outros mapeamentos aqui conforme necessário
+};
 
 // Obter itens da loja a partir das constantes
 // Filtrar para mostrar apenas itens compráveis, se necessário no futuro
@@ -45,17 +55,39 @@ export default function ShopDrawer({ opened, onClose, currentUser, onBuyItem }) 
             <Card key={item.id} shadow="sm" padding="lg" radius="md" withBorder mb="md">
               <Group justify="space-between" mb="xs">
                 <Group gap="xs">
-                  {item.iconName === 'IconShirt' && <IconShirt size={24} color={itemColor} />} 
+                  {
+                    item.iconSvgPath ? (
+                      // <<< Renderizar IMG se houver caminho SVG
+                      <img 
+                        src={item.iconSvgPath}
+                        alt={item.name} 
+                        style={{ 
+                          width: 24, 
+                          height: 24, 
+                          // Adicionar filtro para cor/inversão se necessário
+                          // filter: theme.colorScheme === 'dark' ? 'invert(1)' : 'none', 
+                        }}
+                      />
+                    ) : (
+                      // <<< Lógica anterior com iconMap se NÃO houver SVG
+                      (() => {
+                        const ItemIconComponent = iconMap[item.iconName]; 
+                        return ItemIconComponent && <ItemIconComponent size={24} color={itemColor} />; 
+                      })()
+                    )
+                  }
+                  {/* Placeholder se nenhum ícone for encontrado */}
+                  {!item.iconSvgPath && !iconMap[item.iconName] && item.iconName && (
+                    <Text size="xs" c="dimmed">?</Text>
+                  )}
                   <Title order={5}>{item.name}</Title>
                 </Group>
-                {hasItem && <Badge color="green">Adquirido</Badge>} 
+                {(item.id === 'keyboard' || hasItem) && <Badge color="green">Adquirido</Badge>} 
               </Group>
 
-              {item.description && (
-                <Text size="sm" c="dimmed" mb="md">
-                  {item.description}
-                </Text>
-              )}
+              <Text size="sm" c="dimmed" mb="md">
+                {item.description || 'Sem descrição.'} 
+              </Text>
 
               <Group justify="space-between" align="center">
                 <Group gap={5}>
@@ -67,10 +99,10 @@ export default function ShopDrawer({ opened, onClose, currentUser, onBuyItem }) 
                   color="blue" 
                   radius="md"
                   onClick={() => handleBuyClick(item.id, item.price)}
-                  disabled={hasItem || !canAfford}
-                  title={hasItem ? "Você já possui este item" : !canAfford ? "Moedas insuficientes" : "Comprar item"}
+                  disabled={item.id === 'keyboard' || hasItem || !canAfford}
+                  title={item.id === 'keyboard' ? "Arma padrão" : hasItem ? "Você já possui este item" : !canAfford ? "Moedas insuficientes" : "Comprar item"}
                 >
-                  {hasItem ? "Equipado" : "Comprar"} 
+                  {item.id === 'keyboard' ? "Padrão" : (hasItem ? "Adquirido" : "Comprar")} 
                 </Button>
               </Group>
             </Card>

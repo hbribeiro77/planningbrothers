@@ -236,6 +236,8 @@ npm run dev
 1. **Sistema de Arremesso e Ataque**
    - Animação fluida do objeto de ataque (ex: teclado).
    - Efeitos visuais de impacto (explosão, tremor, ricochete).
+   - Animação de esquiva (`dodge`) aprimorada: Exibe o texto "Errou!" e dispara uma animação rápida do teclado "atravessando" o alvo horizontalmente, desaparecendo rapidamente (via `keyboard-pass-through` CSS).
+   - Corrigido "flash" inicial na animação de arremesso: O teclado agora é adicionado diretamente ao `body` com posição calculada, evitando o aparecimento momentâneo sobre o avatar alvo.
    - Sistema de dano calculado no servidor:
      - Considera ataque base da arma (fixo + dado).
      - Considera bônus de ataque do acessório do atacante (fixo + dado).
@@ -245,7 +247,7 @@ npm run dev
    - Animações centralizadas.
 
 2. **Sistema de Vida e Feedback**
-   - Barra de vida visual dinâmica.
+   - Barra de vida visual dinâmica: Agora é exibida temporariamente para **todos os participantes** quando um avatar sofre dano (e não é esquiva), refletindo a atualização no `LifeBarContext` e a correção do `overflow` no CSS do avatar.
    - Visibilidade da barra para todos ao receber dano.
    - Feedback visual de dano crítico.
    - Piscada vermelha na tela do jogador atingido (se condições aplicáveis).

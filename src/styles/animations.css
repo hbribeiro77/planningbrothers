@@ -6,13 +6,13 @@
 
 @keyframes keyboard-flying-left {
   0% { transform: translateX(-120vw) translateY(0) rotate(15deg); opacity: 1; }
-  95% { transform: translateX(0) translateY(0) rotate(15deg); opacity: 1; }
+  95% { transform: translateX(0) translateY(0) rotate(15deg); opacity: 0; }
   100% { transform: translateX(0) translateY(0) rotate(15deg); opacity: 0; }
 }
 
 @keyframes keyboard-flying-right {
   0% { transform: translateX(120vw) translateY(0) rotate(-15deg); opacity: 1; }
-  95% { transform: translateX(0) translateY(0) rotate(-15deg); opacity: 1; }
+  95% { transform: translateX(0) translateY(0) rotate(-15deg); opacity: 0; }
   100% { transform: translateX(0) translateY(0) rotate(-15deg); opacity: 0; }
 }
 

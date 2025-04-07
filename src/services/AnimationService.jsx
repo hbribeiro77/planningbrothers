@@ -100,32 +100,43 @@ export class AnimationService {
     
     const keyboardDiv = document.createElement('div');
     keyboardDiv.id = `keyboard-${animationId}`;
-    keyboardDiv.className = `keyboard-flying keyboard-flying-${direction}`;
+    // NÃO aplicar classe de animação ainda
+    keyboardDiv.className = `keyboard-flying`; // Classe base apenas
     keyboardDiv.setAttribute('data-target-id', targetId);
     
+    // Define todos os estilos ANTES de adicionar ao DOM
     keyboardDiv.style.position = 'fixed';
-    keyboardDiv.style.zIndex = '10';
-    keyboardDiv.style.pointerEvents = 'none';
+    keyboardDiv.style.zIndex = '10'; 
+    keyboardDiv.style.pointerEvents = 'none'; 
+    // Começar invisível
+    keyboardDiv.style.opacity = '0';
 
     const rect = element.getBoundingClientRect();
     const targetCenterX = rect.left + rect.width / 2;
     const targetCenterY = rect.top + rect.height / 2;
     
-    keyboardDiv.style.left = `${targetCenterX - 17.5}px`;
-    keyboardDiv.style.top = `${targetCenterY - 17.5}px`;
+    keyboardDiv.style.left = `${targetCenterX - 17.5}px`; 
+    keyboardDiv.style.top = `${targetCenterY - 17.5}px`; 
     
     const keyboardImg = document.createElement('img');
     keyboardImg.src = '/images/game-objects/keyboard.svg';
     keyboardImg.alt = 'Teclado';
     keyboardImg.className = 'keyboard-image';
-    
     keyboardDiv.appendChild(keyboardImg);
     
-    // Forçar reflow para garantir que os estilos sejam aplicados antes da animação
-    void keyboardDiv.offsetWidth; 
-    
-    // Adiciona ao body DEPOIS de configurar tudo e forçar reflow
+    // Adiciona ao body (ainda invisível e sem animação)
     document.body.appendChild(keyboardDiv);
+
+    // Força reflow (opcional, mas pode ajudar em alguns casos)
+    // void keyboardDiv.offsetWidth;
+
+    // No próximo quadro de animação, adiciona a classe de animação
+    requestAnimationFrame(() => {
+        // A animação CSS (keyboard-flying-left/right) deve começar com opacity: 1
+        keyboardDiv.classList.add(`keyboard-flying-${direction}`);
+        // Remove a opacidade 0 inline para permitir que a animação controle
+        keyboardDiv.style.opacity = ''; 
+    });
 
     return animationId;
   }

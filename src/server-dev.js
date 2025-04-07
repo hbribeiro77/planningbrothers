@@ -142,9 +142,9 @@ app.prepare().then(() => {
 
     // Aplicar dano após a animação
     socket.on('attack', (data) => {
-      const { codigo, fromUserId, targetId, objectType, attackDirection } = data;
+      const { codigo, fromUserId, targetId, objectType } = data;
       
-      console.log(`[${codigo}] Evento 'attack' recebido: fromUserId=${fromUserId}, targetId=${targetId}, objectType=${objectType}, direction=${attackDirection}`);
+      console.log(`[${codigo}] Evento 'attack' recebido: fromUserId=${fromUserId}, targetId=${targetId}, objectType=${objectType}`);
       
       if (!salas.has(codigo)) return;
       
@@ -172,9 +172,11 @@ app.prepare().then(() => {
             damage: 0, 
             currentLife: participanteAlvo.life, // Vida não muda
             isCritical: false,
-            isDodge: true, // <<< Nova flag indicando esquiva
-            attackDirection: attackDirection // << INCLUIR DIREÇÃO AQUI
+            isDodge: true // <<< Nova flag indicando esquiva
           });
+          
+          // Não precisa atualizar participantes pois a vida não mudou
+          // io.to(codigo).emit('atualizarParticipantes', Array.from(sala.participantes.values()));
           
           return; // Interrompe o processamento do ataque
         }
@@ -249,8 +251,7 @@ app.prepare().then(() => {
           damage: finalDamage, 
           currentLife: vidaDepois,
           isCritical: isCriticalHit,
-          isDodge: false, // <<< Indicar que não houve esquiva
-          attackDirection: attackDirection // << INCLUIR DIREÇÃO AQUI
+          isDodge: false // <<< Indicar que não houve esquiva
         };
 
         if (isKill) {

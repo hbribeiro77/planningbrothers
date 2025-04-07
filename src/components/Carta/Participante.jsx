@@ -74,6 +74,7 @@ export default function CartaParticipante({
         transition: 'all 0.3s ease',
         opacity: isObservador ? 0.85 : 1,
         minHeight: 'clamp(68px, 5vw, 80px)',
+        overflow: 'hidden',
       }}
     >
       {!isObservador && <LifeBar currentLife={life} maxLife={maxLife} avatarId={id} />}

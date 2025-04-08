@@ -112,27 +112,38 @@ planningbrothers/
      - Comunicação em tempo real via WebSockets para sincronização.
      - Estado PVP compartilhado via Context API (`PvpContext`).
    - **Sistema de Itens e Combate:**
-     - **Definição Centralizada (`itemsData.js`):** Armas (`type: 'weapon'`) e Acessórios (`type: 'accessory'`) são definidos com seus atributos:
-       - **Armas:** Dano base (fixo e/ou dado - ex: `'1d6'`), chance de crítico (`criticalChance`).
-       - **Acessórios:** Bônus de ataque (fixo/dado), Defesa (fixo/dado).
+     - **Definição Centralizada (`itemsData.js`):** 
+       - Armas (`type: 'weapon'`) e Acessórios (`type: 'accessory'`) definidos com atributos (dano, crítico, bônus, defesa, esquiva, **preço**).
+       - **NOVO:** Acessórios possuem `equipSlot` (ex: 'body', 'headband') para definir grupos de equipamentos. Slots nomeados são mutuamente exclusivos (só um item do slot 'body' pode ser equipado), enquanto outros podem permitir múltiplos itens ou combinações.
      - **Cálculo de Dano no Servidor:**
-       - O servidor recebe o evento `attack` (com o tipo de arma usada).
-       - Calcula o ataque total: (Dano base da arma + Bônus de ataque do acessório do atacante), rolando dados conforme necessário.
-       - Verifica chance de crítico (da arma): Se crítico, dano = vida atual do alvo.
-       - Se não crítico, calcula defesa total: (Defesa do acessório do alvo), rolando dados.
-       - Dano final = `max(0, Ataque Total - Defesa Total)`.
-     - **Feedback Visual:** Exibição do dano final sofrido no avatar, com indicação especial ("CRITICAL!") para acertos críticos.
+       - Servidor recebe `attack` (com `objectType` da arma).
+       - Busca dados da arma e de **TODOS** os acessórios em `itemsData.js`.
+       - Calcula ataque total: (Dano base arma + **Soma** Bônus de ataque de **todos** acessórios equipados pelo atacante).
+       - Verifica chance de crítico (da arma).
+       - Se não crítico, calcula defesa total: (**Soma** Defesa de **todos** acessórios equipados pelo alvo).
+       - Verifica chance de esquiva: Considera a **maior** `dodgeChance` entre **todos** os acessórios equipados pelo alvo.
+       - Dano final = `max(0, Ataque Total - Defesa Total)` (se não esquivou).
+     - **Feedback Visual:**
+       - Dano final ou "CRITICAL!" ou "Errou!" exibido no avatar.
+       - **NOVO:** Tooltip sobre o nome do avatar exibe status consolidados (Ataque total, Defesa total, Crítico, Esquiva) da arma e acessórios.
    - **Loja e Inventário:**
-     - Loja (`ShopDrawer`) permite comprar itens definidos em `itemsData.js` usando score.
-     - Inventário (`InventoryDisplay`) mostra armas e acessórios possuídos.
-     - Teclado padrão (`type: 'weapon'`) é adicionado automaticamente ao inventário inicial.
-   - **Acessórios Equipáveis:**
-     - Acessórios podem ser equipados/desequipados via inventário.
-     - Estado `equippedAccessory` sincronizado pelo servidor.
-     - Acessório equipado é exibido visualmente no avatar (`CartaParticipante`).
+     - Loja (`ShopDrawer`) permite comprar itens definidos (e precificados) em `itemsData.js`.
+     - **NOVO:** Ordem dos itens na loja definida pela propriedade `displayOrder` em `itemsData.js`.
+     - Inventário (`InventoryDisplay`) mostra itens possuídos.
+     - **NOVO:** Tooltip sobre cada item no inventário exibe nome, descrição e atributos detalhados.
+     - Teclado padrão (`type: 'weapon'`) adicionado automaticamente.
+   - **Acessórios Equipáveis (Sistema de Slots):**
+     - Acessórios podem ser equipados/desequipados via inventário (`InventoryDisplay`).
+     - **ALTERADO:** Estado no servidor agora é `equippedAccessories: string[]` (um array com IDs dos itens equipados).
+     - Lógica `toggleEquipAccessory` no servidor gerencia o array, respeitando os `equipSlot` (remove item conflitante em slot exclusivo antes de adicionar novo).
+     - Itens em slots diferentes (ex: 'body' e 'headband') podem ser equipados simultaneamente.
+     - Visuais dos acessórios (definidos em `avatarVisual` no `itemsData.js`) são renderizados no avatar (`CartaParticipante`) para **todos** os itens no array `equippedAccessories`.
    - **Controles e Configurações (`GameController`):**
      - Ativação/desativação do Modo PVP.
-     - Configuração de efeitos visuais/sonoros (Som, Piscada de Dano Vermelha).
+     - Configuração de efeitos visuais/sonoros: 
+       - Mute de Som (Switch).
+       - **NOVO:** Controle de Volume (Slider), sincronizado com o Mute.
+       - Piscada de Dano Vermelha (Switch).
      - Configuração de assinaturas de eliminação.
    - **Kill Feed (Notificação de Eliminação):**
      - Notificações visuais com pontuação (`POINTS.KILL` de `gameConfig.js`) e estatísticas (kills) atualizadas.
@@ -160,8 +171,11 @@ planningbrothers/
      - Definição de assinaturas (`setCustomKillSignatures`)
 
 3. **Estado da Aplicação**
-   - **Servidor:** Fonte única da verdade, realiza cálculos de combate (dano, crítico) com base nos dados de `itemsData.js`.
-   - **Cliente:** Reflete estado do servidor, inicia animações de ataque, ouve `damageReceived` para exibir dano final/crítico.
+   - **Servidor:** Fonte única da verdade. Mantém estado da sala e dos participantes, incluindo:
+     - `life`, `score`, `kills`, `inventory`.
+     - **ALTERADO:** `equippedAccessories: string[]` (array de IDs dos acessórios equipados).
+     - Realiza cálculos de combate (ataque, defesa, crítico, esquiva) baseado em `itemsData.js` e **todos** os itens equipados.
+   - **Cliente:** Reflete estado do servidor. Exibe informações, itens, tooltips e animações.
 
 ## Segurança
 1. **Variáveis de Ambiente**
@@ -252,17 +266,24 @@ npm run dev
    - Sincronização em tempo real.
    - Configurações de vida máxima e tempos em `gameConfig.js`.
 
-3. **Sistema de Itens (Armas e Acessórios)**
-   - Definição centralizada em `itemsData.js` com tipos (`weapon`, `accessory`) e atributos de combate.
-   - Loja para aquisição de itens.
-   - Inventário para visualização e gerenciamento (equipar/desequipar acessórios).
-   - Exibição visual de acessórios equipados nos avatares.
+3. **Sistema de Itens (Armas e Acessórios) - REVISADO**
+   - Definição centralizada em `itemsData.js` (tipo, preço, stats, `equipSlot`, `displayOrder`, `avatarVisual`).
+   - Loja (`ShopDrawer`) com itens ordenados por `displayOrder`.
+   - Inventário (`InventoryDisplay`) com tooltips detalhados por item.
+   - Sistema de equipamento baseado em slots (`equipSlot`) permitindo múltiplos acessórios não conflitantes.
+   - Estado `equippedAccessories: []` no servidor.
+   - Renderização de todos os visuais equipados no avatar (`CartaParticipante`).
+   - Tooltip consolidado no avatar mostrando status combinados (Ataque, Defesa, Crítico, Esquiva).
 
-4. **GameController**
-   - Componente para interação com elementos de gamificação.
-   - Interface de controle (Drawer) para ativar/desativar funcionalidades como Som, Modo PVP e **Efeito de Piscada ao Sofrer Dano (Morto)**.
-   - Consome e atualiza o estado PVP através do `PvpContext`.
-   - Renderiza componentes como `KeyboardThrower`.
+4. **GameController - REVISADO**
+   - Interface de controle (Drawer) com opções:
+     - Modo PVP (Switch)
+     - Som Mute (Switch)
+     - **NOVO:** Volume (Slider)
+     - Efeito de Piscada (Switch)
+     - Assinaturas de Kill (Inputs)
+   - Consome e atualiza contextos (`PvpContext`).
+   - Renderiza `KeyboardThrower` (passando volume numérico).
 
 5. **Sistema de Configuração**
    - Arquivo centralizado `gameConfig.js` para todas as configurações do jogo
@@ -300,7 +321,7 @@ npm run dev
    *   **Implementação:** Lógica de incremento e persistência no `server-dev.js`; exibição no `page.js`.
 
 8. **Indicador Visual de Morte:**
-   *   Quando a vida de um participante (incluindo observadores) chega a 0 ou menos, um ícone de caveira vermelha (`IconSkull`) é exibido no canto inferior direito do seu card (`CartaParticipante.jsx`).
+   *   Quando a vida de um participante (incluindo observadores) chega a 0 ou menos, um ícone de caveira vermelha (`IconSkull`) é exibido no canto inferior direito do seu card (`CartaParticipante`).
    *   Isso indica visualmente quem está fora de combate na rodada atual do modo PVP.
    *   **Implementação:** Condição e ícone adicionados ao `CartaParticipante.jsx`.
 

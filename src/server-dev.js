@@ -96,29 +96,52 @@ app.prepare().then(() => {
       const salaAtual = salas.get(codigo);
       const isModerador = salaAtual.participantes.size === 0;
 
-      // Primeiro adiciona o usuário à sala
-      salaAtual.participantes.set(socket.id, {
-        ...usuario,
-        id: socket.id,
-        jaVotou: false,
-        valorVotado: null,
-        isModerador,
-        keyboardMode: isModerador ? true : false, // Define o keyboardMode inicial
-        life: GAME_CONFIG.LIFE.MAX, // Adiciona vida inicial
-        customKillSignatures: [],
-        score: 0,
-        kills: 0, // <-- Inicializa kills
-        inventory: [KEYBOARD_ID], // <<< INICIALIZAR COM TECLADO
-        equippedAccessory: null, // <<<< Novo estado para acessório equipado
-      });
+      // Verifica se o usuário já está na sala (reconexão?)
+      let participanteExistente = null;
+      if (salaAtual.participantes) {
+          participanteExistente = Array.from(salaAtual.participantes.values()).find(p => p.browserToken === usuario.browserToken && p.nome === usuario.nome);
+      }
+      
+      if (participanteExistente) {
+          // Atualizar o socket ID do participante existente
+          // Remover a entrada antiga pelo socket.id antigo (se houver)
+          for (let [oldSocketId, p] of salaAtual.participantes.entries()) {
+              if (p.browserToken === usuario.browserToken && p.nome === usuario.nome && oldSocketId !== socket.id) {
+                  salaAtual.participantes.delete(oldSocketId);
+                  break;
+              }
+          }
+          // Adiciona com o novo socket.id, mantendo o estado
+          salaAtual.participantes.set(socket.id, { ...participanteExistente, id: socket.id });
+          console.log(`[${codigo}] Usuário ${usuario.nome} reconectou com socket ID ${socket.id}`);
+          
+      } else {
+          // Primeiro adiciona o usuário à sala (Novo Participante)
+          salaAtual.participantes.set(socket.id, {
+              ...usuario,
+              id: socket.id,
+              jaVotou: false,
+              valorVotado: null,
+              isModerador,
+              keyboardMode: isModerador ? true : false,
+              life: GAME_CONFIG.LIFE.MAX, 
+              customKillSignatures: [],
+              score: 0,
+              kills: 0, 
+              inventory: [KEYBOARD_ID], 
+              // ALTERADO: Usar array para múltiplos acessórios
+              equippedAccessories: [], 
+          });
+          console.log(`[${codigo}] Usuário ${usuario.nome} entrou na sala com socket ID ${socket.id}`);
 
-      // Se não for o primeiro participante, copia o modo PVP do moderador
-      if (!isModerador) {
-        const moderador = Array.from(salaAtual.participantes.values()).find(p => p.isModerador);
-        if (moderador) {
-          const participante = salaAtual.participantes.get(socket.id);
-          participante.keyboardMode = moderador.keyboardMode;
-        }
+          // Se não for o primeiro, copia o modo PVP do moderador
+          if (!isModerador) {
+              const moderador = Array.from(salaAtual.participantes.values()).find(p => p.isModerador);
+              if (moderador) {
+                  const participanteNovo = salaAtual.participantes.get(socket.id);
+                  participanteNovo.keyboardMode = moderador.keyboardMode;
+              }
+          }
       }
       
       io.to(codigo).emit('atualizarParticipantes', 
@@ -158,79 +181,94 @@ app.prepare().then(() => {
 
       if (participanteAlvo && participanteAtacante && fromUserId !== targetId) {
         
-        // --- INÍCIO: Verificação de Esquiva (Dodge) ---
-        const targetEquippedId = participanteAlvo.equippedAccessory;
-        const targetAccessoryData = targetEquippedId ? ITEMS_DATA[targetEquippedId] : null;
-        const dodgeChance = targetAccessoryData?.dodgeChance || 0;
+        // --- INÍCIO: Verificação de Esquiva (Dodge) --- CORRECTED ---
+        let highestDodgeChance = 0;
+        let dodgingItemName = null;
+        // Itera sobre TODOS os acessórios equipados pelo alvo
+        for (const equippedId of participanteAlvo.equippedAccessories || []) {
+          const accessoryData = ITEMS_DATA[equippedId];
+          if (accessoryData && accessoryData.type === 'accessory' && accessoryData.dodgeChance) {
+            if (accessoryData.dodgeChance > highestDodgeChance) {
+                highestDodgeChance = accessoryData.dodgeChance;
+                dodgingItemName = accessoryData.name;
+            }
+          }
+        }
 
-        if (dodgeChance > 0 && Math.random() < dodgeChance) {
-          console.log(`[${codigo}] *** ATAQUE ESQUIVADO por ${nomeAlvoLog} (Item: ${targetEquippedId})! ***`);
-
-          // Emitir evento indicando a esquiva (sem dano)
+        if (highestDodgeChance > 0 && Math.random() < highestDodgeChance) {
+          console.log(`[${codigo}] *** ATAQUE ESQUIVADO por ${nomeAlvoLog} (Item: ${dodgingItemName}, Chance: ${highestDodgeChance * 100}%)! ***`);
           io.to(codigo).emit('damageReceived', {
             targetId: targetId,
             damage: 0, 
-            currentLife: participanteAlvo.life, // Vida não muda
+            currentLife: participanteAlvo.life,
             isCritical: false,
-            isDodge: true // <<< Nova flag indicando esquiva
+            isDodge: true // <<< Flag de esquiva
           });
-          
-          // Não precisa atualizar participantes pois a vida não mudou
-          // io.to(codigo).emit('atualizarParticipantes', Array.from(sala.participantes.values()));
-          
           return; // Interrompe o processamento do ataque
         }
         // --- FIM: Verificação de Esquiva (Dodge) ---
         
-        // --- Obter Dados da Arma --- 
+        // --- Obter Dados da Arma --- (sem alteração)
         const weaponData = ITEMS_DATA[objectType];
         if (!weaponData || weaponData.type !== 'weapon') {
           console.warn(`[${codigo}] Tipo de objeto inválido ou não é arma: ${objectType}`);
-          return; // Ignora se não for uma arma válida
+          return;
         }
         
-        // --- Calcular Poder de Ataque Total ---
+        // --- Calcular Poder de Ataque Total --- CORRECTED ---
         const baseDamageFixed = weaponData.baseDamageFixed || 0;
         const baseDamageRolled = rollDice(weaponData.baseDamageDice);
         console.log(`[${codigo}] Arma '${objectType}': ${baseDamageFixed} fixo + ${baseDamageRolled} (rolado de ${weaponData.baseDamageDice})`);
 
-        let attackerBonusFixed = 0;
-        let attackerBonusRolled = 0;
-        const attackerEquippedId = participanteAtacante.equippedAccessory;
-        const attackerAccessoryData = attackerEquippedId ? ITEMS_DATA[attackerEquippedId] : null;
-        if (attackerAccessoryData && attackerAccessoryData.type === 'accessory') { // Verifica se é acessório
-          attackerBonusFixed = attackerAccessoryData.attackBonusFixed || 0;
-          attackerBonusRolled = rollDice(attackerAccessoryData.attackBonusDice);
-          console.log(`[${codigo}] Atacante ${nomeAtacanteLog} acessório '${attackerEquippedId}': +${attackerBonusFixed} fixo, +${attackerBonusRolled} (rolado de ${attackerAccessoryData.attackBonusDice})`);
-        } else {
-          console.log(`[${codigo}] Atacante ${nomeAtacanteLog} sem acessório de bônus de ataque.`);
+        let totalAttackerBonusFixed = 0;
+        let totalAttackerBonusRolled = 0;
+        // Itera sobre TODOS os acessórios do atacante
+        for (const equippedId of participanteAtacante.equippedAccessories || []) {
+            const accessoryData = ITEMS_DATA[equippedId];
+            if (accessoryData && accessoryData.type === 'accessory') {
+                const bonusFixo = accessoryData.attackBonusFixed || 0;
+                const bonusDado = rollDice(accessoryData.attackBonusDice);
+                totalAttackerBonusFixed += bonusFixo;
+                totalAttackerBonusRolled += bonusDado;
+                if (bonusFixo !== 0 || accessoryData.attackBonusDice) {
+                   console.log(`[${codigo}] Atacante ${nomeAtacanteLog} acessório '${equippedId}': +${bonusFixo} fixo, +${bonusDado} (rolado de ${accessoryData.attackBonusDice})`);
+                }
+            }
         }
-        const totalAttackPower = baseDamageFixed + baseDamageRolled + attackerBonusFixed + attackerBonusRolled;
+        console.log(`[${codigo}] Atacante ${nomeAtacanteLog} Bônus Total Acessórios: +${totalAttackerBonusFixed} fixo, +${totalAttackerBonusRolled} rolado`);
+        
+        const totalAttackPower = baseDamageFixed + baseDamageRolled + totalAttackerBonusFixed + totalAttackerBonusRolled;
         console.log(`[${codigo}] Poder de Ataque Total: ${totalAttackPower}`);
 
-        // --- Calcular Dano (Considerando Crítico da Arma) ---
+        // --- Calcular Dano (Considerando Crítico da Arma) --- CORRECTED DEFENSE ---
         let finalDamage = 0;
         let isCriticalHit = false;
-        const critChance = weaponData.criticalChance || 0; // << Pega chance de crítico da ARMA
+        const critChance = weaponData.criticalChance || 0; 
 
         if (Math.random() < critChance) {
           isCriticalHit = true;
-          finalDamage = participanteAlvo.life; 
+          finalDamage = participanteAlvo.life; // Dano crítico ignora defesa
           console.log(`[${codigo}] *** CRITICAL HIT pela arma ${objectType}! ***`);
         } else {
           // Calcular Defesa Total do Alvo
-          let targetDefenseFixed = 0;
-          let targetDefenseRolled = 0;
-          const targetEquippedId = participanteAlvo.equippedAccessory;
-          const targetAccessoryData = targetEquippedId ? ITEMS_DATA[targetEquippedId] : null;
-          if (targetAccessoryData && targetAccessoryData.type === 'accessory') { // Verifica se é acessório
-            targetDefenseFixed = targetAccessoryData.defenseFixed || 0;
-            targetDefenseRolled = rollDice(targetAccessoryData.defenseDice);
-            console.log(`[${codigo}] Alvo ${nomeAlvoLog} acessório '${targetEquippedId}': +${targetDefenseFixed} fixa, +${targetDefenseRolled} (rolada de ${targetAccessoryData.defenseDice})`);
-          } else {
-            console.log(`[${codigo}] Alvo ${nomeAlvoLog} sem acessório de defesa.`);
+          let totalTargetDefenseFixed = 0;
+          let totalTargetDefenseRolled = 0;
+          // Itera sobre TODOS os acessórios do alvo
+          for (const equippedId of participanteAlvo.equippedAccessories || []) {
+              const accessoryData = ITEMS_DATA[equippedId];
+              if (accessoryData && accessoryData.type === 'accessory') {
+                  const defFixa = accessoryData.defenseFixed || 0;
+                  const defDado = rollDice(accessoryData.defenseDice);
+                  totalTargetDefenseFixed += defFixa;
+                  totalTargetDefenseRolled += defDado;
+                  if (defFixa !== 0 || accessoryData.defenseDice) {
+                     console.log(`[${codigo}] Alvo ${nomeAlvoLog} acessório '${equippedId}': +${defFixa} fixa, +${defDado} (rolada de ${accessoryData.defenseDice})`);
+                  }
+              }
           }
-          const totalDefense = targetDefenseFixed + targetDefenseRolled;
+          console.log(`[${codigo}] Alvo ${nomeAlvoLog} Defesa Total Acessórios: +${totalTargetDefenseFixed} fixa, +${totalTargetDefenseRolled} rolada`);
+          
+          const totalDefense = totalTargetDefenseFixed + totalTargetDefenseRolled;
           console.log(`[${codigo}] Defesa Total do Alvo: ${totalDefense}`);
 
           // Calcular Dano Normal
@@ -238,7 +276,7 @@ app.prepare().then(() => {
           console.log(`[${codigo}] Dano Normal calculado: ${totalAttackPower} (ataque) - ${totalDefense} (defesa) = ${finalDamage}`);
         }
         
-        // --- Aplicar Dano e Verificar Kill ---
+        // --- Aplicar Dano e Verificar Kill --- (sem alteração aqui)
         const vidaAntes = participanteAlvo.life;
         participanteAlvo.life = Math.max(GAME_CONFIG.LIFE.MIN, vidaAntes - finalDamage);
         const vidaDepois = participanteAlvo.life;
@@ -458,30 +496,58 @@ app.prepare().then(() => {
     });
     // --- Fim do Listener Múltiplo ---
 
-    // --- Listener para Equipar/Desequipar Acessório ---
+    // --- Listener para Equipar/Desequipar Acessório (Lógica de Slot) ---
     socket.on('toggleEquipAccessory', ({ codigo, itemId }) => {
       if (!salas.has(codigo)) return;
       const sala = salas.get(codigo);
       const participante = sala.participantes.get(socket.id);
+      const itemData = ITEMS_DATA[itemId]; // Dados do item sendo equipado/desequipado
 
-      // Verifica se participante existe, se o item é um acessório válido, e se o participante possui o item
-      if (participante && isAccessory(itemId) && participante.inventory?.includes(itemId)) {
-        // Se o item clicado já está equipado, desequipa.
-        if (participante.equippedAccessory === itemId) {
-          participante.equippedAccessory = null;
-          console.log(`[${codigo}] ${participante.nome} desequipou ${itemId}`);
-        } 
-        // Se um item diferente ou nenhum item estava equipado, equipa o NOVO item.
-        else {
-          participante.equippedAccessory = itemId;
-          console.log(`[${codigo}] ${participante.nome} equipou ${itemId}`);
-        }
-        
-        // Notifica todos sobre a mudança no estado do participante
-        io.to(codigo).emit('atualizarParticipantes', Array.from(sala.participantes.values()));
-      } else {
-        console.warn(`[${codigo}] Participante ${socket.id} tentou equipar item inválido (${itemId}) ou não encontrado no inventário.`);
+      // Validações:
+      if (!participante) return;
+      if (!itemData || itemData.type !== 'accessory') {
+        console.warn(`[${codigo}] Tentativa de equipar item inválido ou não acessório: ${itemId}`);
+        return;
       }
+      if (!participante.inventory?.includes(itemId)) {
+        console.warn(`[${codigo}] Participante ${participante.nome} não possui o item ${itemId} no inventário.`);
+        return;
+      }
+
+      const itemSlot = itemData.equipSlot; // Slot do item clicado
+      const currentlyEquipped = participante.equippedAccessories || []; // Garante que é um array
+      const isCurrentlyEquipped = currentlyEquipped.includes(itemId);
+
+      let updatedEquipped = [...currentlyEquipped]; // Cria cópia para modificar
+
+      if (isCurrentlyEquipped) {
+        // --- DESEQUIPAR --- 
+        updatedEquipped = updatedEquipped.filter(id => id !== itemId);
+        console.log(`[${codigo}] ${participante.nome} desequipou ${itemId}`);
+      } else {
+        // --- EQUIPAR --- 
+        // Verifica se há conflito de slot exclusivo
+        if (itemSlot && itemSlot !== 'misc' && itemSlot !== 'passive') { // Considera slots nomeados como exclusivos
+          const conflictingItemIndex = updatedEquipped.findIndex(equippedId => 
+            ITEMS_DATA[equippedId]?.equipSlot === itemSlot
+          );
+          if (conflictingItemIndex !== -1) {
+            const conflictingItemId = updatedEquipped[conflictingItemIndex];
+            console.log(`[${codigo}] ${participante.nome} equipando ${itemId} (slot: ${itemSlot}), desequipando ${conflictingItemId} (mesmo slot).`);
+            // Remove o item conflitante
+            updatedEquipped.splice(conflictingItemIndex, 1);
+          }
+        }
+        // Adiciona o novo item
+        updatedEquipped.push(itemId);
+        console.log(`[${codigo}] ${participante.nome} equipou ${itemId}`);
+      }
+      
+      // Atualiza o estado do participante
+      participante.equippedAccessories = updatedEquipped;
+      
+      // Notifica todos sobre a mudança
+      io.to(codigo).emit('atualizarParticipantes', Array.from(sala.participantes.values()));
     });
     // --- Fim do Listener Equipar/Desequipar ---
 
@@ -532,15 +598,24 @@ app.prepare().then(() => {
         participante.score -= item.price;
         participante.inventory.push(itemId);
 
-        // --- Lógica de Auto-Equipar --- 
-        // Conta quantos acessórios o participante tem AGORA
-        const currentAccessoryCount = participante.inventory.filter(isAccessory).length;
-        
-        // Se o item comprado é um acessório E é o único acessório que ele possui,
-        // equipa automaticamente.
-        if (isAccessory(itemId) && currentAccessoryCount === 1) {
-          participante.equippedAccessory = itemId;
-          console.log(`[${codigo}] ${participante.nome} equipou automaticamente ${itemId} por ser o único acessório.`);
+        // --- Lógica de Auto-Equipar (AJUSTADA PARA SLOTS) --- 
+        if (item.type === 'accessory' && item.equipSlot) {
+          const itemSlot = item.equipSlot;
+          const equippedAccessories = participante.equippedAccessories || [];
+          // Verifica se já existe algum item equipado NO MESMO SLOT
+          const hasItemInSlot = equippedAccessories.some(equippedId => 
+             ITEMS_DATA[equippedId]?.equipSlot === itemSlot
+          );
+          
+          // Equipa automaticamente APENAS se o slot estiver vazio
+          if (!hasItemInSlot) {
+            // Se o slot for exclusivo, remove qualquer outro item desse slot (segurança extra, embora não devesse ter)
+            if (itemSlot && itemSlot !== 'misc' && itemSlot !== 'passive') {
+                participante.equippedAccessories = equippedAccessories.filter(equippedId => ITEMS_DATA[equippedId]?.equipSlot !== itemSlot);
+            }
+            participante.equippedAccessories.push(itemId);
+            console.log(`[${codigo}] ${participante.nome} equipou automaticamente ${itemId} (slot ${itemSlot} estava vazio).`);
+          }
         }
         // --- Fim da Lógica de Auto-Equipar ---
 

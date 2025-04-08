@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Stack, Group, Text, Tooltip, ActionIcon, Divider, Box } from '@mantine/core';
 import { IconKeyboard, IconShirt, IconHandNinja, IconStar, IconMask } from '@tabler/icons-react';
 import { usePvpStatus } from '@/contexts/PvpContext';
-import { COLETE_DPE_ID, COLETE_BLUE_ID, ITEMS_DATA } from '@/constants/itemsData';
+import { COLETE_DPE_ID, COLETE_BLUE_ID, ITEMS_DATA, KEYBOARD_ID } from '@/constants/itemsData';
 
 // <<< Criar Mapa de Ícones (mesmo mapa)
 const accessoryIconMap = {
@@ -14,15 +14,43 @@ const accessoryIconMap = {
   // Adicionar outros mapeamentos aqui conforme necessário
 };
 
+// Helper para formatar atributos do item para o Tooltip
+function formatItemAttributes(itemData) {
+  if (!itemData) return '';
+  const attributes = [];
+  // Arma
+  if (itemData.baseDamageFixed) attributes.push(`Dano Fixo: ${itemData.baseDamageFixed}`);
+  if (itemData.baseDamageDice) attributes.push(`Dano Dado: ${itemData.baseDamageDice}`);
+  if (itemData.criticalChance) attributes.push(`Crítico: ${itemData.criticalChance * 100}%`);
+  // Acessório
+  if (itemData.attackBonusFixed) attributes.push(`Atq Fixo: +${itemData.attackBonusFixed}`);
+  if (itemData.attackBonusDice) attributes.push(`Atq Dado: +${itemData.attackBonusDice}`);
+  if (itemData.defenseFixed) attributes.push(`Def Fixo: +${itemData.defenseFixed}`);
+  if (itemData.defenseDice) attributes.push(`Def Dado: +${itemData.defenseDice}`);
+  if (itemData.dodgeChance) attributes.push(`Esquiva: ${itemData.dodgeChance * 100}%`);
+  
+  // Adiciona a descrição principal se houver e outros atributos também
+  let tooltipLabel = itemData.name || 'Item Desconhecido';
+  if (itemData.description) {
+    tooltipLabel += `\n${itemData.description}`; // Usa \n para quebra de linha no tooltip
+  }
+  // Junta os atributos formatados, se houver
+  if (attributes.length > 0) {
+      tooltipLabel += `\n(${attributes.join(', ')})`;
+  }
+  return tooltipLabel;
+}
+
 export function InventoryDisplay({ 
   currentUser, 
   onToggleEquip
 }) {
   const { pvpStatus } = usePvpStatus();
   
-  const [armaSelecionada, setArmaSelecionada] = useState('keyboard');
+  const [armaSelecionada, setArmaSelecionada] = useState(KEYBOARD_ID);
   const armasDisponiveis = [{ id: 'keyboard', nome: 'Teclado', icon: IconKeyboard }];
   const userAccessories = currentUser?.inventory?.filter(itemId => ITEMS_DATA[itemId]?.type === 'accessory') || [];
+  const equippedAccessories = currentUser?.equippedAccessories || [];
   
   const isAccessoryClickable = (itemId) => 
     ITEMS_DATA[itemId]?.type === 'accessory' && userAccessories.includes(itemId);
@@ -37,23 +65,33 @@ export function InventoryDisplay({
         <Stack align="center" spacing="xs">
           <Text size="sm" weight={500} c="dimmed">Arma:</Text>
           <Group position="center" spacing="xs">
-            {armasDisponiveis.map((arma) => (
-              <Tooltip 
-                key={arma.id} 
-                label={pvpStatus ? arma.nome : "Seleção desativada (Modo PVP desligado)"}
-                openDelay={300}
-              >
-                <ActionIcon
-                  variant={armaSelecionada === arma.id ? 'filled' : 'light'}
-                  color={armaSelecionada === arma.id ? 'blue' : 'gray'}
-                  size="lg"
-                  onClick={() => handleSelecionarArma(arma.id)}
-                  disabled={!pvpStatus}
+            {armasDisponiveis.map((arma) => {
+              const armaData = ITEMS_DATA[arma.id];
+              // Formata o label do Tooltip para a arma
+              const tooltipLabel = pvpStatus 
+                ? formatItemAttributes(armaData)
+                : "Seleção desativada (Modo PVP desligado)";
+              
+              return (
+                <Tooltip 
+                  key={arma.id} 
+                  label={tooltipLabel}
+                  openDelay={300}
+                  multiline // Permite múltiplas linhas no tooltip
+                  w={220} // Define uma largura para o tooltip
                 >
-                  <arma.icon size={20} />
-                </ActionIcon>
-              </Tooltip>
-            ))}
+                  <ActionIcon
+                    variant={armaSelecionada === arma.id ? 'filled' : 'light'}
+                    color={armaSelecionada === arma.id ? 'blue' : 'gray'}
+                    size="lg"
+                    onClick={() => handleSelecionarArma(arma.id)}
+                    disabled={!pvpStatus}
+                  >
+                    <arma.icon size={20} />
+                  </ActionIcon>
+                </Tooltip>
+              );
+            })}
           </Group>
         </Stack>
 
@@ -66,20 +104,26 @@ export function InventoryDisplay({
               const itemData = ITEMS_DATA[itemId];
               if (!itemData) return null;
               
-              const itemName = itemData.name || itemId;
-              const accessoryColor = itemData.iconColor || 'gray';
+              // Formata o label do Tooltip para o acessório
+              const tooltipLabel = formatItemAttributes(itemData);
               
-              const isSelected = currentUser?.equippedAccessory === itemId;
+              const isSelected = equippedAccessories.includes(itemId);
               
               const isClickable = isAccessoryClickable(itemId);
               
-              const iconRenderColor = isSelected ? '#fff' : accessoryColor;
+              const iconRenderColor = isSelected ? '#fff' : itemData.iconColor || 'gray';
               
               // <<< Usar mapa para obter o componente de ícone
               const AccessoryIconComponent = accessoryIconMap[itemData.iconName];
               
               return (
-                <Tooltip key={itemId} label={itemName} openDelay={300}>
+                <Tooltip 
+                  key={itemId} 
+                  label={tooltipLabel}
+                  openDelay={300}
+                  multiline // Permite múltiplas linhas
+                  w={220} // Define uma largura
+                >
                   <ActionIcon
                     variant={isSelected ? 'filled' : 'outline'} 
                     color={isSelected ? 'blue' : 'gray'}
@@ -92,7 +136,7 @@ export function InventoryDisplay({
                         // <<< Renderizar IMG se houver caminho SVG
                         <img 
                           src={itemData.iconSvgPath}
-                          alt={itemName} 
+                          alt={itemData.name || itemId} 
                           style={{ 
                             width: 20, // Ajustar tamanho para ActionIcon
                             height: 20, 

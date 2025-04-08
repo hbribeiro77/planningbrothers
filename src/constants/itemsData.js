@@ -18,6 +18,7 @@ const ITEMS_DATA = {
     name: 'Teclado Padrão', 
     price: 0, // Arma inicial
     type: 'weapon', // << Tipo Arma
+    displayOrder: 1, // << Ordem de exibição
     description: 'Ataque base: 1d6. Chance de Crítico: 5%.',
     iconName: 'IconKeyboard', // << Adicionar nome do ícone
     iconColor: 'blue', // << Adicionar cor (exemplo)
@@ -37,6 +38,8 @@ const ITEMS_DATA = {
     name: 'Colete DPE', 
     price: 1, 
     type: 'accessory', // << Tipo Acessório
+    equipSlot: 'body', // << Slot Exclusivo para Corpo
+    displayOrder: 10, // << Ordem de exibição
     description: 'Defesa Fixa: +1.',
     iconName: 'IconShirt', 
     iconColor: DPE_GREEN,
@@ -70,6 +73,8 @@ const ITEMS_DATA = {
     name: 'Colete Blue', 
     price: 1, 
     type: 'accessory',
+    equipSlot: 'body', // << Slot Exclusivo para Corpo
+    displayOrder: 11, // << Ordem de exibição
     description: 'Defesa Fixa: +1.',
     iconName: 'IconShirt', 
     iconColor: BLUE_MAIN,
@@ -103,6 +108,8 @@ const ITEMS_DATA = {
     name: 'Treinamento Ninja',
     price: 2, // Preço exemplo
     type: 'accessory',
+    equipSlot: 'headband', // << Slot Separado/Não Exclusivo com 'body'
+    displayOrder: 20, // << Ordem de exibição
     description: 'Aumenta sua perícia. Bônus de Ataque Fixo: +1. Chance de Esquiva: 40%.',
     iconSvgPath: '/images/game-objects/ninja_mask.svg', // Usado no inventário/loja
     defenseFixed: 0,
@@ -126,7 +133,7 @@ const ITEMS_DATA = {
       }
     }
   },
-  // Adicionar outros acessórios aqui
+  // Adicionar outros acessórios aqui com seu equipSlot
 };
 
 // Helper para identificar tipos (se necessário, mas talvez não mais)

@@ -13,11 +13,15 @@ const iconMap = {
   // Adicionar outros mapeamentos aqui conforme necessário
 };
 
-// Obter itens da loja a partir das constantes
-// Filtrar para mostrar apenas itens compráveis, se necessário no futuro
+// Obter itens da loja, adicionar ID e ORDENAR por displayOrder
 const shopItems = Object.entries(ITEMS_DATA)
-  // .filter(([id, data]) => data.isPurchasable) // Exemplo de filtro futuro
-  .map(([id, data]) => ({ ...data, id })); // Garante que o ID está no objeto
+  .map(([id, data]) => ({ ...data, id })) // Adiciona ID ao objeto do item
+  .sort((itemA, itemB) => { 
+    // Ordena pelos números de displayOrder. Itens sem displayOrder vão para o final.
+    const orderA = itemA.displayOrder ?? Infinity;
+    const orderB = itemB.displayOrder ?? Infinity;
+    return orderA - orderB;
+  });
 
 export default function ShopDrawer({ opened, onClose, currentUser, onBuyItem }) { 
   
@@ -45,7 +49,7 @@ export default function ShopDrawer({ opened, onClose, currentUser, onBuyItem }) 
       <Text c="dimmed" size="sm" mb="lg">Gaste suas moedas suadas!</Text>
 
       <SimpleGrid cols={1}>
-        {/* Mapear sobre os itens da loja */}
+        {/* Mapeia sobre shopItems, que agora está ORDENADO */}
         {shopItems.map((item) => {
           const hasItem = userInventory.includes(item.id);
           const canAfford = userScore >= item.price;

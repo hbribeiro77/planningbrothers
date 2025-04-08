@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Switch, Tooltip, ActionIcon, Drawer, Stack, Text, Group, TextInput, Button, SimpleGrid } from '@mantine/core';
-import { IconSettings, IconKeyboard, IconVolume, IconBellRinging, IconMessageChatbot } from '@tabler/icons-react';
+import { Switch, Tooltip, ActionIcon, Drawer, Stack, Text, Group, TextInput, Button, SimpleGrid, Slider, ScrollArea } from '@mantine/core';
+import { IconSettings, IconKeyboard, IconVolume, IconVolumeOff, IconBellRinging, IconMessageChatbot } from '@tabler/icons-react';
 import { KeyboardThrower } from './KeyboardThrower';
 import { usePvpStatus } from '@/contexts/PvpContext';
 
@@ -24,8 +24,8 @@ export function GameController({
   const { pvpStatus, togglePvpStatus } = usePvpStatus();
   const [drawerOpened, setDrawerOpened] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [volumeLevel, setVolumeLevel] = useState(0.5);
   const [flashEnabled, setFlashEnabled] = useState(true);
-  const [keyboardKey, setKeyboardKey] = useState(0);
   const [signatures, setSignatures] = useState(Array(MAX_SIGNATURES).fill(''));
   const [originalSignatures, setOriginalSignatures] = useState(Array(MAX_SIGNATURES).fill(''));
   const isModerator = currentUser?.isModerator;
@@ -74,8 +74,22 @@ export function GameController({
   }, [flashEnabled, onFlashEnabledChange]);
 
   const handleToggleSound = (event) => {
-    setSoundEnabled(event.currentTarget.checked);
-    setKeyboardKey(prev => prev + 1);
+    const isEnabled = event.currentTarget.checked;
+    console.log(`[GameController] handleToggleSound: Setting soundEnabled to ${isEnabled}`);
+    setSoundEnabled(isEnabled);
+    if (isEnabled && volumeLevel === 0) {
+      setVolumeLevel(0.5);
+    }
+  };
+
+  const handleVolumeChange = (value) => {
+    setVolumeLevel(value);
+    if (value > 0 && !soundEnabled) {
+      setSoundEnabled(true);
+    }
+    if (value === 0 && soundEnabled) {
+      setSoundEnabled(false);
+    }
   };
 
   const handleToggleFlash = (event) => {
@@ -118,6 +132,9 @@ export function GameController({
     }
   };
   
+  const effectiveVolume = soundEnabled ? volumeLevel : 0;
+  console.log(`[GameController] Render: soundEnabled=${soundEnabled}, volumeLevel=${volumeLevel}, effectiveVolume=${effectiveVolume}`);
+
   return (
     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
       <Tooltip label="Configurações do jogo">
@@ -131,12 +148,11 @@ export function GameController({
       </Tooltip>
       
       <KeyboardThrower
-        key={keyboardKey}
         enabled={pvpStatus} 
         socket={socket}
         codigoSala={codigoSala}
         currentUser={currentUser}
-        soundEnabled={soundEnabled}
+        volume={effectiveVolume}
       />
 
       <Drawer
@@ -145,63 +161,84 @@ export function GameController({
         title="Configurações do Jogo"
         position="right"
         size="sm"
+        styles={{ body: { height: 'calc(100% - 60px)', overflow: 'hidden' } }}
       >
-        <Stack>
-          <Text size="sm" c="dimmed">
-            Ajuste as configurações do jogo
-          </Text>
-
-          <Group position="apart" mt="md">
+        <ScrollArea h="100%" scrollbarSize={0}>
+          <Stack>
             <Text size="sm" c="dimmed">
-              <IconKeyboard size={16} style={{ marginRight: 4 }} />
-              Modo PVP
+              Ajuste as configurações do jogo
             </Text>
-            <Switch
-              size="sm"
-              checked={pvpStatus} 
-              onChange={(event) => togglePvpStatus(event.currentTarget.checked)}
-            />
-          </Group>
 
-          <Group position="apart" mt="md">
-            <Text size="sm" c="dimmed">
-              <IconVolume size={16} style={{ marginRight: 4 }} />
-              Som
+            <Group position="apart" mt="md">
+              <Text size="sm" c="dimmed">
+                <IconKeyboard size={16} style={{ marginRight: 4 }} />
+                Modo PVP
+              </Text>
+              <Switch
+                size="sm"
+                checked={pvpStatus} 
+                onChange={(event) => togglePvpStatus(event.currentTarget.checked)}
+              />
+            </Group>
+
+            <Group position="apart" mt="md">
+              <Text size="sm" c="dimmed">
+                {soundEnabled ? <IconVolume size={16} style={{ marginRight: 4 }} /> : <IconVolumeOff size={16} style={{ marginRight: 4 }} />}
+                Som (Mute)
+              </Text>
+              <Switch
+                size="sm"
+                checked={soundEnabled}
+                onChange={handleToggleSound}
+              />
+            </Group>
+
+            <Slider
+              mt={5}
+              label={(value) => `${Math.round(value * 100)}%`}
+              step={0.01}
+              min={0}
+              max={1}
+              value={volumeLevel}
+              onChange={handleVolumeChange}
+              marks={[
+                   { value: 0, label: 'Mudo' },
+                   { value: 0.5, label: '50%' },
+                   { value: 1, label: '100%' },
+               ]}
+              thumbChildren={soundEnabled ? <IconVolume size={12} /> : <IconVolumeOff size={12}/>}
+              color={soundEnabled ? "blue" : "gray"} 
+              style={{ width: '90%', margin: 'auto' }}
+            />
+
+            <Group position="apart" mt="md">
+              <Text size="sm" c="dimmed">
+                <IconBellRinging size={16} style={{ marginRight: 4 }} /> 
+                Piscada ao Sofrer Dano (Morto)
+              </Text>
+              <Switch
+                size="sm"
+                checked={flashEnabled}
+                onChange={handleToggleFlash}
+              />
+            </Group>
+
+            <Text size="sm" fw={500} mt="lg">Assinaturas de Eliminação</Text>
+            <Text size="xs" c="dimmed" mb="xs">
+              Mensagens aleatórias que aparecem quando você elimina alguém. (Máx: {MAX_KILL_MESSAGE_LENGTH} caracteres cada)
             </Text>
-            <Switch
-              size="sm"
-              checked={soundEnabled}
-              onChange={handleToggleSound}
-            />
-          </Group>
-
-          <Group position="apart" mt="md">
-            <Text size="sm" c="dimmed">
-              <IconBellRinging size={16} style={{ marginRight: 4 }} /> 
-              Piscada ao Sofrer Dano (Morto)
-            </Text>
-            <Switch
-              size="sm"
-              checked={flashEnabled}
-              onChange={handleToggleFlash}
-            />
-          </Group>
-
-          <Text size="sm" fw={500} mt="lg">Assinaturas de Eliminação</Text>
-          <Text size="xs" c="dimmed" mb="xs">
-            Mensagens aleatórias que aparecem quando você elimina alguém. (Máx: {MAX_KILL_MESSAGE_LENGTH} caracteres cada)
-          </Text>
-          {signatures.map((signature, index) => (
-            <TextInput
-              key={index}
-              placeholder={signaturePlaceholders[index] || `Assinatura ${index + 1}`}
-              leftIcon={<IconMessageChatbot size={16} />}
-              value={signature}
-              onChange={(event) => handleSignatureChange(index, event.currentTarget.value)}
-              maxLength={MAX_KILL_MESSAGE_LENGTH}
-            />
-          ))}
-        </Stack>
+            {signatures.map((signature, index) => (
+              <TextInput
+                key={index}
+                placeholder={signaturePlaceholders[index] || `Assinatura ${index + 1}`}
+                leftIcon={<IconMessageChatbot size={16} />}
+                value={signature}
+                onChange={(event) => handleSignatureChange(index, event.currentTarget.value)}
+                maxLength={MAX_KILL_MESSAGE_LENGTH}
+              />
+            ))}
+          </Stack>
+        </ScrollArea>
       </Drawer>
     </div>
   );

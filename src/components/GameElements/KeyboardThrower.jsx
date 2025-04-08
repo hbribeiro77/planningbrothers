@@ -10,11 +10,21 @@ export function KeyboardThrower({
   socket, 
   codigoSala, 
   currentUser,
-  soundEnabled
+  volume
 }) {
+  console.log(`[KeyboardThrower] Render/Received prop volume: ${volume} (type: ${typeof volume})`);
   const [explodingAvatars, setExplodingAvatars] = useState([]);
   const [flyingKeyboards, setFlyingKeyboards] = useState([]);
   const { showLifeBarTemporarily } = useLifeBar();
+
+  // Criar um ref para armazenar o valor mais recente do volume
+  const volumeRef = useRef(volume);
+
+  // Atualizar o ref sempre que a prop 'volume' mudar
+  useEffect(() => {
+    volumeRef.current = volume;
+    console.log(`[KeyboardThrower] useEffect: Updated volumeRef.current to ${volumeRef.current}`);
+  }, [volume]);
 
   // Adiciona listener para o evento throwObject
   useEffect(() => {
@@ -82,7 +92,11 @@ export function KeyboardThrower({
       
       // Adiciona efeito de tremor ao avatar e mostra a explosão simultaneamente
       AnimationService.makeAvatarShake(element);
-      AnimationService.showExplosionInAvatar(element, userId, soundEnabled);
+      
+      // Ler o valor ATUAL do volume do ref no momento da execução do timeout
+      const currentVolume = volumeRef.current;
+      console.log(`[KeyboardThrower] setTimeout: Calling showExplosionInAvatar with currentVolume from ref: ${currentVolume}`);
+      AnimationService.showExplosionInAvatar(element, userId, currentVolume);
       
       // Adiciona efeito de ricochete imediatamente no mesmo instante
       AnimationService.createRicochetKeyboard(element, attackDirection);

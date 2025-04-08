@@ -467,3 +467,18 @@ useEffect(() => {
 *   **Problema:** Um elemento (`div` com número de dano) criado dinamicamente via JavaScript e adicionado ao DOM com `position: absolute` estava aparecendo no local errado (canto da tela) em vez de sobre o elemento alvo (avatar).
 *   **Solução Técnica:** Adicionar `position: relative` via CSS (ou `style` inline) ao elemento pai (`div.carta-participante`) onde o número de dano estava sendo anexado (`appendChild`).
 *   **Aprendizado:** O contexto de posicionamento é fundamental para `position: absolute`. Um elemento posicionado absolutamente se alinha em relação ao ancestral posicionado mais próximo. Se nenhum ancestral tiver `position` definido (diferente de `static`), ele se alinha em relação ao `<body>` ou à viewport. Garantir que o pai direto tenha `position: relative` é a prática comum para conter elementos posicionados absolutamente dentro dele. 
+
+## Lidando com Valores Obsoletos (Stale Closures) em Callbacks Assíncronos
+
+*   **Problema:** Um callback agendado com `setTimeout` (ou usado em listeners de eventos) pode capturar ("fechar sobre") o valor de props ou estados que existiam no momento em que o callback foi *definido*, não no momento em que ele é *executado*. Se o valor da prop/estado mudar antes do callback rodar, ele usará o valor antigo e obsoleto, levando a bugs.
+*   **Cenário Específico:** A função `throwKeyboardAtAvatar` em `KeyboardThrower.jsx` agenda um `setTimeout`. A função dentro do `setTimeout` precisa usar o valor da prop `volume` para tocar o som. No entanto, se a prop `volume` mudasse entre o clique do usuário e a execução do `setTimeout`, a função interna usaria o valor de `volume` que existia no momento do clique, ignorando a atualização e potencialmente tocando o som com volume errado ou não aplicando o mute corretamente.
+*   **Solução Técnica (`useRef`):** Utilizar `useRef` para manter uma referência ao valor mais atual da prop ou estado problemático.
+    1.  **Criar Ref:** `const volumeRef = useRef(volume);` (Inicializa com o valor atual da prop `volume`).
+    2.  **Atualizar Ref:** Usar `useEffect` para atualizar o `.current` do ref sempre que a prop/estado mudar: 
+        ```jsx
+        useEffect(() => {
+          volumeRef.current = volume;
+        }, [volume]);
+        ```
+    3.  **Ler Ref no Callback:** Dentro do callback assíncrono (`setTimeout`, listener, etc.), ler o valor *atual* da referência: `const currentVolume = volumeRef.current;`. Usar este valor atual na lógica.
+*   **Aprendizado:** Ao usar props ou estados dentro de callbacks assíncronos (`setTimeout`, `setInterval`, listeners de eventos adicionados em `useEffect`), esteja ciente do risco de *stale closures*. Se você precisa garantir que o callback use o valor *mais recente* da prop/estado, use `useRef` para armazenar esse valor e leia `ref.current` dentro do callback. Isso desacopla o callback do valor capturado no momento da sua definição. 

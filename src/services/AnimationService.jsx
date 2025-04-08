@@ -1,15 +1,72 @@
 // Arquivo de serviço para gerenciar animações
+
+// --- Início Lógica de Áudio com Volume ---
+const audioContext = typeof window !== 'undefined' ? new (window.AudioContext || window.webkitAudioContext)() : null;
+const audioBuffers = {}; // Cache para buffers de áudio decodificados
+let isLoading = {}; 
+
+const loadSound = (soundPath) => {
+  if (!audioContext) return Promise.resolve(null);
+  if (audioBuffers[soundPath]) return Promise.resolve(audioBuffers[soundPath]);
+  if (isLoading[soundPath]) {
+    return new Promise(resolve => setTimeout(() => resolve(loadSound(soundPath)), 100));
+  }
+  isLoading[soundPath] = true;
+
+  console.log(`[Audio] Carregando: ${soundPath}`);
+  return fetch(soundPath)
+    .then(response => {
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return response.arrayBuffer();
+    })
+    .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
+    .then(audioBuffer => {
+      console.log(`[Audio] Carregado: ${soundPath}`);
+      audioBuffers[soundPath] = audioBuffer;
+      delete isLoading[soundPath];
+      return audioBuffer;
+    })
+    .catch(error => {
+      console.error(`[Audio] Erro ao carregar ${soundPath}:`, error);
+      delete isLoading[soundPath];
+      return null;
+    });
+};
+
+const playSound = async (soundPath, volume = 1.0) => {
+  // Log para verificar o volume recebido ANTES da condição de mute
+  console.log(`[playSound] Checking mute condition. Received volume: ${volume} (type: ${typeof volume})`); // Log 4
+  if (!audioContext || volume <= 0) {
+    console.log(`[playSound] Muting/Skipping sound. volume=${volume}, audioContext=${!!audioContext}`);
+    return; // Mudo ou sem contexto, não faz nada
+  }
+
+  try {
+    const buffer = await loadSound(soundPath);
+    if (!buffer) return; 
+
+    const source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    const gainNode = audioContext.createGain();
+    gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+
+    source.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    source.start(0);
+  } catch (error) {
+    console.error(`[playSound] Erro ao tocar ${soundPath}:`, error);
+  }
+};
+// --- Fim Lógica de Áudio com Volume ---
+
 export class AnimationService {
   /**
    * Cria e mostra uma explosão em um elemento
    */
-  static showExplosionInAvatar(element, userId, soundEnabled) {
+  static showExplosionInAvatar(element, userId, volume) {
     if (!element) return;
 
-    if (soundEnabled) {
-      const audio = new Audio('/audio/beat.wav');
-      audio.play().catch(error => console.log('Erro ao tocar som:', error));
-    }
+    playSound('/audio/beat.wav', volume);
 
     const explosionId = Date.now().toString();
     

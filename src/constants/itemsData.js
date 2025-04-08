@@ -61,9 +61,9 @@ const ITEMS_DATA = {
         top: '60%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
-        width: '140%',
+        width: '145%',
         height: 'auto',
-        opacity: 0.8,
+        opacity: 1,
         pointerEvents: 'none',
         zIndex: 5,
       }
@@ -96,9 +96,9 @@ const ITEMS_DATA = {
         top: '60%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
-        width: '140%',
+        width: '145%',
         height: 'auto',
-        opacity: 0.8,
+        opacity: 1,
         pointerEvents: 'none',
         zIndex: 5,
       }
@@ -129,7 +129,7 @@ const ITEMS_DATA = {
         height: 'auto',
         opacity: 0.9,
         pointerEvents: 'none',
-        zIndex: 6, // Acima do colete
+        zIndex: 4, // Acima do colete
       }
     }
   },

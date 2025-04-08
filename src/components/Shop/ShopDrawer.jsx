@@ -1,16 +1,14 @@
 import { Drawer, Text, Title, Card, Group, Button, Badge, SimpleGrid, ActionIcon, Tooltip } from '@mantine/core';
-import { IconShoppingCart, IconCoin, IconShirt, IconHandNinja, IconKeyboard, IconStar, IconMask } from '@tabler/icons-react';
+import { IconShoppingCart, IconCoin, IconKeyboard, IconShirt, IconStar, IconMask } from '@tabler/icons-react';
 import { COLETE_DPE_ID, COLETE_BLUE_ID, ITEMS_DATA } from '@/constants/itemsData';
 import { useMantineTheme } from '@mantine/core';
 
-// <<< Criar Mapa de Ícones
+// Mapa de ícones para a loja
 const iconMap = {
   IconShirt: IconShirt,
-  IconHandNinja: IconHandNinja,
   IconKeyboard: IconKeyboard,
   IconStar: IconStar,
   IconMask: IconMask,
-  // Adicionar outros mapeamentos aqui conforme necessário
 };
 
 // Obter itens da loja, adicionar ID e ORDENAR por displayOrder

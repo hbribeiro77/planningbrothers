@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { Stack, Group, Text, Tooltip, ActionIcon, Divider, Box } from '@mantine/core';
-import { IconKeyboard, IconShirt, IconHandNinja, IconStar, IconMask } from '@tabler/icons-react';
+import { IconKeyboard, IconShirt, IconStar, IconMask } from '@tabler/icons-react';
 import { usePvpStatus } from '@/contexts/PvpContext';
 import { COLETE_DPE_ID, COLETE_BLUE_ID, ITEMS_DATA, KEYBOARD_ID } from '@/constants/itemsData';
 
-// <<< Criar Mapa de Ícones (mesmo mapa)
+// Mapa de ícones para acessórios
 const accessoryIconMap = {
   IconShirt: IconShirt,
-  IconHandNinja: IconHandNinja,
   IconKeyboard: IconKeyboard,
   IconStar: IconStar,
   IconMask: IconMask,

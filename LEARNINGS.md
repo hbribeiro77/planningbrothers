@@ -482,3 +482,19 @@ useEffect(() => {
         ```
     3.  **Ler Ref no Callback:** Dentro do callback assíncrono (`setTimeout`, listener, etc.), ler o valor *atual* da referência: `const currentVolume = volumeRef.current;`. Usar este valor atual na lógica.
 *   **Aprendizado:** Ao usar props ou estados dentro de callbacks assíncronos (`setTimeout`, `setInterval`, listeners de eventos adicionados em `useEffect`), esteja ciente do risco de *stale closures*. Se você precisa garantir que o callback use o valor *mais recente* da prop/estado, use `useRef` para armazenar esse valor e leia `ref.current` dentro do callback. Isso desacopla o callback do valor capturado no momento da sua definição. 
+
+## Layout com Elementos Posicionados Absolutamente (Caso `LifeBar`)
+
+*   **Problema:** Ao mover o Nome do participante para fora e acima do Card (`CartaParticipante`), a `LifeBar`, que era renderizada com `position: absolute; top: -10px;` dentro do Card, começou a sobrepor o Nome.
+*   **Tentativas Incorretas:**
+    1.  Mover a renderização da `LifeBar` para o componente pai (`Mesa.jsx`) fora do `CartaParticipante`. Isso quebrou a lógica de visibilidade da `LifeBar` (controlada por contexto e `avatarId`) e a fez aparecer em locais errados (dentro da "mesa" central).
+    2.  Tentar posicionar a `LifeBar` abaixo do Card *ainda dentro* do `CartaParticipante` usando `position: absolute; bottom: -8px;`. Isso falhou porque o posicionamento absoluto é relativo ao pai posicionado mais próximo (o próprio `Paper` do Card). `bottom: -8px` a empurrava para baixo, mas ainda *dentro* do limite visual do `Paper`, não para fora dele.
+*   **Solução Correta:**
+    1.  **Manter Renderização no Card:** A `LifeBar` deve continuar sendo renderizada *dentro* do `CartaParticipante.jsx`, pois sua lógica de visibilidade depende do `avatarId` do participante.
+    2.  **Modificar Estilo Interno da LifeBar:** A alteração de posicionamento (de `top: -10px` para `bottom: -8px`) deve ser feita *dentro* do próprio componente `LifeBar.jsx`. Isso garante que o posicionamento seja aplicado corretamente em relação ao container pai (`Paper` do `CartaParticipante`).
+    3.  **Garantir `overflow: visible` no Pai:** O componente pai (`Paper` do `CartaParticipante`) precisa ter `overflow: visible` (ou não ter `overflow: hidden`) para permitir que a `LifeBar` (posicionada com `bottom` negativo) seja exibida *fora* de seus limites visuais.
+*   **Aprendizado:** Ao lidar com elementos posicionados absolutamente que precisam "sair" visualmente de seus contêineres pais:
+    1.  Mantenha a renderização do elemento onde sua lógica faz sentido (neste caso, `LifeBar` dentro de `CartaParticipante`).
+    2.  Controle o posicionamento absoluto diretamente nos estilos do *próprio* elemento (`LifeBar.jsx`).
+    3.  Certifique-se de que o contêiner pai (`CartaParticipante`) permita que o conteúdo transborde visualmente (`overflow: visible`).
+    4.  Evite mover a renderização de componentes com lógica de contexto específica para locais onde o contexto não está disponível ou não faz sentido. 

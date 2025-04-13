@@ -1,8 +1,75 @@
-import { Box, Paper, Group, Stack, Text, Flex, Badge, Title, Button } from '@mantine/core';
-import { IconCheck } from '@tabler/icons-react';
+import { Box, Paper, Group, Stack, Text, Flex, Badge, Title, Button, Tooltip } from '@mantine/core';
+import { IconCheck, IconEye, IconSkull } from '@tabler/icons-react';
 import CartaParticipante from '../Carta/Participante';
-// import { ITEMS } from '@/constants/items'; // << Importar constantes (quando existirem)
+import { ITEMS_DATA, KEYBOARD_ID } from '@/constants/itemsData';
+
 const COLETE_DPE_ID = 'vest'; // << Usar ID constante (simulado por enquanto)
+
+// Helper COPIADO de CartaParticipante.jsx para formatar stats consolidados
+function formatConsolidatedBonus(equippedAccessories, weaponId) { 
+  const parts = [];
+  let weaponDescription = null;
+  let accessoryDescription = null;
+
+  // --- Stats Base da Arma ---
+  let baseAtkFixed = 0;
+  let baseAtkDice = null;
+  let baseCrit = 0;
+  const weaponData = ITEMS_DATA[weaponId];
+  if (weaponData && weaponData.type === 'weapon') {
+    baseAtkFixed = weaponData.baseDamageFixed || 0;
+    baseAtkDice = weaponData.baseDamageDice; // Pode ser null
+    baseCrit = weaponData.criticalChance || 0;
+  }
+
+  // --- Bônus Totais dos Acessórios ---
+  let totalAccAtkFixed = 0;
+  let totalAccAtkDice = [];
+  let totalAccDefFixed = 0;
+  let totalAccDefDice = [];
+  let highestDodge = 0;
+
+  (equippedAccessories || []).forEach(itemId => {
+    const itemData = ITEMS_DATA[itemId];
+    if (itemData && itemData.type === 'accessory') {
+      totalAccAtkFixed += itemData.attackBonusFixed || 0;
+      if (itemData.attackBonusDice) totalAccAtkDice.push(itemData.attackBonusDice);
+      totalAccDefFixed += itemData.defenseFixed || 0;
+      if (itemData.defenseDice) totalAccDefDice.push(itemData.defenseDice);
+      if (itemData.dodgeChance && itemData.dodgeChance > highestDodge) {
+        highestDodge = itemData.dodgeChance;
+      }
+    }
+  });
+
+  // --- Montar String de Ataque Consolidado ---
+  let attackString = '';
+  const finalAtkFixed = baseAtkFixed + totalAccAtkFixed;
+  const finalAtkDice = [baseAtkDice, ...totalAccAtkDice].filter(Boolean); 
+  if (finalAtkFixed > 0) { attackString += finalAtkFixed; }
+  if (finalAtkDice.length > 0) {
+      if (attackString) attackString += ' + ';
+      attackString += finalAtkDice.join(' + ');
+  }
+  if (attackString) { parts.push(`Ataque: ${attackString}`); }
+
+  // --- Montar String de Defesa Consolidada ---
+  let defenseString = '';
+  if (totalAccDefFixed > 0) { defenseString += `+${totalAccDefFixed}`; }
+  if (totalAccDefDice.length > 0) {
+      if (defenseString) defenseString += ' + ';
+      defenseString += totalAccDefDice.join(' + ');
+  }
+  if (defenseString) { parts.push(`Defesa: ${defenseString}`); }
+
+  // --- Adicionar Crítico e Esquiva ---
+  if (baseCrit > 0) { parts.push(`Crítico: ${baseCrit * 100}%`); }
+  if (highestDodge > 0) { parts.push(`Esquiva: ${highestDodge * 100}%`); }
+
+  // --- Texto Final ---
+  if (parts.length === 0) { return 'Nenhum bônus ativo.'; }
+  return parts.join(', '); 
+}
 
 export default function Mesa({ 
   participantes = [], 
@@ -231,7 +298,7 @@ export default function Mesa({
               <div
                 style={{ 
                   position: 'absolute',
-                  top: 10,
+                  top: -10, // Subir um pouco para dar espaço ao nome
                   left: '5%',
                   right: '5%',
                   width: '90%',
@@ -240,24 +307,38 @@ export default function Mesa({
                   flexWrap: 'wrap',
                   gap: 'clamp(15px, 3vw, 30px)',
                   padding: '0 25px',
-                  zIndex: 10
+                  zIndex: 10,
+                  alignItems: 'flex-end', // Alinhar items (Stack) na base para nome ficar em cima
                 }}
               >
                 {lados.superior.map((participante, idx) => {
-                  // <<< ADICIONAR LOG
-                  console.log(`[Mesa] Mapeando participante (superior) ${participante.nome}:`, participante);
+                  const consolidatedBonusText = formatConsolidatedBonus(participante.equippedAccessories, KEYBOARD_ID);
+                  const isObservador = participante.isObservador;
                   return (
-                    <div 
+                    <Stack 
                       key={participante.id} 
-                      data-user-id={participante.id} 
-                      className="carta-participante"
-                      style={{ position: 'relative' }}
+                      align="center" 
+                      gap={2} // Espaço pequeno entre nome e card
                     >
+                      <Tooltip 
+                        label={consolidatedBonusText}
+                        position="bottom"
+                        withArrow openDelay={500} multiline w={200}
+                        disabled={isObservador}
+                      >
+                        <Text 
+                          size="xs" 
+                          ta="center" 
+                          style={{ cursor: 'help' }}
+                        >
+                          {participante.nome}
+                        </Text>
+                      </Tooltip>
                       <CartaParticipante
                         participante={participante}
                         revelarVotos={revelarVotos}
                       />
-                    </div>
+                    </Stack>
                   );
                 })}
               </div>
@@ -266,7 +347,7 @@ export default function Mesa({
               <div
                 style={{ 
                   position: 'absolute',
-                  bottom: 10,
+                  bottom: 0, 
                   left: '5%',
                   right: '5%',
                   width: '90%',
@@ -275,24 +356,38 @@ export default function Mesa({
                   flexWrap: 'wrap',
                   gap: 'clamp(15px, 3vw, 30px)',
                   padding: '0 25px',
-                  zIndex: 10
+                  zIndex: 10,
+                  alignItems: 'flex-start',
                 }}
               >
                 {lados.inferior.map((participante, idx) => {
-                  // <<< ADICIONAR LOG
-                  console.log(`[Mesa] Mapeando participante (inferior) ${participante.nome}:`, participante);
+                  const consolidatedBonusText = formatConsolidatedBonus(participante.equippedAccessories, KEYBOARD_ID);
+                  const isObservador = participante.isObservador;
                   return (
-                    <div 
+                    <Stack 
                       key={participante.id} 
-                      data-user-id={participante.id} 
-                      className="carta-participante"
-                      style={{ position: 'relative' }}
+                      align="center" 
+                      gap={2}
                     >
+                      <Tooltip 
+                        label={consolidatedBonusText}
+                        position="top" // Mudar tooltip para cima aqui
+                        withArrow openDelay={500} multiline w={200}
+                        disabled={isObservador}
+                      >
+                        <Text 
+                          size="xs" 
+                          ta="center" 
+                          style={{ cursor: 'help' }}
+                        >
+                          {participante.nome}
+                        </Text>
+                      </Tooltip>
                       <CartaParticipante
                         participante={participante}
                         revelarVotos={revelarVotos}
                       />
-                    </div>
+                    </Stack>
                   );
                 })}
               </div>

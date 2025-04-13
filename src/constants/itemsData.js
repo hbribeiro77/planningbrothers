@@ -58,7 +58,7 @@ const ITEMS_DATA = {
       },
       style: { // Estilos movidos de Participante.jsx
         position: 'absolute',
-        top: '60%',
+        top: '45%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
         width: '145%',
@@ -93,7 +93,7 @@ const ITEMS_DATA = {
       },
       style: { // Mesmos estilos do outro colete
         position: 'absolute',
-        top: '60%',
+        top: '45%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
         width: '145%',
@@ -122,7 +122,7 @@ const ITEMS_DATA = {
       path: '/images/game-objects/ninja_faixa.svg', // <<< Caminho para o SVG da faixa
       style: { // Estilo para o SVG da faixa (exemplo)
         position: 'absolute',
-        top: '80%', // Ajustado para talvez ficar na testa
+        top: '75%', // Ajustado para talvez ficar na testa
         left: '50%',
         transform: 'translate(-50%, -50%)',
         width: '120%', // Ajustar conforme necessário

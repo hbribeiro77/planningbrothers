@@ -30,13 +30,13 @@ export function LifeBar({ currentLife, maxLife, avatarId }) {
     <Box
       style={{
         position: 'absolute',
-        top: '-10px',
+        bottom: '-8px',
         left: '50%',
         transform: 'translateX(-50%)',
         width: '80%',
-        height: '4px',
+        height: '6px',
         backgroundColor: 'rgba(0, 0, 0, 0.3)',
-        borderRadius: '2px',
+        borderRadius: '3px',
         overflow: 'hidden',
         opacity: shouldShow ? 1 : 0,
         transition: 'opacity 0.3s ease'

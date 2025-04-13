@@ -1,7 +1,7 @@
 import React from 'react';
-import { Paper, Text, Badge, useMantineTheme, Tooltip } from '@mantine/core';
+import { Paper, Text, Badge, useMantineTheme, Tooltip, Box } from '@mantine/core';
 import { IconEye, IconSkull } from '@tabler/icons-react';
-import { LifeBar } from '../GameElements/LifeBar';
+import { LifeBar } from '../GameElements/LifeBar'; // Manter importação
 // Importar constantes e o novo ícone
 import { ITEMS_DATA, KEYBOARD_ID } from '@/constants/itemsData';
 // Importar o componente de ícone diretamente aqui
@@ -13,86 +13,8 @@ const AVATAR_COMPONENTS = {
     // Adicionar outros mapeamentos se usar mais componentes visuais
 };
 
-// Helper Refatorado: Formata stats consolidados (Arma + Acessórios)
-function formatConsolidatedBonus(equippedAccessories, weaponId) { 
-  const parts = [];
-  let weaponDescription = null;
-  let accessoryDescription = null;
-
-  // --- Stats Base da Arma ---
-  let baseAtkFixed = 0;
-  let baseAtkDice = null;
-  let baseCrit = 0;
-  const weaponData = ITEMS_DATA[weaponId];
-  if (weaponData && weaponData.type === 'weapon') {
-    baseAtkFixed = weaponData.baseDamageFixed || 0;
-    baseAtkDice = weaponData.baseDamageDice; // Pode ser null
-    baseCrit = weaponData.criticalChance || 0;
-  }
-
-  // --- Bônus Totais dos Acessórios ---
-  let totalAccAtkFixed = 0;
-  let totalAccAtkDice = [];
-  let totalAccDefFixed = 0;
-  let totalAccDefDice = [];
-  let highestDodge = 0;
-
-  (equippedAccessories || []).forEach(itemId => {
-    const itemData = ITEMS_DATA[itemId];
-    if (itemData && itemData.type === 'accessory') {
-      totalAccAtkFixed += itemData.attackBonusFixed || 0;
-      if (itemData.attackBonusDice) totalAccAtkDice.push(itemData.attackBonusDice);
-      totalAccDefFixed += itemData.defenseFixed || 0;
-      if (itemData.defenseDice) totalAccDefDice.push(itemData.defenseDice);
-      if (itemData.dodgeChance && itemData.dodgeChance > highestDodge) {
-        highestDodge = itemData.dodgeChance;
-      }
-    }
-  });
-
-  // --- Montar String de Ataque Consolidado ---
-  let attackString = '';
-  const finalAtkFixed = baseAtkFixed + totalAccAtkFixed;
-  const finalAtkDice = [baseAtkDice, ...totalAccAtkDice].filter(Boolean); // Junta dados da arma e acessórios
-  
-  if (finalAtkFixed > 0) {
-      attackString += finalAtkFixed;
-  }
-  if (finalAtkDice.length > 0) {
-      if (attackString) attackString += ' + '; // Adiciona separador se já tinha fixo
-      attackString += finalAtkDice.join(' + ');
-  }
-  if (attackString) {
-      parts.push(`Ataque: ${attackString}`);
-  }
-
-  // --- Montar String de Defesa Consolidada ---
-  let defenseString = '';
-  if (totalAccDefFixed > 0) {
-      defenseString += `+${totalAccDefFixed}`;
-  }
-  if (totalAccDefDice.length > 0) {
-      if (defenseString) defenseString += ' + ';
-      defenseString += totalAccDefDice.join(' + ');
-  }
-  if (defenseString) {
-       parts.push(`Defesa: ${defenseString}`);
-  }
-
-  // --- Adicionar Crítico e Esquiva ---
-  if (baseCrit > 0) {
-    parts.push(`Crítico: ${baseCrit * 100}%`);
-  }
-  if (highestDodge > 0) {
-    parts.push(`Esquiva: ${highestDodge * 100}%`);
-  }
-
-  // --- Texto Final ---
-  if (parts.length === 0) {
-      return 'Nenhum bônus ativo.';
-  }
-  return parts.join(', '); // Separa os stats consolidados com vírgula
-}
+// REMOVER esta função daqui
+// function formatConsolidatedBonus(...) { ... }
 
 export default function CartaParticipante({ 
   participante,
@@ -116,14 +38,14 @@ export default function CartaParticipante({
     equippedAccessories = []
   } = participante || {};
 
-  const consolidatedBonusText = formatConsolidatedBonus(equippedAccessories, KEYBOARD_ID);
-  
   const isDead = life <= 0;
 
   return (
     <Paper
       shadow="sm"
-      p="xs"
+      pb="xs"
+      px="xs"
+      pt={0}
       radius="md"
       withBorder
       className="carta-participante"
@@ -137,7 +59,6 @@ export default function CartaParticipante({
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
         position: 'relative',
         backgroundColor: isObservador 
           ? (isDark ? '#1f3b2c' : '#f0ffee')
@@ -152,12 +73,21 @@ export default function CartaParticipante({
         transition: 'all 0.3s ease',
         opacity: isObservador ? 0.85 : 1,
         minHeight: 'clamp(68px, 5vw, 80px)',
-        overflow: 'visible',
+        overflow: 'visible', // Necessário para a barra sair
+        padding: 0,
       }}
     >
-      {!isObservador && <LifeBar currentLife={life} maxLife={maxLife} avatarId={id} />}
+      {/* LifeBar renderizada aqui, mas estilizada em seu próprio componente */}
+      {!isObservador && (
+        <LifeBar 
+          currentLife={life} 
+          maxLife={maxLife} 
+          avatarId={id} 
+          // Remover estilo inline daqui, pois está no componente LifeBar
+        />
+      )}
 
-      {/* Renderização dinâmica de MÚLTIPLOS acessórios */}
+      {/* Renderização dinâmica de MÚLTIPLOS acessórios (position: absolute) */}
       {equippedAccessories.map(accessoryId => {
         const itemData = ITEMS_DATA[accessoryId];
         const visualConfig = itemData?.avatarVisual;
@@ -186,29 +116,7 @@ export default function CartaParticipante({
         );
       })}
 
-      {isModerador && (
-        <Badge 
-          size="xs" 
-          color="blue" 
-          radius="sm" 
-          style={{ position: 'absolute', top: 2, right: 2, zIndex: 2 }}
-        >
-          M
-        </Badge>
-      )}
-      
-      {isObservador && (
-        <Badge 
-          size="xs" 
-          color="teal" 
-          radius="sm" 
-          style={{ position: 'absolute', top: 2, left: 2, zIndex: 2 }}
-          leftSection={<IconEye size={10} />}
-        >
-          O
-        </Badge>
-      )}
-      
+      {/* Icone de Caveira (se morto - position: absolute) */}
       {isDead && (
         <IconSkull 
           size={14} 
@@ -223,53 +131,36 @@ export default function CartaParticipante({
         />
       )}
       
-      {/* Tooltip AGORA envolve APENAS o nome */}
-      <Tooltip 
-        label={consolidatedBonusText}
-        position="top" // Mudar para 'top' pode ficar melhor aqui
-        withArrow
-        openDelay={500}
-        multiline
-        w={200}
-        disabled={isObservador} // Desabilitado para observadores
+      {/* Voto / Status Votou / Observador - POSIÇÃO ABSOLUTA CENTRAL */}
+      <Box 
+        style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          zIndex: 7,
+          textAlign: 'center',
+        }}
       >
-        <Text 
-          fw={500} 
-          ta="center" 
-          size="xs" 
-          style={{ 
-            marginBottom: 5, 
-            fontSize: '0.75rem',
-            position: 'relative',
-            zIndex: 3,
-            cursor: 'help', // Adiciona cursor de ajuda para indicar interatividade
-          }}
-        >
-          {nome}
-        </Text>
-      </Tooltip>
-      
-      {jaVotou && revelarVotos && !isObservador && (
-        <Text fw={700} size="md" c={isDark ? 'blue.4' : 'blue'} style={{ position: 'relative', zIndex: 3 }}>
-          {valorVotado === "?" ? "?" : valorVotado}
-        </Text>
-      )}
-      
-      {jaVotou && !revelarVotos && !isObservador && (
-        <Text size="xs" c="dimmed" style={{ fontSize: '0.75rem', position: 'relative', zIndex: 3 }}>
-          Votou
-        </Text>
-      )}
-      
-      {!jaVotou && !isObservador && (
-        <Text size="xs" c="dimmed" style={{ fontSize: '0.75rem', position: 'relative', zIndex: 3 }}>
-          ...
-        </Text>
-      )}
-      
-      {isObservador && (
-        <IconEye size={16} color={isDark ? '#2d5640' : '#20c997'} style={{ opacity: 0.7, position: 'relative', zIndex: 3 }} />
-      )}
+        {jaVotou && revelarVotos && !isObservador && (
+          <Text fw={700} size="lg" c={isDark ? 'blue.4' : 'blue'}>
+            {valorVotado === "?" ? "?" : valorVotado}
+          </Text>
+        )}
+        {jaVotou && !revelarVotos && !isObservador && (
+          <Text size="xs" c="dimmed">
+            Votou
+          </Text>
+        )}
+        {!jaVotou && !isObservador && (
+          <Text size="xs" c="dimmed">
+            ...
+          </Text>
+        )}
+        {isObservador && (
+          <IconEye size={16} color={isDark ? '#2d5640' : '#20c997'} style={{ opacity: 0.7 }} />
+        )}
+      </Box>
     </Paper>
   );
 } 

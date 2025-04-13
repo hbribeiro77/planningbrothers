@@ -201,12 +201,17 @@ app.prepare().then(() => {
 
         if (finalDodgeChance > 0 && Math.random() < finalDodgeChance) {
           console.log(`[${codigo}] *** ATAQUE ESQUIVADO por ${participanteAlvo.nome} (Item Base: ${dodgingItemName || 'Nenhum'}, Chance Base: ${highestDodgeChance * 100}%, Bônus Total: ${totalDodgeChanceBonus * 100}%, Final: ${finalDodgeChance * 100}%)! ***`);
+          
+          // >>> ADICIONAR CRIAÇÃO E INCLUSÃO DO ID ÚNICO AO EVENTO AQUI <<< 
+          const eventId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
           io.to(codigo).emit('damageReceived', {
+            eventId: eventId, // <<< Incluir ID no payload
             targetId: targetId,
             damage: 0, 
             currentLife: participanteAlvo.life,
             isCritical: false,
-            isDodge: true // <<< Flag de esquiva
+            isDodge: true 
           });
           return; // Interrompe o processamento do ataque
         }

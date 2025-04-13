@@ -203,22 +203,35 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     if (!lastDamageInfoForAnimation) return;
 
     const { targetId, damage, isCritical, isDodge } = lastDamageInfoForAnimation;
-    // Manter este log?
-    // console.log(`[Cliente/Animation] Reagindo a lastDamageInfoForAnimation: targetId=${targetId}, damage=${damage}, isCritical=${isCritical}, isDodge=${isDodge}`);
-      
+    console.log(`[DEBUG useEffect Start] targetId=${targetId}, damage=${damage}, isCritical=${isCritical} (type: ${typeof isCritical}), isDodge=${isDodge} (type: ${typeof isDodge})`);
+
     const targetElement = document.querySelector(`.carta-participante[data-user-id="${targetId}"]`);
 
-    // Chama a animação apenas se necessário
-    if (targetElement && (damage > 0 || isCritical || isDodge)) {
+    // *** CORREÇÃO/DEPURAÇÃO DA CONDIÇÃO ***
+    let shouldShowAnimation = false;
+    if (damage > 0) {
+        console.log(`[DEBUG Condição] Dano > 0 (${damage})`);
+        shouldShowAnimation = true;
+    } else if (isCritical) {
+        console.log(`[DEBUG Condição] Crítico = true`);
+        shouldShowAnimation = true;
+    } else if (isDodge) {
+        console.log(`[DEBUG Condição] Esquiva = true`);
+        shouldShowAnimation = true;
+    } else {
+        console.log(`[DEBUG Condição] Nenhuma condição atendida (Dano=${damage}, Crit=${isCritical}, Dodge=${isDodge})`);
+    }
+
+    if (targetElement && shouldShowAnimation) {
+      console.log(`[Cliente/Animation] Condição VERDADEIRA. Chamando showDamageNumber para ${targetId} (damage=${damage}, isCrit=${isCritical}, isDodge=${isDodge})`);
       AnimationService.showDamageNumber(targetElement, damage, isCritical, isDodge);
     } else if (targetElement) {
-      console.log(`[Cliente/Animation] Avatar para targetId=${targetId} encontrado, mas sem dano/crítico/esquiva a exibir.`);
+      console.log(`[Cliente/Animation] Alvo ${targetId} encontrado, mas animação NÃO será mostrada (Condição: ${shouldShowAnimation})`);
     } else {
       console.warn(`[Cliente/Animation] Avatar para targetId=${targetId} não encontrado.`);
     }
 
-    // Não precisamos de limpeza aqui, pois este useEffect só reage à mudança de estado
-  }, [lastDamageInfoForAnimation]); // Dependência no novo estado vindo do hook
+  }, [lastDamageInfoForAnimation]);
 
   // Se houver erro de entrada, mostra mensagem (verificar antes da conexão)
   if (erroEntrada) {

@@ -66,6 +66,17 @@
   transform: translateY(-20px);
 }
 
+/* Sobrescrever estilos para Crítico */
+.damage-critical {
+  color: #ffa500;
+  font-size: 1.4rem;
+}
+
+/* Sobrescrever estilos para Esquiva */
+.damage-dodge {
+  color: #4dabf7;
+}
+
 .shake-effect {
   animation: avatar-shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
   transform-origin: center;

@@ -528,3 +528,20 @@ useEffect(() => {
         />
         ```
 *   **Aprendizado:** Exibir dados calculados em tooltips no cliente exige cuidado. Recalcular no cliente pode ser mais simples que passar dados complexos via props/estado, mas cria uma dependência de sincronia manual com a lógica do servidor. Usar a técnica de mapear para componentes `<Text>` é a forma mais confiável de obter formatação multiline em tooltips de bibliotecas como Mantine. 
+
+## Depuração de Eventos e Animações Duplicadas em Tempo Real
+
+*   **Problema:** Em cenários com múltiplos usuários interagindo rapidamente (ex: vários ataques simultâneos), observou-se que a animação de dano visual no cliente era exibida múltiplas vezes para uma única ação de ataque. O número de animações duplicadas parecia correlacionado com o número de outros jogadores na sala.
+*   **Investigação Inicial (Incorreta):** A primeira hipótese foi a duplicação de listeners de eventos (`socket.on('damageReceived')`) no cliente devido a re-renderizações incorretas. Foram feitas tentativas de isolar o listener em `useEffect` com dependências mínimas.
+*   **Diagnóstico Correto (Logs + Rastreamento):**
+    1.  **Logs do Servidor:** Logs detalhados no servidor (`server-dev.js`) mostraram que, para um único ataque, o servidor estava processando corretamente e emitindo **apenas um** evento `damageReceived`.
+    2.  **Rastreamento do Fluxo de Eventos do Cliente:** Uma análise mais profunda do fluxo de eventos no cliente (`KeyboardThrower.jsx`) revelou a causa raiz: o evento `attack` (que solicita o cálculo de dano ao servidor) estava sendo emitido não apenas pelo cliente *atacante* original, mas também por **todos** os clientes *observadores* que recebiam o evento de animação (`throwObject`). Cada cliente (atacante e observadores) executava a função `throwKeyboardAtAvatar`, que continha um `setTimeout` para sincronizar com a animação, e **dentro desse `setTimeout` todos emitiam o `attack`**.
+*   **Solução Técnica:**
+    1.  **Centralizar Emissão do Evento Lógico:** O evento `attack` foi removido de dentro do `setTimeout` em `throwKeyboardAtAvatar`.
+    2.  **Emitir Apenas pelo Iniciador:** A emissão do `socket.emit('attack', ...)` foi movida para o manipulador de eventos original do atacante (`handleClick` em `KeyboardThrower.jsx`), garantindo que apenas o jogador que clica para atacar envie o evento de lógica ao servidor.
+    3.  **Sincronização de Animação/Lógica (Ajuste Fino):** Para que a animação do número de dano (acionada pela resposta `damageReceived` do servidor) aparecesse sincronizada com a animação de colisão visual (que tem um delay), a emissão do `attack` no `handleClick` foi movida de volta para dentro do `setTimeout` de 400ms em `throwKeyboardAtAvatar`, mas com uma condição `if (isAttacker)` adicionada. A função `throwKeyboardAtAvatar` foi modificada para aceitar um parâmetro `isAttacker`, que é passado como `true` apenas quando chamado pelo `handleClick` do atacante.
+*   **Aprendizado:**
+    1.  **Distinguir Eventos de Animação vs. Lógica:** É fundamental separar eventos que servem apenas para sincronizar animações visuais entre clientes (ex: `throwObject`) de eventos que disparam lógica de negócio no servidor (ex: `attack`).
+    2.  **Fonte Única para Eventos Lógicos:** Eventos que modificam o estado do jogo ou disparam cálculos no servidor devem ser emitidos **apenas uma vez** e pela fonte correta (geralmente, o cliente que iniciou a ação).
+    3.  **Rastreamento Cuidadoso:** Depurar problemas em tempo real pode exigir rastrear o fluxo completo de eventos, desde a interação inicial do usuário até a resposta final do servidor e a reação do cliente, para identificar onde a lógica está divergindo.
+    4.  **Sincronização de Timing:** Ao usar `setTimeout` para alinhar animações e lógica, certifique-se de que apenas o processo relevante (o atacante, neste caso) dispare o evento lógico após o delay. 

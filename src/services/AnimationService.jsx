@@ -123,11 +123,10 @@ export class AnimationService {
 
     let displayTime = 800; // Tempo padrão
 
+    // *** RESTAURAR LÓGICA ORIGINAL ***
     if (isDodge) { // Verificar esquiva primeiro
       damageNumber.textContent = 'Errou!';
       damageNumber.className = 'damage-number damage-dodge'; // Classe específica para esquiva
-      // Poderia ter um tempo de exibição diferente para esquiva, se desejado
-      // displayTime = 1000;
     } else if (isCritical) { // Senão, verificar crítico
       damageNumber.textContent = 'CRITICAL!';
       damageNumber.className = 'damage-number damage-critical';
@@ -136,6 +135,7 @@ export class AnimationService {
       damageNumber.textContent = `-${damage}`;
       damageNumber.className = 'damage-number';
     }
+    // *** FIM DA RESTAURAÇÃO ***
     
     element.appendChild(damageNumber);
 

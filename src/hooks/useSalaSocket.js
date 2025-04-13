@@ -131,9 +131,8 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
           oldIds.forEach(id => processedDamageEventIds.current.delete(id));
       }
 
-      console.log('Evento damageReceived recebido no HOOK:', data); // Log movido para depois da verificação
-      // Desestruturar payload
-      const { eventId, targetId, damage, currentLife, isCritical, isDodge, attackerName, targetName, weaponType, killTitle } = data; // Incluir eventId na desestruturação (embora não usado diretamente abaixo)
+      console.log('Evento damageReceived recebido no HOOK:', data); 
+      const { eventId, targetId, damage, currentLife, isCritical, isDodge, attackerName, targetName, weaponType, killTitle } = data; 
       
       let currentUserWasTarget = false;
 
@@ -169,14 +168,18 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
         });
       }
       
+      // <<< ADICIONAR LOG ANTES DO SETSTATE >>>
+      console.log(`[DEBUG useSalaSocket] Atualizando lastDamageInfoForAnimation com: eventId=${eventId}, targetId=${targetId}, damage=${damage}, isCrit=${isCritical}, isDodge=${isDodge}`);
+      // <<< FIM DO LOG >>>
+
       // ATUALIZA O NOVO ESTADO para acionar a animação no componente
       setLastDamageInfoForAnimation({ 
-          eventId: eventId, // <<< Passar eventId para o estado de animação (para debug)
+          eventId: eventId, 
           targetId, 
           damage, 
           isCritical, 
           isDodge, 
-          timestamp: Date.now() // Garante nova referência
+          timestamp: Date.now() 
       });
     };
 

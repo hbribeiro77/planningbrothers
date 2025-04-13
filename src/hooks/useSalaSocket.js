@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSocket } from '@/contexts/SocketContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { getOrCreateToken } from '@/utils/browserToken';
@@ -17,6 +17,12 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
   const [lastDamageTimestamp, setLastDamageTimestamp] = useState(null);
   const [lastKillInfo, setLastKillInfo] = useState(null);
   const [lastDamageInfoForAnimation, setLastDamageInfoForAnimation] = useState(null);
+
+  // NOVO: Ref para nomeUsuario para usar no listener sem adicionar como dependência do useEffect
+  const nomeUsuarioRef = useRef(nomeUsuario);
+  useEffect(() => {
+    nomeUsuarioRef.current = nomeUsuario;
+  }, [nomeUsuario]);
 
   // Conectar à sala quando o componente montar
   useEffect(() => {
@@ -104,7 +110,7 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
     };
   }, [socket, codigoSala, nomeUsuario]);
 
-  // NOVO useEffect para gerenciar o listener de damageReceived
+  // useEffect para gerenciar o listener de damageReceived
   useEffect(() => {
     if (!socket) return;
 
@@ -116,7 +122,8 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
       let currentUserWasTarget = false;
 
       setParticipantes(prev => {
-        const currentUserId = prev.find(p => p.nome === nomeUsuario)?.id;
+        // USA O REF AQUI:
+        const currentUserId = prev.find(p => p.nome === nomeUsuarioRef.current)?.id;
         return prev.map(p => {
           if (p.id === targetId) {
             if (p.id === currentUserId) {
@@ -147,7 +154,6 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
       }
       
       // ATUALIZA O NOVO ESTADO para acionar a animação no componente
-      // Inclui um ID único para garantir que o useEffect no componente sempre dispare
       setLastDamageInfoForAnimation({ 
           targetId, 
           damage, 
@@ -163,7 +169,7 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
       socket.off('damageReceived', handleDamageReceived);
     };
 
-  }, [socket, nomeUsuario]);
+  }, [socket]); // <<< REMOVIDO nomeUsuario das dependências
 
   // Funções de manipulação de eventos
   const handleVotar = useCallback((valor) => {

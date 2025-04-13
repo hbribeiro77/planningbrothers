@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSocket } from '@/contexts/SocketContext';
 import { SOCKET_EVENTS } from '@/constants/socketEvents';
 import { getOrCreateToken } from '@/utils/browserToken';
@@ -16,6 +16,7 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
   const [erroEntrada, setErroEntrada] = useState(null);
   const [lastDamageTimestamp, setLastDamageTimestamp] = useState(null);
   const [lastKillInfo, setLastKillInfo] = useState(null);
+  const [lastDamageInfoForAnimation, setLastDamageInfoForAnimation] = useState(null);
 
   // Conectar à sala quando o componente montar
   useEffect(() => {
@@ -50,49 +51,6 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
       setParticipantes(participantesAtualizados);
       setConectado(true);
       setErroEntrada(null);
-    });
-
-    // Receber dano
-    socket.on('damageReceived', (data) => {
-      console.log('Evento damageReceived recebido:', data);
-      // Desestruturar payload, incluindo weaponType e killTitle
-      const { targetId, damage, currentLife, attackerName, targetName, weaponType, killTitle } = data;
-      
-      console.log('Recebeu dano (payload completo):', data);
-      let currentUserWasTarget = false;
-
-      setParticipantes(prev => {
-        const currentUserId = prev.find(p => p.nome === nomeUsuario)?.id;
-        return prev.map(p => {
-          if (p.id === targetId) {
-            if (p.id === currentUserId) {
-              currentUserWasTarget = true;
-            }
-            return { ...p, life: currentLife }; // Atualiza vida
-          } 
-          return p;
-        })
-      });
-
-      // Atualiza timestamp se o user atual foi alvo
-      if (currentUserWasTarget) {
-        console.log("Damage received by current user, updating timestamp.");
-        setLastDamageTimestamp(Date.now());
-      }
-
-      // Se for um evento de kill (tem attackerName e targetName)
-      // O backend agora SEMPRE envia killTitle se for um kill.
-      if (attackerName && targetName && killTitle) { // Verifica se killTitle também está presente
-        console.log(`KILL registrado: ${killTitle} - ${attackerName} -> ${targetName} com ${weaponType}`);
-        // Armazena a informação completa da eliminação
-        setLastKillInfo({ 
-          attackerName,
-          targetName,
-          weaponType, 
-          killTitle, // <-- ARMAZENAR TÍTULO DA KILL
-          timestamp: Date.now() 
-        });
-      }
     });
 
     // Receber votos
@@ -143,12 +101,72 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
       socket.off(SOCKET_EVENTS.VOTOS_REVELADOS);
       socket.off(SOCKET_EVENTS.VOTACAO_REINICIADA);
       socket.off(SOCKET_EVENTS.MODO_OBSERVADOR_ALTERADO);
-      socket.off('damageReceived');
     };
   }, [socket, codigoSala, nomeUsuario]);
 
+  // NOVO useEffect para gerenciar o listener de damageReceived
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleDamageReceived = (data) => {
+      console.log('Evento damageReceived recebido no HOOK:', data);
+      // Desestruturar payload, incluindo weaponType e killTitle
+      const { targetId, damage, currentLife, isCritical, isDodge, attackerName, targetName, weaponType, killTitle } = data;
+      
+      let currentUserWasTarget = false;
+
+      setParticipantes(prev => {
+        const currentUserId = prev.find(p => p.nome === nomeUsuario)?.id;
+        return prev.map(p => {
+          if (p.id === targetId) {
+            if (p.id === currentUserId) {
+              currentUserWasTarget = true;
+            }
+            return { ...p, life: currentLife }; // Atualiza vida
+          } 
+          return p;
+        })
+      });
+
+      // Atualiza timestamp se o user atual foi alvo
+      if (currentUserWasTarget) {
+        console.log("Damage received by current user, updating timestamp.");
+        setLastDamageTimestamp(Date.now());
+      }
+
+      // Se for um evento de kill (tem attackerName e targetName)
+      if (attackerName && targetName && killTitle) { 
+        console.log(`KILL registrado: ${killTitle} - ${attackerName} -> ${targetName} com ${weaponType}`);
+        setLastKillInfo({ 
+          attackerName,
+          targetName,
+          weaponType, 
+          killTitle,
+          timestamp: Date.now() 
+        });
+      }
+      
+      // ATUALIZA O NOVO ESTADO para acionar a animação no componente
+      // Inclui um ID único para garantir que o useEffect no componente sempre dispare
+      setLastDamageInfoForAnimation({ 
+          targetId, 
+          damage, 
+          isCritical, 
+          isDodge, 
+          timestamp: Date.now() // Garante nova referência
+      });
+    };
+
+    socket.on('damageReceived', handleDamageReceived);
+
+    return () => {
+      socket.off('damageReceived', handleDamageReceived);
+    };
+
+  }, [socket, nomeUsuario]);
+
   // Funções de manipulação de eventos
-  const handleVotar = (valor) => {
+  const handleVotar = useCallback((valor) => {
     if (!socket || modoObservador) return;
     
     socket.emit(SOCKET_EVENTS.VOTAR, {
@@ -157,9 +175,9 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
       voto: valor 
     });
     setMeuVoto(valor);
-  };
+  }, [socket, codigoSala, nomeUsuario, modoObservador]);
 
-  const handleCancelarVoto = () => {
+  const handleCancelarVoto = useCallback(() => {
     if (!socket || modoObservador) return;
     
     socket.emit(SOCKET_EVENTS.CANCELAR_VOTO, {
@@ -167,19 +185,19 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
       usuario: { nome: nomeUsuario }
     });
     setMeuVoto(null);
-  };
+  }, [socket, codigoSala, nomeUsuario, modoObservador]);
 
-  const handleRevelarVotos = () => {
+  const handleRevelarVotos = useCallback(() => {
     if (!socket) return;
     socket.emit(SOCKET_EVENTS.REVELAR_VOTOS, codigoSala);
-  };
+  }, [socket, codigoSala]);
 
-  const handleNovaRodada = () => {
+  const handleNovaRodada = useCallback(() => {
     if (!socket) return;
     socket.emit(SOCKET_EVENTS.REINICIAR_VOTACAO, codigoSala);
-  };
+  }, [socket, codigoSala]);
 
-  const toggleModoObservador = () => {
+  const toggleModoObservador = useCallback(() => {
     if (!socket) return;
     
     const novoModo = !modoObservador;
@@ -194,7 +212,7 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
       usuario: meuParticipante || { nome: nomeUsuario },
       isObservador: novoModo
     });
-  };
+  }, [socket, codigoSala, nomeUsuario, participantes, modoObservador]);
 
   return {
     participantes,
@@ -211,6 +229,7 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
     toggleModoObservador,
     socket,
     lastDamageTimestamp,
-    lastKillInfo
+    lastKillInfo,
+    lastDamageInfoForAnimation
   };
 } 

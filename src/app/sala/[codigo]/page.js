@@ -88,7 +88,8 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     toggleModoObservador: originalToggleModoObservador,
     socket,
     lastDamageTimestamp,
-    lastKillInfo
+    lastKillInfo,
+    lastDamageInfoForAnimation
   } = useSalaSocket(codigoSala, nomeUsuario);
 
   const currentUser = participantes.find(p => p.nome === nomeUsuario) || { id: '', nome: nomeUsuario, score: 0, kills: 0, inventory: [], equippedAccessory: null };
@@ -197,32 +198,26 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
   }, [socket, codigoSala, currentUser?.id]); // Incluir currentUser.id nas dependências
   // ----------------------------------------------
 
-  // Efeito para lidar com a recepção de dano
+  // NOVO useEffect para reagir à mudança no lastDamageInfoForAnimation e mostrar o número
   useEffect(() => {
-    if (!socket) return;
+    if (!lastDamageInfoForAnimation) return;
 
-    const handleDamageReceived = ({ targetId, damage, currentLife, isCritical, isDodge }) => {
-      console.log(`[Cliente] Recebido damageReceived: targetId=${targetId}, damage=${damage}, isCritical=${isCritical}, isDodge=${isDodge}`);
+    const { targetId, damage, isCritical, isDodge } = lastDamageInfoForAnimation;
+    console.log(`[Cliente/Animation] Reagindo a lastDamageInfoForAnimation: targetId=${targetId}, damage=${damage}, isCritical=${isCritical}, isDodge=${isDodge}`);
       
-      const targetElement = document.querySelector(`.carta-participante[data-user-id="${targetId}"]`);
+    const targetElement = document.querySelector(`.carta-participante[data-user-id="${targetId}"]`);
 
-      if (targetElement && (damage > 0 || isCritical || isDodge)) {
-        AnimationService.showDamageNumber(targetElement, damage, isCritical, isDodge);
-      } else if (targetElement) {
-        console.log(`[Cliente] Avatar para targetId=${targetId} encontrado, mas sem dano/crítico/esquiva a exibir.`);
-      } else {
-        console.warn(`[Cliente] Avatar para targetId=${targetId} não encontrado.`);
-      }
-    };
+    // Chama a animação apenas se necessário
+    if (targetElement && (damage > 0 || isCritical || isDodge)) {
+      AnimationService.showDamageNumber(targetElement, damage, isCritical, isDodge);
+    } else if (targetElement) {
+      console.log(`[Cliente/Animation] Avatar para targetId=${targetId} encontrado, mas sem dano/crítico/esquiva a exibir.`);
+    } else {
+      console.warn(`[Cliente/Animation] Avatar para targetId=${targetId} não encontrado.`);
+    }
 
-    socket.on('damageReceived', handleDamageReceived);
-
-    // Limpeza ao desmontar
-    return () => {
-      socket.off('damageReceived', handleDamageReceived);
-    };
-
-  }, [socket]); // Dependência apenas no socket
+    // Não precisamos de limpeza aqui, pois este useEffect só reage à mudança de estado
+  }, [lastDamageInfoForAnimation]); // Dependência no novo estado vindo do hook
 
   // Se houver erro de entrada, mostra mensagem (verificar antes da conexão)
   if (erroEntrada) {
@@ -416,7 +411,9 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
         <ShopDrawer 
           opened={shopOpened} 
           onClose={closeShop} 
-          currentUser={currentUser} 
+          currentUserScore={currentUserScore}
+          currentUserInventory={currentUser.inventory || []}
+          currentUser={currentUser}
           onBuyItem={handleBuyItem} 
         />
 

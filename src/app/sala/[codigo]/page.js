@@ -202,6 +202,9 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
   useEffect(() => {
     if (!lastDamageInfoForAnimation) return;
 
+    // <<< LOG ADICIONAL PARA DEPURAR EXECUÇÃO DUPLA >>>
+    console.log(`[DEBUG Client Animation Effect] Executando para:`, JSON.stringify(lastDamageInfoForAnimation));
+
     const { targetId, damage, isCritical, isDodge } = lastDamageInfoForAnimation;
     console.log(`[Cliente/Animation] Reagindo a lastDamageInfoForAnimation: targetId=${targetId}, damage=${damage}, isCritical=${isCritical}, isDodge=${isDodge}`);
       

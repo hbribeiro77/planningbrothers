@@ -52,7 +52,7 @@ export function KeyboardThrower({
   }, [socket, currentUser.id]);
 
   // Função para adicionar teclado voador e explosão a um avatar
-  const throwKeyboardAtAvatar = (element, userId) => {
+  const throwKeyboardAtAvatar = (element, userId, isAttacker = false) => {
     if (!element) return;
     
     // Escolhe uma direção aleatória
@@ -106,13 +106,14 @@ export function KeyboardThrower({
 
       // Mostra a barra de vida do avatar atingido
       showLifeBarTemporarily(userId);
-
-      // Emitir o evento de ATAQUE (sem dano) após a animação
-      if (socket) {
+      
+      // >>> REINTRODUZIR EMISSÃO DO ATTACK, MAS CONDICIONAL <<<
+      if (socket && isAttacker) { // Só emite se for o atacante original
+        console.log(`[DEBUG KeyboardThrower] Attacker emitting 'attack' after delay for target: ${userId}`);
         socket.emit('attack', {
           codigo: codigoSala,
           targetId: userId,
-          fromUserId: currentUser.id,
+          fromUserId: currentUser.id, // Correto aqui, pois isAttacker=true
           objectType: 'keyboard'
         });
       }
@@ -137,7 +138,8 @@ export function KeyboardThrower({
     e.preventDefault();
     
     // Lança teclado no avatar
-    throwKeyboardAtAvatar(targetElement, targetId);
+    // >>> PASSAR isAttacker = true <<<
+    throwKeyboardAtAvatar(targetElement, targetId, true);
     
     // Envia evento para outros participantes via socket.io
     if (socket) {
@@ -147,6 +149,16 @@ export function KeyboardThrower({
         toUser: targetId,
         objectType: 'keyboard'
       });
+      
+      // <<< REMOVER EMISSÃO IMEDIATA DO ATTACK DAQUI >>>
+      /*
+      socket.emit('attack', {
+        codigo: codigoSala,
+        targetId: targetId,
+        fromUserId: currentUser.id, // ID correto do atacante
+        objectType: 'keyboard'
+      });
+      */
     }
   };
   

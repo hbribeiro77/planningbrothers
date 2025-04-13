@@ -397,8 +397,8 @@ app.prepare().then(() => {
       for (const participante of sala.participantes.values()) {
         // Pontua apenas quem efetivamente votou nesta rodada
         if (participante.jaVotou) {
-          participante.score = (participante.score || 0) + 10;
-          console.log(`[${codigo}] Score de ${participante.nome} atualizado para: ${participante.score} (+10 voto revelado)`);
+          participante.score = (participante.score || 0) + GAME_CONFIG.POINTS.VOTE_REVEALED;
+          console.log(`[${codigo}] Score de ${participante.nome} atualizado para: ${participante.score} (+${GAME_CONFIG.POINTS.VOTE_REVEALED} voto revelado)`);
           participantesAtualizados = true;
         }
       }

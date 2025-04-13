@@ -8,6 +8,7 @@ const GAME_CONFIG = {
   // Configurações de Pontos
   POINTS: {
     KILL: 1, // Pontos por kill (exemplo)
+    VOTE_REVEALED: 10, // Pontos por ter o voto revelado na rodada
     // Adicionar outras pontuações aqui
   },
 

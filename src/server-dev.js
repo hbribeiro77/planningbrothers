@@ -167,17 +167,25 @@ app.prepare().then(() => {
     socket.on('attack', (data) => {
       const { codigo, fromUserId, targetId, objectType } = data;
       
-      console.log(`[${codigo}] Evento 'attack' recebido: fromUserId=${fromUserId}, targetId=${targetId}, objectType=${objectType}`);
+      // LOG: Log inicial do evento recebido
+      console.log(`[DEBUG ${codigo}] === Attack Event Start ===`);
+      console.log(`[DEBUG ${codigo}] Received attack: fromUserId=${fromUserId}, targetId=${targetId}, objectType=${objectType}`);
       
-      if (!salas.has(codigo)) return;
+      if (!salas.has(codigo)) {
+        console.warn(`[DEBUG ${codigo}] Sala não encontrada. Abortando ataque.`);
+        return;
+      }
       
       const sala = salas.get(codigo);
       const participanteAlvo = Array.from(sala.participantes.values())
         .find(p => p.id === targetId);
       const participanteAtacante = sala.participantes.get(fromUserId);
 
-      const nomeAlvoLog = participanteAlvo ? participanteAlvo.nome : 'NÃO ENCONTRADO';
-      const nomeAtacanteLog = participanteAtacante ? participanteAtacante.nome : 'NÃO ENCONTRADO';
+      // LOG: Log dos participantes encontrados
+      const nomeAlvoLog = participanteAlvo ? participanteAlvo.nome : 'ALVO NÃO ENCONTRADO';
+      const nomeAtacanteLog = participanteAtacante ? participanteAtacante.nome : 'ATACANTE NÃO ENCONTRADO';
+      console.log(`[DEBUG ${codigo}] Resolved Attacker: ID=${fromUserId}, Name=${nomeAtacanteLog}`);
+      console.log(`[DEBUG ${codigo}] Resolved Target: ID=${targetId}, Name=${nomeAlvoLog}`);
 
       if (participanteAlvo && participanteAtacante && fromUserId !== targetId) {
         
@@ -302,6 +310,8 @@ app.prepare().then(() => {
               killTitle = validSignatures[randomIndex];
             }
           }
+          // LOG: Log antes de popular o payload de kill
+          console.log(`[DEBUG ${codigo}] Kill detected! Preparing payload for attacker: ${participanteAtacante.nome} (ID: ${fromUserId})`);
           payload.attackerName = participanteAtacante.nome;
           payload.targetName = participanteAlvo.nome;
           payload.weaponType = objectType; 
@@ -310,23 +320,32 @@ app.prepare().then(() => {
           const pointsForKill = GAME_CONFIG.POINTS.KILL || 0;
           participanteAtacante.score = (participanteAtacante.score || 0) + pointsForKill;
           participanteAtacante.kills = (participanteAtacante.kills || 0) + 1;
+          // LOG: Log após modificar score/kills do atacante
+          console.log(`[DEBUG ${codigo}] Updated attacker score/kills: Score=${participanteAtacante.score}, Kills=${participanteAtacante.kills}`);
           console.log(`[${codigo}] KILL EVENT... (Crítico: ${isCriticalHit})`);
         } else if (vidaDepois <= GAME_CONFIG.LIFE.MIN) {
            console.log(`[${codigo}] Dano aplicado em ${nomeAlvoLog}, que já estava com vida <= ${GAME_CONFIG.LIFE.MIN}.`);
         }
 
+        // LOG: Log final do payload antes de emitir damageReceived
+        console.log(`[DEBUG ${codigo}] Emitting damageReceived payload:`, JSON.stringify(payload));
         io.to(codigo).emit('damageReceived', payload);
+        
+        // LOG: Log antes de emitir atualizarParticipantes
+        console.log(`[DEBUG ${codigo}] Emitting atualizarParticipantes after attack.`);
         io.to(codigo).emit('atualizarParticipantes', Array.from(sala.participantes.values()));
 
       } else {
           // Log caso atacante seja igual ao alvo ou participantes não encontrados
           if (fromUserId === targetId) {
-              console.warn(`[${codigo}] Tentativa de dano onde atacante (${fromUserId}) é igual ao alvo (${targetId}). Evento ignorado.`);
+              console.warn(`[DEBUG ${codigo}] Tentativa de dano onde atacante (${fromUserId}) é igual ao alvo (${targetId}). Evento ignorado.`);
           } else {
-              console.warn(`[${codigo}] Atacante (${fromUserId}) ou Alvo (${targetId}) não encontrado(s). Evento ignorado.`);
+              console.warn(`[DEBUG ${codigo}] Atacante (${fromUserId}, Nome=${nomeAtacanteLog}) ou Alvo (${targetId}, Nome=${nomeAlvoLog}) não encontrado(s) ou inválido. Evento ignorado.`);
           }
           // Não faz nada se o atacante for igual ao alvo ou se algum participante não foi encontrado
       }
+      // LOG: Log final do evento
+      console.log(`[DEBUG ${codigo}] === Attack Event End ===`);
     });
 
     // Votar

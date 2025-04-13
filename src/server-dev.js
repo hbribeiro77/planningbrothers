@@ -167,12 +167,8 @@ app.prepare().then(() => {
     socket.on('attack', (data) => {
       const { codigo, fromUserId, targetId, objectType } = data;
       
-      // LOG: Log inicial do evento recebido
-      console.log(`[DEBUG ${codigo}] === Attack Event Start ===`);
-      console.log(`[DEBUG ${codigo}] Received attack: fromUserId=${fromUserId}, targetId=${targetId}, objectType=${objectType}`);
-      
       if (!salas.has(codigo)) {
-        console.warn(`[DEBUG ${codigo}] Sala não encontrada. Abortando ataque.`);
+        console.warn(`[${codigo}] Sala não encontrada para o evento attack. Abortando.`);
         return;
       }
       
@@ -180,12 +176,6 @@ app.prepare().then(() => {
       const participanteAlvo = Array.from(sala.participantes.values())
         .find(p => p.id === targetId);
       const participanteAtacante = sala.participantes.get(fromUserId);
-
-      // LOG: Log dos participantes encontrados
-      const nomeAlvoLog = participanteAlvo ? participanteAlvo.nome : 'ALVO NÃO ENCONTRADO';
-      const nomeAtacanteLog = participanteAtacante ? participanteAtacante.nome : 'ATACANTE NÃO ENCONTRADO';
-      console.log(`[DEBUG ${codigo}] Resolved Attacker: ID=${fromUserId}, Name=${nomeAtacanteLog}`);
-      console.log(`[DEBUG ${codigo}] Resolved Target: ID=${targetId}, Name=${nomeAlvoLog}`);
 
       if (participanteAlvo && participanteAtacante && fromUserId !== targetId) {
         
@@ -210,7 +200,7 @@ app.prepare().then(() => {
         const finalDodgeChance = highestDodgeChance + totalDodgeChanceBonus;
 
         if (finalDodgeChance > 0 && Math.random() < finalDodgeChance) {
-          console.log(`[${codigo}] *** ATAQUE ESQUIVADO por ${nomeAlvoLog} (Item Base: ${dodgingItemName || 'Nenhum'}, Chance Base: ${highestDodgeChance * 100}%, Bônus Total: ${totalDodgeChanceBonus * 100}%, Final: ${finalDodgeChance * 100}%)! ***`);
+          console.log(`[${codigo}] *** ATAQUE ESQUIVADO por ${participanteAlvo.nome} (Item Base: ${dodgingItemName || 'Nenhum'}, Chance Base: ${highestDodgeChance * 100}%, Bônus Total: ${totalDodgeChanceBonus * 100}%, Final: ${finalDodgeChance * 100}%)! ***`);
           io.to(codigo).emit('damageReceived', {
             targetId: targetId,
             damage: 0, 
@@ -245,11 +235,11 @@ app.prepare().then(() => {
                 totalAttackerBonusFixed += bonusFixo;
                 totalAttackerBonusRolled += bonusDado;
                 if (bonusFixo !== 0 || accessoryData.attackBonusDice) {
-                   console.log(`[${codigo}] Atacante ${nomeAtacanteLog} acessório '${equippedId}': +${bonusFixo} fixo, +${bonusDado} (rolado de ${accessoryData.attackBonusDice})`);
+                   console.log(`[${codigo}] Atacante ${participanteAtacante.nome} acessório '${equippedId}': +${bonusFixo} fixo, +${bonusDado} (rolado de ${accessoryData.attackBonusDice})`);
                 }
             }
         }
-        console.log(`[${codigo}] Atacante ${nomeAtacanteLog} Bônus Total Acessórios: +${totalAttackerBonusFixed} fixo, +${totalAttackerBonusRolled} rolado`);
+        console.log(`[${codigo}] Atacante ${participanteAtacante.nome} Bônus Total Acessórios: +${totalAttackerBonusFixed} fixo, +${totalAttackerBonusRolled} rolado`);
         
         const totalAttackPower = baseDamageFixed + baseDamageRolled + totalAttackerBonusFixed + totalAttackerBonusRolled;
         console.log(`[${codigo}] Poder de Ataque Total: ${totalAttackPower}`);
@@ -287,11 +277,11 @@ app.prepare().then(() => {
                   totalTargetDefenseFixed += defFixa;
                   totalTargetDefenseRolled += defDado;
                   if (defFixa !== 0 || accessoryData.defenseDice) {
-                     console.log(`[${codigo}] Alvo ${nomeAlvoLog} acessório '${equippedId}': +${defFixa} fixa, +${defDado} (rolada de ${accessoryData.defenseDice})`);
+                     console.log(`[${codigo}] Alvo ${participanteAlvo.nome} acessório '${equippedId}': +${defFixa} fixa, +${defDado} (rolada de ${accessoryData.defenseDice})`);
                   }
               }
           }
-          console.log(`[${codigo}] Alvo ${nomeAlvoLog} Defesa Total Acessórios: +${totalTargetDefenseFixed} fixa, +${totalTargetDefenseRolled} rolada`);
+          console.log(`[${codigo}] Alvo ${participanteAlvo.nome} Defesa Total Acessórios: +${totalTargetDefenseFixed} fixa, +${totalTargetDefenseRolled} rolada`);
           
           const totalDefense = totalTargetDefenseFixed + totalTargetDefenseRolled;
           console.log(`[${codigo}] Defesa Total do Alvo: ${totalDefense}`);
@@ -305,7 +295,7 @@ app.prepare().then(() => {
         const vidaAntes = participanteAlvo.life;
         participanteAlvo.life = Math.max(GAME_CONFIG.LIFE.MIN, vidaAntes - finalDamage);
         const vidaDepois = participanteAlvo.life;
-        console.log(`[${codigo}] Vida de ${nomeAlvoLog} atualizada de ${vidaAntes} para: ${vidaDepois} (dano sofrido: ${finalDamage}, crítico: ${isCriticalHit})`);
+        console.log(`[${codigo}] Vida de ${participanteAlvo.nome} atualizada de ${vidaAntes} para: ${vidaDepois} (dano sofrido: ${finalDamage}, crítico: ${isCriticalHit})`);
         
         const isKill = vidaDepois <= GAME_CONFIG.LIFE.MIN && vidaAntes > GAME_CONFIG.LIFE.MIN;
 
@@ -331,8 +321,6 @@ app.prepare().then(() => {
               killTitle = validSignatures[randomIndex];
             }
           }
-          // LOG: Log antes de popular o payload de kill
-          console.log(`[DEBUG ${codigo}] Kill detected! Preparing payload for attacker: ${participanteAtacante.nome} (ID: ${fromUserId})`);
           payload.attackerName = participanteAtacante.nome;
           payload.targetName = participanteAlvo.nome;
           payload.weaponType = objectType; 
@@ -350,32 +338,24 @@ app.prepare().then(() => {
 
           participanteAtacante.score = (participanteAtacante.score || 0) + finalPointsForKill;
           participanteAtacante.kills = (participanteAtacante.kills || 0) + 1;
-          // LOG: Log após modificar score/kills do atacante
-          console.log(`[DEBUG ${codigo}] Updated attacker score/kills: Score=${participanteAtacante.score}, Kills=${participanteAtacante.kills}`);
           console.log(`[${codigo}] KILL EVENT... (Crítico: ${isCriticalHit})`);
         } else if (vidaDepois <= GAME_CONFIG.LIFE.MIN) {
-           console.log(`[${codigo}] Dano aplicado em ${nomeAlvoLog}, que já estava com vida <= ${GAME_CONFIG.LIFE.MIN}.`);
+           console.log(`[${codigo}] Dano aplicado em ${participanteAlvo.nome}, que já estava com vida <= ${GAME_CONFIG.LIFE.MIN}.`);
         }
 
-        // LOG: Log final do payload antes de emitir damageReceived
-        console.log(`[DEBUG ${codigo}] Emitting damageReceived payload:`, JSON.stringify(payload));
         io.to(codigo).emit('damageReceived', payload);
         
-        // LOG: Log antes de emitir atualizarParticipantes
-        console.log(`[DEBUG ${codigo}] Emitting atualizarParticipantes after attack.`);
         io.to(codigo).emit('atualizarParticipantes', Array.from(sala.participantes.values()));
 
       } else {
           // Log caso atacante seja igual ao alvo ou participantes não encontrados
           if (fromUserId === targetId) {
-              console.warn(`[DEBUG ${codigo}] Tentativa de dano onde atacante (${fromUserId}) é igual ao alvo (${targetId}). Evento ignorado.`);
+              console.warn(`[${codigo}] Tentativa de dano onde atacante (${fromUserId}) é igual ao alvo (${targetId}). Evento ignorado.`);
           } else {
-              console.warn(`[DEBUG ${codigo}] Atacante (${fromUserId}, Nome=${nomeAtacanteLog}) ou Alvo (${targetId}, Nome=${nomeAlvoLog}) não encontrado(s) ou inválido. Evento ignorado.`);
+              console.warn(`[${codigo}] Atacante (${fromUserId}, Nome=${participanteAtacante.nome}) ou Alvo (${targetId}, Nome=${participanteAlvo.nome}) não encontrado(s) ou inválido. Evento ignorado.`);
           }
           // Não faz nada se o atacante for igual ao alvo ou se algum participante não foi encontrado
       }
-      // LOG: Log final do evento
-      console.log(`[DEBUG ${codigo}] === Attack Event End ===`);
     });
 
     // Votar

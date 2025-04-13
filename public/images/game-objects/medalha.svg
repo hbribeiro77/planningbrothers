@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300">
+  <!-- Fita da Medalha -->
+  <path d="M60 40 L60 10 L140 10 L140 40 L120 100 L80 100 Z" fill="#D22F27" />
+  <path d="M65 40 L65 15 L135 15 L135 40 L115 95 L85 95 Z" fill="#E74C3C" />
+  
+  <!-- Anel de conexão da fita à medalha -->
+  <circle cx="100" cy="100" r="10" fill="#B87333" stroke="#8B4513" stroke-width="2" />
+  <circle cx="100" cy="100" r="6" fill="none" stroke="#8B4513" stroke-width="1.5" />
+  
+  <!-- Medalha - Parte exterior -->
+  <circle cx="100" cy="150" r="50" fill="#FFD700" stroke="#B8860B" stroke-width="2" />
+  
+  <!-- Medalha - Círculo interior -->
+  <circle cx="100" cy="150" r="45" fill="#FFDF00" />
+  
+  <!-- Detalhes da medalha -->
+  <circle cx="100" cy="150" r="40" fill="none" stroke="#DAA520" stroke-width="1" />
+  <circle cx="100" cy="150" r="35" fill="none" stroke="#DAA520" stroke-width="1" />
+  
+  <!-- Efeito de brilho -->
+  <ellipse cx="85" cy="135" rx="15" ry="10" fill="#FFFFFF" opacity="0.3" />
+  
+  <!-- Estrela central -->
+  <path d="M100 120 L107 140 L128 140 L112 153 L118 173 L100 162 L82 173 L88 153 L72 140 L93 140 Z" 
+    fill="#B8860B" />
+  
+  <!-- Número 5 central -->
+  <text x="95" y="158" font-family="Arial" font-size="22" font-weight="bold" fill="#8B4513">5</text>
+  
+  <!-- Ornamentos radiais -->
+  <g stroke="#DAA520" stroke-width="1">
+    <path d="M100 110 L100 100" />
+    <path d="M100 190 L100 200" />
+    <path d="M60 150 L50 150" />
+    <path d="M140 150 L150 150" />
+    <path d="M71 121 L64 114" />
+    <path d="M129 179 L136 186" />
+    <path d="M71 179 L64 186" />
+    <path d="M129 121 L136 114" />
+  </g>
+  
+  <!-- Pequenos detalhes de relevo -->
+  <g fill="#B8860B" opacity="0.7">
+    <circle cx="75" cy="150" r="3" />
+    <circle cx="125" cy="150" r="3" />
+    <circle cx="100" cy="125" r="3" />
+    <circle cx="100" cy="175" r="3" />
+  </g>
+</svg>

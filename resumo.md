@@ -13,7 +13,7 @@ Aplicação web para facilitar sessões de Planning Poker em equipes ágeis, per
   - Next.js 14.1.0 (LTS)
   - React 18
   - Mantine UI (@mantine/core, @mantine/hooks)
-  - @tabler/icons-react 2.40.0
+  - @tabler/icons-react (várias versões)
 - **Backend**: Node.js com Express e Socket.io
 - **Comunicação em Tempo Real**: Socket.io com WebSocket
 - **Gerenciamento de Dependências**: NPM
@@ -32,20 +32,20 @@ planningbrothers/
 │   │   ├── Auth/             # Componentes de autenticação
 │   │   │   └── FormularioEntrada.jsx # Formulário de entrada na sala
 │   │   ├── Carta/            # Componentes de carta (Votação, Participante)
-│   │   │   ├── Participante.jsx # Card de Participante (Avatar)
+│   │   │   ├── Participante.jsx # Card de Participante (Avatar + visuais de itens)
 │   │   │   └── Votacao.jsx      # Card de Votação clicável
 │   │   ├── GameElements/     # Componentes de gamificação
 │   │   │   ├── KeyboardThrower.jsx # Sistema de arremesso de teclado
 │   │   │   ├── GameController.jsx # Controlador de elementos de gamificação e configurações
 │   │   │   ├── LifeBar.jsx   # Barra de vida dos participantes
 │   │   │   ├── KillFeedDisplay.jsx # Exibe as notificações de eliminação
-│   │   │   └── InventoryDisplay.jsx # Exibe inventário de armas e acessórios
+│   │   │   └── InventoryDisplay.jsx # Exibe inventário de armas e acessórios (com tooltips)
 │   │   ├── Mesa/             # Componentes da mesa de Planning Poker
-│   │   │   └── Mesa.jsx      # Componente principal da mesa
+│   │   │   └── Mesa.jsx      # Componente principal da mesa (com tooltip de status no nome)
 │   │   ├── Sala/             # Componentes da sala
 │   │   │   └── OpcoesVotacao.jsx # Agrupa opções de voto e inventário
 │   │   └── Shop/             # Componentes da Loja
-│   │       └── ShopDrawer.jsx  # Painel lateral da loja de itens
+│   │       └── ShopDrawer.jsx  # Painel lateral da loja de itens (com tooltips)
 │   ├── contexts/             # Contextos React
 │   │   ├── SocketContext.js  # Gerenciamento do Socket.io
 │   │   ├── LifeBarContext.jsx # Gerenciamento da visibilidade da barra de vida
@@ -55,8 +55,8 @@ planningbrothers/
 │   │   └── useSalaUiEffects.js # Lógica de efeitos visuais da sala (animações, piscada)
 │   ├── constants/            # Constantes e configurações
 │   │   ├── socketEvents.js   # Eventos do Socket.io (idealmente)
-│   │   └── gameConfig.js     # Configurações GERAIS do jogo (vida, pontos, tempos)
-│   │   └── itemsData.js      # Dados dos ITENS (armas, acessórios) com stats de combate
+│   │   ├── gameConfig.js     # Configurações GERAIS do jogo (vida, PONTOS, tempos)
+│   │   └── itemsData.js      # Dados dos ITENS (armas, acessórios) com stats e bônus
 │   ├── services/             # Serviços da aplicação
 │   │   └── AnimationService.jsx # Serviço de animações centralizado (agora .jsx)
 │   ├── styles/               # Estilos CSS
@@ -66,7 +66,7 @@ planningbrothers/
 │   ├── lib/                  # Bibliotecas e configurações
 │   │   └── mantine/          # Configurações do Mantine UI
 │   ├── pages/                # Páginas legadas (em migração)
-│   └── server-dev.js         # Servidor de desenvolvimento
+│   └── server-dev.js         # Servidor de desenvolvimento com lógica de jogo
 ├── public/                   # Arquivos estáticos
 │   ├── audio/                # Arquivos de áudio
 │   │   └── beat.wav
@@ -74,7 +74,8 @@ planningbrothers/
 │   │   └── game-objects/    # Recursos para elementos de gamificação
 │   │       ├── keyboard.svg # Ícone de teclado para arremesso
 │   │       ├── collision.svg # Efeito de explosão
-│   │       └── vest.svg      # Ícone do Colete DPE
+│   │       ├── vest.svg      # Ícone do Colete DPE
+│   │       └── medalha.svg   # Ícone da Medalha de 5 Anos (NOVO)
 ├── .env.example             # Template de variáveis de ambiente
 ├── render.yaml              # Configuração de deploy no Render
 └── package.json             # Dependências e scripts
@@ -97,6 +98,7 @@ planningbrothers/
    - Feedback visual das ações (voto, dano, etc.)
    - Identificação de moderador da sala
    - Modo observador para stakeholders
+   - **ATUALIZADO:** Tooltips com fontes padronizadas (`size="xs"`) em vários elementos (inventário, loja, nome do jogador na mesa, botão de copiar link).
 
 4. **Gerenciamento de Sessão**
    - Verificação de sessão por token e navegador
@@ -114,40 +116,41 @@ planningbrothers/
    - **Sistema de Itens e Combate:**
      - **Definição Centralizada (`itemsData.js`):** 
        - Armas (`type: 'weapon'`) e Acessórios (`type: 'accessory'`) definidos com atributos (dano, crítico, bônus, defesa, esquiva, **preço**).
-       - **NOVO:** Acessórios possuem `equipSlot` (ex: 'body', 'headband') para definir grupos de equipamentos. Slots nomeados são mutuamente exclusivos (só um item do slot 'body' pode ser equipado), enquanto outros podem permitir múltiplos itens ou combinações.
-     - **Cálculo de Dano no Servidor:**
+       - **ATUALIZADO:** Acessórios possuem `equipSlot` (ex: 'body', 'headband', 'passive') para definir grupos de equipamentos e comportamento. Slots nomeados ('body', 'headband', etc.) são mutuamente exclusivos. Slots 'passive' indicam bônus aplicados a partir do inventário, sem visual no avatar (a menos que `avatarVisual` seja definido).
+       - **ATUALIZADO:** Novos atributos foram adicionados: `scoreMultiplier` (multiplica ganhos de pontos, ex: "Manifesto Comunista"), `criticalChanceBonus` e `dodgeChanceBonus` (bônus fixos adicionados à chance final, ex: "Medalha de 5 Anos").
+     - **Cálculo de Dano/Efeitos no Servidor:**
        - Servidor recebe `attack` (com `objectType` da arma).
-       - Busca dados da arma e de **TODOS** os acessórios em `itemsData.js`.
-       - Calcula ataque total: (Dano base arma + **Soma** Bônus de ataque de **todos** acessórios equipados pelo atacante).
-       - Verifica chance de crítico (da arma).
-       - Se não crítico, calcula defesa total: (**Soma** Defesa de **todos** acessórios equipados pelo alvo).
-       - Verifica chance de esquiva: Considera a **maior** `dodgeChance` entre **todos** os acessórios equipados pelo alvo.
-       - Dano final = `max(0, Ataque Total - Defesa Total)` (se não esquivou).
+       - Ataque Total: Soma do dano base da arma (fixo + dado) e dos bônus de ataque fixos/dados (`attackBonusFixed`, `attackBonusDice`) de **todos** os acessórios **EQUIPADOS** pelo atacante.
+       - Defesa Total: Soma dos bônus de defesa fixos/dados (`defenseFixed`, `defenseDice`) de **todos** os acessórios **EQUIPADOS** pelo alvo.
+       - **ATUALIZADO - Chance de Crítico Final:** Soma da chance base da arma (`criticalChance`) com os bônus de chance de crítico (`criticalChanceBonus`) de **todos** os acessórios no **INVENTÁRIO** do atacante.
+       - **ATUALIZADO - Chance de Esquiva Final:** Soma da **maior** chance base (`dodgeChance`) entre os acessórios **EQUIPADOS** pelo alvo com os bônus de chance de esquiva (`dodgeChanceBonus`) de **todos** os acessórios no **INVENTÁRIO** do alvo.
+       - Dano Final = `max(0, Ataque Total - Defesa Total)` (se não esquivou e não foi crítico).
      - **Feedback Visual:**
-       - Dano final ou "CRITICAL!" ou "Errou!" exibido no avatar.
-       - **NOVO:** Tooltip sobre o nome do avatar exibe status consolidados (Ataque total, Defesa total, Crítico, Esquiva) da arma e acessórios.
+       - Animação de dano (número) no avatar alvo.
+       - **ATUALIZADO:** Tooltip sobre o nome do avatar em `Mesa.jsx` exibe status consolidados (Ataque, Defesa, Crítico Final, Esquiva Final) calculados no cliente (a partir do inventário/equipados), com cada atributo em uma linha separada.
    - **Loja e Inventário:**
-     - Loja (`ShopDrawer`) permite comprar itens definidos (e precificados) em `itemsData.js`.
-     - **NOVO:** Ordem dos itens na loja definida pela propriedade `displayOrder` em `itemsData.js`.
+     - Loja (`ShopDrawer`) permite comprar itens definidos (e precificados) em `itemsData.js`, ordenados por `displayOrder`.
      - Inventário (`InventoryDisplay`) mostra itens possuídos.
-     - **NOVO:** Tooltip sobre cada item no inventário exibe nome, descrição e atributos detalhados.
+     - **ATUALIZADO:** Tooltips nos itens da loja e do inventário exibem nome, descrição e atributos detalhados (incluindo novos bônus e multiplicador de score) com fonte padronizada.
      - Teclado padrão (`type: 'weapon'`) adicionado automaticamente.
    - **Acessórios Equipáveis (Sistema de Slots):**
-     - Acessórios podem ser equipados/desequipados via inventário (`InventoryDisplay`).
-     - **ALTERADO:** Estado no servidor agora é `equippedAccessories: string[]` (um array com IDs dos itens equipados).
-     - Lógica `toggleEquipAccessory` no servidor gerencia o array, respeitando os `equipSlot` (remove item conflitante em slot exclusivo antes de adicionar novo).
-     - Itens em slots diferentes (ex: 'body' e 'headband') podem ser equipados simultaneamente.
-     - Visuais dos acessórios (definidos em `avatarVisual` no `itemsData.js`) são renderizados no avatar (`CartaParticipante`) para **todos** os itens no array `equippedAccessories`.
+     - Acessórios com `equipSlot` diferente de `'passive'` podem ser equipados/desequipados via inventário (`InventoryDisplay`).
+     - Estado no servidor `equippedAccessories: string[]` armazena IDs dos itens equipados.
+     - Lógica `toggleEquipAccessory` no servidor gerencia o array, respeitando os `equipSlot` exclusivos.
+     - Visuais dos acessórios (definidos em `avatarVisual` no `itemsData.js`) são renderizados no avatar (`CartaParticipante`) para itens em `equippedAccessories`. **ATUALIZADO:** Adicionado visual SVG para "Medalha de 5 Anos".
+     - **ATUALIZADO:** Itens com `equipSlot: 'passive'` não precisam ser equipados; seus bônus (`scoreMultiplier`, `criticalChanceBonus`, `dodgeChanceBonus`) são aplicados diretamente do inventário pela lógica do servidor.
    - **Controles e Configurações (`GameController`):**
      - Ativação/desativação do Modo PVP.
-     - Configuração de efeitos visuais/sonoros: 
-       - Mute de Som (Switch).
-       - **NOVO:** Controle de Volume (Slider), sincronizado com o Mute.
-       - Piscada de Dano Vermelha (Switch).
+     - Configuração de efeitos visuais/sonoros: Mute, Volume, Piscada de Dano.
      - Configuração de assinaturas de eliminação.
    - **Kill Feed (Notificação de Eliminação):**
-     - Notificações visuais com pontuação (`POINTS.KILL` de `gameConfig.js`) e estatísticas (kills) atualizadas.
-     - Exibe mensagens personalizadas (assinaturas) e o tipo de arma usada na eliminação.
+     - Notificações visuais com pontuação e estatísticas (kills) atualizadas.
+     - Usa `GAME_CONFIG.POINTS.KILL` para pontuação base.
+     - Exibe mensagens personalizadas (assinaturas) e o tipo de arma usada.
+   - **Sistema de Pontuação (Score/Dinheiro):**
+     - **ATUALIZADO:** Pontos ganhos por kill e por voto revelado são definidos em `src/constants/gameConfig.js` (`POINTS.KILL`, `POINTS.VOTE_REVEALED`).
+     - **ATUALIZADO:** Ao ganhar pontos, o servidor verifica o inventário do jogador por itens com `scoreMultiplier` (ex: "Manifesto Comunista") e aplica o multiplicador aos pontos base.
+     - Score não é resetado entre rodadas.
 
 ## Fluxo de Dados
 1. **Conexão**
@@ -172,10 +175,9 @@ planningbrothers/
 
 3. **Estado da Aplicação**
    - **Servidor:** Fonte única da verdade. Mantém estado da sala e dos participantes, incluindo:
-     - `life`, `score`, `kills`, `inventory`.
-     - **ALTERADO:** `equippedAccessories: string[]` (array de IDs dos acessórios equipados).
-     - Realiza cálculos de combate (ataque, defesa, crítico, esquiva) baseado em `itemsData.js` e **todos** os itens equipados.
-   - **Cliente:** Reflete estado do servidor. Exibe informações, itens, tooltips e animações.
+     - `life`, `score`, `kills`, `inventory`, `equippedAccessories`.
+     - **ATUALIZADO:** Realiza cálculos de combate e pontuação considerando bônus e multiplicadores de itens no `inventory` ou `equippedAccessories` conforme a nova lógica.
+   - **Cliente:** Reflete estado do servidor. Exibe informações, itens, tooltips e animações. **ATUALIZADO:** A função `formatConsolidatedBonus` em `Mesa.jsx` recalcula status para o tooltip do nome.
 
 ## Segurança
 1. **Variáveis de Ambiente**
@@ -250,13 +252,12 @@ npm run dev
 1. **Sistema de Arremesso e Ataque**
    - Animação fluida do objeto de ataque (ex: teclado).
    - Efeitos visuais de impacto (explosão, tremor, ricochete).
-   - Sistema de dano calculado no servidor:
-     - Considera ataque base da arma (fixo + dado).
-     - Considera bônus de ataque do acessório do atacante (fixo + dado).
-     - Considera defesa do acessório do alvo (fixo + dado).
-     - Inclui chance de acerto crítico (definida pela arma).
-   - Exibição do valor de dano final ou "CRITICAL!" no avatar atingido.
-   - Animações centralizadas.
+   - **ATUALIZADO:** Sistema de dano/efeito calculado no servidor:
+       - Considera ataque base da arma e bônus de ataque de acessórios **equipados**.
+       - Considera defesa de acessórios **equipados**.
+       - Calcula chance final de crítico somando chance base da arma e bônus (`criticalChanceBonus`) de acessórios no **inventário**.
+       - Calcula chance final de esquiva somando a maior chance base (`dodgeChance`) de acessório **equipado** e bônus (`dodgeChanceBonus`) de acessórios no **inventário**.
+   - Exibição do valor de dano final ou "CRITICAL!"/"Errou!" no avatar atingido.
 
 2. **Sistema de Vida e Feedback**
    - Barra de vida visual dinâmica.
@@ -267,13 +268,12 @@ npm run dev
    - Configurações de vida máxima e tempos em `gameConfig.js`.
 
 3. **Sistema de Itens (Armas e Acessórios) - REVISADO**
-   - Definição centralizada em `itemsData.js` (tipo, preço, stats, `equipSlot`, `displayOrder`, `avatarVisual`).
-   - Loja (`ShopDrawer`) com itens ordenados por `displayOrder`.
-   - Inventário (`InventoryDisplay`) com tooltips detalhados por item.
-   - Sistema de equipamento baseado em slots (`equipSlot`) permitindo múltiplos acessórios não conflitantes.
-   - Estado `equippedAccessories: []` no servidor.
-   - Renderização de todos os visuais equipados no avatar (`CartaParticipante`).
-   - Tooltip consolidado no avatar mostrando status combinados (Ataque, Defesa, Crítico, Esquiva).
+   - Definição centralizada em `itemsData.js` (tipo, preço, stats, `equipSlot`, `displayOrder`, `avatarVisual`, **`scoreMultiplier`**, **`criticalChanceBonus`**, **`dodgeChanceBonus`**).
+   - Loja (`ShopDrawer`) com itens ordenados por `displayOrder` e tooltips padronizados.
+   - Inventário (`InventoryDisplay`) com tooltips detalhados por item e fonte padronizada.
+   - Sistema de equipamento baseado em slots (`equipSlot`).
+   - Renderização de visuais equipados no avatar (`CartaParticipante`).
+   - **ATUALIZADO:** Tooltip consolidado no nome do jogador em `Mesa.jsx` mostrando status combinados (Ataque, Defesa, Crítico, Esquiva) em linhas separadas.
 
 4. **GameController - REVISADO**
    - Interface de controle (Drawer) com opções:
@@ -286,11 +286,9 @@ npm run dev
    - Renderiza `KeyboardThrower` (passando volume numérico).
 
 5. **Sistema de Configuração**
-   - Arquivo centralizado `gameConfig.js` para todas as configurações do jogo
-   - Ajuste fácil de parâmetros como vida máxima, dano e tempos
-   - Separação clara entre configurações de vida, dano, tempo e animação
-   - Facilidade para adicionar novos tipos de dano e objetos no futuro
-   - Manutenção simplificada com todas as configurações em um único lugar
+   - Arquivo centralizado `gameConfig.js`.
+   - **ATUALIZADO:** Inclui `POINTS.KILL` e `POINTS.VOTE_REVEALED` para configurar ganhos de score base.
+   - Ajuste fácil de parâmetros (vida, pontos, tempos, animações).
 
 6. **Kill Feed (Notificação de Eliminação) com Assinaturas:**
    - Quando um participante finaliza outro (vida chega a 0 ou menos), uma notificação é exibida.
@@ -310,20 +308,17 @@ npm run dev
        - `globals.css`: Contém as definições `@keyframes` e classes CSS para as animações de entrada/saída da notificação.
 
 7. **Placar Pessoal (Pontos e Kills):**
-   *   **Pontuação:** Acumulada pelo jogador durante a sessão.
-       *   `+1 ponto` por cada eliminação (`kill`) realizada.
-       *   `+10 pontos` por participar da votação (concedidos ao revelar os votos da rodada).
-       *   A pontuação não é resetada entre as rodadas de votação.
-   *   **Kills:** Contagem de eliminações realizadas pelo jogador.
-       *   Incrementada a cada eliminação realizada.
-       *   A contagem não é resetada entre as rodadas de votação.
-   *   **Exibição:** A contagem de Kills (ícone de caveira) e a Pontuação (ícone de moeda) do usuário atual são exibidas no canto superior direito da tela (`page.js`).
-   *   **Implementação:** Lógica de incremento e persistência no `server-dev.js`; exibição no `page.js`.
+   - **Pontuação:** Acumulada pelo jogador.
+       - **ATUALIZADO:** Ganha pontos base (`GAME_CONFIG.POINTS.KILL`) por kill e (`GAME_CONFIG.POINTS.VOTE_REVEALED`) por voto revelado.
+       - **ATUALIZADO:** Pontos base são multiplicados por `scoreMultiplier` de itens no inventário (ex: Manifesto Comunista).
+       - Score não é resetado.
+   - **Kills:** Contagem de eliminações, não resetada.
+   - **Exibição:** Kills e Pontos no canto superior direito (`page.js`).
 
 8. **Indicador Visual de Morte:**
-   *   Quando a vida de um participante (incluindo observadores) chega a 0 ou menos, um ícone de caveira vermelha (`IconSkull`) é exibido no canto inferior direito do seu card (`CartaParticipante`).
-   *   Isso indica visualmente quem está fora de combate na rodada atual do modo PVP.
-   *   **Implementação:** Condição e ícone adicionados ao `CartaParticipante.jsx`.
+   - Quando a vida de um participante (incluindo observadores) chega a 0 ou menos, um ícone de caveira vermelha (`IconSkull`) é exibido no canto inferior direito do seu card (`CartaParticipante`).
+   - Isso indica visualmente quem está fora de combate na rodada atual do modo PVP.
+   - **Implementação:** Condição e ícone adicionados ao `CartaParticipante.jsx`.
 
 ## Próximos Passos
 1. **Melhorias de UX**

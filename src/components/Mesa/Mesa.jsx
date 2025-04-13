@@ -6,7 +6,7 @@ import { ITEMS_DATA, KEYBOARD_ID } from '@/constants/itemsData';
 const COLETE_DPE_ID = 'vest'; // << Usar ID constante (simulado por enquanto)
 
 // Helper COPIADO de CartaParticipante.jsx para formatar stats consolidados
-function formatConsolidatedBonus(equippedAccessories, weaponId) { 
+function formatConsolidatedBonus(inventory, equippedAccessories, weaponId) {
   const parts = [];
   let weaponDescription = null;
   let accessoryDescription = null;
@@ -28,21 +28,31 @@ function formatConsolidatedBonus(equippedAccessories, weaponId) {
   let totalAccDefFixed = 0;
   let totalAccDefDice = [];
   let highestDodge = 0;
+  let totalAccCritBonus = 0;
+  let totalAccDodgeBonus = 0;
 
-  (equippedAccessories || []).forEach(itemId => {
+  (inventory || []).forEach(itemId => {
     const itemData = ITEMS_DATA[itemId];
     if (itemData && itemData.type === 'accessory') {
-      totalAccAtkFixed += itemData.attackBonusFixed || 0;
-      if (itemData.attackBonusDice) totalAccAtkDice.push(itemData.attackBonusDice);
-      totalAccDefFixed += itemData.defenseFixed || 0;
-      if (itemData.defenseDice) totalAccDefDice.push(itemData.defenseDice);
-      if (itemData.dodgeChance && itemData.dodgeChance > highestDodge) {
+      if (equippedAccessories?.includes(itemId)) {
+        totalAccAtkFixed += itemData.attackBonusFixed || 0;
+        if (itemData.attackBonusDice) totalAccAtkDice.push(itemData.attackBonusDice);
+        totalAccDefFixed += itemData.defenseFixed || 0;
+        if (itemData.defenseDice) totalAccDefDice.push(itemData.defenseDice);
+      }
+      
+      if (equippedAccessories?.includes(itemId) && itemData.dodgeChance && itemData.dodgeChance > highestDodge) {
         highestDodge = itemData.dodgeChance;
       }
+
+      totalAccCritBonus += itemData.criticalChanceBonus || 0;
+      totalAccDodgeBonus += itemData.dodgeChanceBonus || 0;
     }
   });
 
-  // --- Montar String de Ataque Consolidado ---
+  const finalCritChance = baseCrit + totalAccCritBonus;
+  const finalDodgeChance = highestDodge + totalAccDodgeBonus;
+
   let attackString = '';
   const finalAtkFixed = baseAtkFixed + totalAccAtkFixed;
   const finalAtkDice = [baseAtkDice, ...totalAccAtkDice].filter(Boolean); 
@@ -53,7 +63,6 @@ function formatConsolidatedBonus(equippedAccessories, weaponId) {
   }
   if (attackString) { parts.push(`Ataque: ${attackString}`); }
 
-  // --- Montar String de Defesa Consolidada ---
   let defenseString = '';
   if (totalAccDefFixed > 0) { defenseString += `+${totalAccDefFixed}`; }
   if (totalAccDefDice.length > 0) {
@@ -62,13 +71,11 @@ function formatConsolidatedBonus(equippedAccessories, weaponId) {
   }
   if (defenseString) { parts.push(`Defesa: ${defenseString}`); }
 
-  // --- Adicionar Crítico e Esquiva ---
-  if (baseCrit > 0) { parts.push(`Crítico: ${baseCrit * 100}%`); }
-  if (highestDodge > 0) { parts.push(`Esquiva: ${highestDodge * 100}%`); }
+  if (finalCritChance > 0) { parts.push(`Crítico: ${Math.round(finalCritChance * 100)}%`); }
+  if (finalDodgeChance > 0) { parts.push(`Esquiva: ${Math.round(finalDodgeChance * 100)}%`); }
 
-  // --- Texto Final ---
-  if (parts.length === 0) { return 'Nenhum bônus ativo.'; }
-  return parts.join(', '); 
+  if (parts.length === 0) { return ['Nenhum bônus ativo.']; }
+  return parts;
 }
 
 export default function Mesa({ 
@@ -312,16 +319,22 @@ export default function Mesa({
                 }}
               >
                 {lados.superior.map((participante, idx) => {
-                  const consolidatedBonusText = formatConsolidatedBonus(participante.equippedAccessories, KEYBOARD_ID);
+                  const consolidatedBonusParts = formatConsolidatedBonus(participante.inventory, participante.equippedAccessories, KEYBOARD_ID);
                   const isObservador = participante.isObservador;
                   return (
                     <Stack 
                       key={participante.id} 
                       align="center" 
-                      gap={2} // Espaço pequeno entre nome e card
+                      gap={2} 
                     >
                       <Tooltip 
-                        label={consolidatedBonusText}
+                        label={(
+                          <>
+                            {consolidatedBonusParts.map((part, index) => (
+                              <Text key={index} size="xs">{part}</Text>
+                            ))}
+                          </>
+                        )}
                         position="bottom"
                         withArrow openDelay={500} multiline w={200}
                         disabled={isObservador}
@@ -361,7 +374,7 @@ export default function Mesa({
                 }}
               >
                 {lados.inferior.map((participante, idx) => {
-                  const consolidatedBonusText = formatConsolidatedBonus(participante.equippedAccessories, KEYBOARD_ID);
+                  const consolidatedBonusParts = formatConsolidatedBonus(participante.inventory, participante.equippedAccessories, KEYBOARD_ID);
                   const isObservador = participante.isObservador;
                   return (
                     <Stack 
@@ -370,8 +383,14 @@ export default function Mesa({
                       gap={2}
                     >
                       <Tooltip 
-                        label={consolidatedBonusText}
-                        position="top" // Mudar tooltip para cima aqui
+                        label={(
+                          <>
+                            {consolidatedBonusParts.map((part, index) => (
+                              <Text key={index} size="xs">{part}</Text>
+                            ))}
+                          </>
+                        )}
+                        position="top" 
                         withArrow openDelay={500} multiline w={200}
                         disabled={isObservador}
                       >

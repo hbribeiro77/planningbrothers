@@ -451,14 +451,14 @@ useEffect(() => {
     3.  Ajustar os componentes frontend (`ShopDrawer.jsx`, `InventoryDisplay.jsx`) para:
         *   Importar os componentes React necessários (`IconShirt`) diretamente.
         *   Ler o `iconName` dos dados e renderizar o componente correspondente condicionalmente.
-*   **Aprendizado:** Em projetos full-stack com JavaScript, é vital estar ciente das diferenças entre os sistemas de módulos CommonJS (Node.js) e ES Modules (Navegador/React). Ao compartilhar arquivos de configuração/dados, pode ser necessário adotar o formato CommonJS para compatibilidade com o backend, o que exige refatoração no frontend para lidar com a perda de referências diretas a funções ou componentes nesses dados compartilhados.
+*   **Aprendizado:** Em projetos full-stack com JavaScript, é vital estar ciente das diferenças entre os sistemas de módulos CommonJS (Node.js) e ES Modules (Navegador/React). Ao compartilhar arquivos de configuração/dados, pode ser necessário adotar o formato CommonJS para compatibilidade com o backend. **Isso frequentemente exige refatoração no frontend para lidar com a perda de referências diretas a funções ou componentes, como usar mapas de ícones (`iconMap`, `accessoryIconMap`) para traduzir nomes de ícones (strings) em componentes React (`IconBook`, `IconMedal`, etc.) no momento da renderização.**
 
 ## Depuração de Renderização Visual de Estado Sincronizado
 
 *   **Problema:** Após implementar a sincronização do `equippedAccessory` via servidor, o avatar no frontend não refletia visualmente a mudança, apesar dos logs confirmarem que os dados corretos chegavam aos componentes.
 *   **Soluções Investigadas e Aplicadas:**
     1.  **Propagação de Props:** Garantir que o componente pai (`Mesa.jsx`) recalculasse a distribuição dos participantes a cada renderização, usando a prop `participantes` atualizada, para que os dados corretos fossem passados para `CartaParticipante.jsx`.
-    2.  **Conflito de Módulos (Frontend):** Componentes do frontend (`CartaParticipante`, `InventoryDisplay`) tentavam usar uma função helper (`isAccessory`) importada de `itemsData.js` (que foi convertido para CommonJS). A solução foi remover a importação e fazer a verificação diretamente nos dados (`itemData?.type === 'accessory'`).
+    2. **Conflito de Módulos (Frontend):** Componentes do frontend (`CartaParticipante`, `InventoryDisplay`) tentavam usar uma função helper (`isAccessory`) importada de `itemsData.js` (que foi convertido para CommonJS). A solução foi remover a importação e fazer a verificação diretamente nos dados (`itemData?.type === 'accessory'`).
     3.  **Ordem de Empilhamento (CSS):** O elemento visual do acessório (`VestIcon` dentro de `CartaParticipante`) estava sendo renderizado com `z-index` inferior a outros elementos (badges, texto). Aumentar o `z-index` do acessório resolveu a sobreposição.
 *   **Aprendizado:** Falhas na renderização visual de um estado que *parece* estar corretamente sincronizado podem ter múltiplas causas. É essencial depurar sistematicamente: (1) a propagação das props atualizadas na árvore de componentes, (2) a compatibilidade de importações/funções entre frontend/backend (especialmente após mudanças no sistema de módulos), e (3) fatores puramente visuais como CSS `z-index`.
 
@@ -498,3 +498,33 @@ useEffect(() => {
     2.  Controle o posicionamento absoluto diretamente nos estilos do *próprio* elemento (`LifeBar.jsx`).
     3.  Certifique-se de que o contêiner pai (`CartaParticipante`) permita que o conteúdo transborde visualmente (`overflow: visible`).
     4.  Evite mover a renderização de componentes com lógica de contexto específica para locais onde o contexto não está disponível ou não faz sentido. 
+
+## Gerenciamento de Efeitos Passivos vs. Ativos no Cálculo de Atributos (NOVO)
+
+*   **Problema:** Como aplicar bônus de itens de forma diferenciada? Alguns bônus devem valer apenas por possuir o item (passivos), enquanto outros exigem que o item esteja equipado (ativos).
+*   **Contexto:** Itens como "Manifesto Comunista" (multiplicador de score) ou "Medalha de 5 Anos" (bônus de chance de crítico/esquiva) devem conceder seus benefícios passivamente, apenas por estarem no inventário. Já bônus de ataque/defesa ou chances base (como a esquiva do "Treinamento Ninja") só fazem sentido se o item estiver ativamente equipado.
+*   **Solução Técnica:**
+    1.  **Identificação via `equipSlot`:** Utilizar um valor específico, como `equipSlot: 'passive'`, em `itemsData.js` para marcar itens cujos bônus são aplicados passivamente.
+    2.  **Lógica de Cálculo Dupla no Servidor:** No `server-dev.js`, ao calcular atributos finais:
+        *   Para bônus **passivos** (`scoreMultiplier`, `criticalChanceBonus`, `dodgeChanceBonus`): Iterar sobre o `participante.inventory` e somar/aplicar os bônus de todos os itens relevantes encontrados.
+        *   Para bônus/bases **ativas** (`attackBonusFixed`, `defenseFixed`, `dodgeChance`, etc.): Iterar sobre `participante.equippedAccessories` e considerar apenas os valores dos itens efetivamente equipados.
+*   **Aprendizado:** Diferenciar bônus passivos de ativos no modelo de dados (`itemsData.js`) e adaptar a lógica de cálculo no servidor para ler do `inventory` ou `equippedAccessories` conforme o tipo de bônus permite criar efeitos de itens mais ricos e flexíveis, mantendo a lógica centralizada e consistente.
+
+## Sincronização de Tooltip de Status (Cliente vs. Servidor) (NOVO)
+
+*   **Problema:** Como exibir informações complexas e calculadas (status consolidados do jogador) em um tooltip de forma consistente com a lógica do servidor, especialmente após mudanças nessa lógica (ex: bônus passivos lidos do inventário)?
+*   **Solução Técnica (Tooltip no Nome em `Mesa.jsx`):**
+    1.  **Recálculo no Cliente:** Criar/Manter uma função auxiliar no componente frontend (`formatConsolidatedBonus` em `Mesa.jsx`) que *replica* a lógica de cálculo de atributos do servidor, buscando dados em `ITEMS_DATA` e lendo `inventory` e `equippedAccessories` do participante.
+    2.  **Manter Sincronia Lógica:** É **crucial** que esta função cliente seja mantida sincronizada com a lógica de cálculo do servidor. Se o servidor muda como calcula um bônus (ex: passa a ler do inventário), a função cliente *deve* ser atualizada também.
+    3.  **Renderização Multiline Robusta:** Para exibir cada atributo em uma linha separada no tooltip do Mantine (`multiline`), a função cliente deve retornar um *array* de strings (cada string uma linha). O componente `Tooltip` deve então usar `.map()` na prop `label` para renderizar cada string dentro de um componente `<Text>`:
+        ```jsx
+        <Tooltip
+          label={(
+            <>
+              {arrayDeStatus.map((linha, i) => <Text key={i} size="xs">{linha}</Text>)}
+            </>
+          )}
+          // ... outras props
+        />
+        ```
+*   **Aprendizado:** Exibir dados calculados em tooltips no cliente exige cuidado. Recalcular no cliente pode ser mais simples que passar dados complexos via props/estado, mas cria uma dependência de sincronia manual com a lógica do servidor. Usar a técnica de mapear para componentes `<Text>` é a forma mais confiável de obter formatação multiline em tooltips de bibliotecas como Mantine. 

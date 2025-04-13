@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Stack, Group, Text, Tooltip, ActionIcon, Divider, Box } from '@mantine/core';
-import { IconKeyboard, IconShirt, IconStar, IconMask } from '@tabler/icons-react';
+import { IconKeyboard, IconShirt, IconStar, IconMask, IconBook, IconMedal } from '@tabler/icons-react';
 import { usePvpStatus } from '@/contexts/PvpContext';
 import { COLETE_DPE_ID, COLETE_BLUE_ID, ITEMS_DATA, KEYBOARD_ID } from '@/constants/itemsData';
 
@@ -10,6 +10,8 @@ const accessoryIconMap = {
   IconKeyboard: IconKeyboard,
   IconStar: IconStar,
   IconMask: IconMask,
+  IconBook: IconBook,
+  IconMedal: IconMedal,
   // Adicionar outros mapeamentos aqui conforme necessário
 };
 
@@ -27,6 +29,11 @@ function formatItemAttributes(itemData) {
   if (itemData.defenseFixed) attributes.push(`Def Fixo: +${itemData.defenseFixed}`);
   if (itemData.defenseDice) attributes.push(`Def Dado: +${itemData.defenseDice}`);
   if (itemData.dodgeChance) attributes.push(`Esquiva: ${itemData.dodgeChance * 100}%`);
+  // Bônus de Chance
+  if (itemData.criticalChanceBonus) attributes.push(`Bônus Crítico: +${itemData.criticalChanceBonus * 100}%`);
+  if (itemData.dodgeChanceBonus) attributes.push(`Bônus Esquiva: +${itemData.dodgeChanceBonus * 100}%`);
+  // Multiplicador de Score
+  if (itemData.scoreMultiplier && itemData.scoreMultiplier !== 1) attributes.push(`Ganhos: ${itemData.scoreMultiplier}x`);
   
   // Adiciona a descrição principal se houver e outros atributos também
   let tooltipLabel = itemData.name || 'Item Desconhecido';
@@ -74,7 +81,7 @@ export function InventoryDisplay({
               return (
                 <Tooltip 
                   key={arma.id} 
-                  label={tooltipLabel}
+                  label={<Text size="xs">{tooltipLabel}</Text>}
                   openDelay={300}
                   multiline // Permite múltiplas linhas no tooltip
                   w={220} // Define uma largura para o tooltip
@@ -118,7 +125,7 @@ export function InventoryDisplay({
               return (
                 <Tooltip 
                   key={itemId} 
-                  label={tooltipLabel}
+                  label={<Text size="xs">{tooltipLabel}</Text>}
                   openDelay={300}
                   multiline // Permite múltiplas linhas
                   w={220} // Define uma largura

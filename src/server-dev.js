@@ -3,7 +3,7 @@ const { createServer } = require('http');
 const next = require('next');
 const { Server } = require('socket.io');
 const { GAME_CONFIG } = require('./constants/gameConfig');
-const { ITEMS_DATA, KEYBOARD_ID } = require('./constants/itemsData');
+const { ITEMS_DATA, KEYBOARD_ID, MANIFESTO_ID, MEDALHA_ID } = require('./constants/itemsData');
 
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
@@ -192,19 +192,25 @@ app.prepare().then(() => {
         // --- INÍCIO: Verificação de Esquiva (Dodge) --- CORRECTED ---
         let highestDodgeChance = 0;
         let dodgingItemName = null;
-        // Itera sobre TODOS os acessórios equipados pelo alvo
-        for (const equippedId of participanteAlvo.equippedAccessories || []) {
-          const accessoryData = ITEMS_DATA[equippedId];
-          if (accessoryData && accessoryData.type === 'accessory' && accessoryData.dodgeChance) {
-            if (accessoryData.dodgeChance > highestDodgeChance) {
-                highestDodgeChance = accessoryData.dodgeChance;
-                dodgingItemName = accessoryData.name;
+        let totalDodgeChanceBonus = 0; 
+        // Itera sobre TODOS os itens no INVENTÁRIO do alvo para bônus passivos
+        for (const itemId of participanteAlvo.inventory || []) { 
+          const itemData = ITEMS_DATA[itemId];
+          if (itemData && itemData.type === 'accessory') {
+            // Encontra a maior chance base de esquiva APENAS se equipado
+            if (participanteAlvo.equippedAccessories?.includes(itemId) && itemData.dodgeChance && itemData.dodgeChance > highestDodgeChance) {
+                highestDodgeChance = itemData.dodgeChance;
+                dodgingItemName = itemData.name;
             }
+            // Acumula bônus de esquiva de todos os itens no inventário
+            totalDodgeChanceBonus += (itemData.dodgeChanceBonus || 0);
           }
         }
 
-        if (highestDodgeChance > 0 && Math.random() < highestDodgeChance) {
-          console.log(`[${codigo}] *** ATAQUE ESQUIVADO por ${nomeAlvoLog} (Item: ${dodgingItemName}, Chance: ${highestDodgeChance * 100}%)! ***`);
+        const finalDodgeChance = highestDodgeChance + totalDodgeChanceBonus;
+
+        if (finalDodgeChance > 0 && Math.random() < finalDodgeChance) {
+          console.log(`[${codigo}] *** ATAQUE ESQUIVADO por ${nomeAlvoLog} (Item Base: ${dodgingItemName || 'Nenhum'}, Chance Base: ${highestDodgeChance * 100}%, Bônus Total: ${totalDodgeChanceBonus * 100}%, Final: ${finalDodgeChance * 100}%)! ***`);
           io.to(codigo).emit('damageReceived', {
             targetId: targetId,
             damage: 0, 
@@ -251,12 +257,23 @@ app.prepare().then(() => {
         // --- Calcular Dano (Considerando Crítico da Arma) --- CORRECTED DEFENSE ---
         let finalDamage = 0;
         let isCriticalHit = false;
-        const critChance = weaponData.criticalChance || 0; 
+        const critChanceBase = weaponData.criticalChance || 0;
+        let totalCritChanceBonus = 0; 
 
-        if (Math.random() < critChance) {
+        // Acumula bônus de crítico dos acessórios no INVENTÁRIO do ATACANTE
+        for (const itemId of participanteAtacante.inventory || []) {
+          const itemData = ITEMS_DATA[itemId];
+          if (itemData && itemData.type === 'accessory') {
+            totalCritChanceBonus += (itemData.criticalChanceBonus || 0);
+          }
+        }
+
+        const finalCritChance = critChanceBase + totalCritChanceBonus;
+
+        if (finalCritChance > 0 && Math.random() < finalCritChance) {
           isCriticalHit = true;
           finalDamage = participanteAlvo.life; // Dano crítico ignora defesa
-          console.log(`[${codigo}] *** CRITICAL HIT pela arma ${objectType}! ***`);
+          console.log(`[${codigo}] *** CRITICAL HIT pela arma ${objectType}! (Chance Base: ${critChanceBase * 100}%, Bônus Total: ${totalCritChanceBonus * 100}%, Final: ${finalCritChance * 100}%) ***`);
         } else {
           // Calcular Defesa Total do Alvo
           let totalTargetDefenseFixed = 0;
@@ -318,7 +335,16 @@ app.prepare().then(() => {
           payload.killTitle = killTitle;
           
           const pointsForKill = GAME_CONFIG.POINTS.KILL || 0;
-          participanteAtacante.score = (participanteAtacante.score || 0) + pointsForKill;
+          let finalPointsForKill = pointsForKill;
+
+          // Verificar se o atacante possui o Manifesto Comunista
+          if (participanteAtacante.inventory?.includes(MANIFESTO_ID)) {
+            const multiplier = ITEMS_DATA[MANIFESTO_ID]?.scoreMultiplier || 1;
+            finalPointsForKill *= multiplier;
+            console.log(`[${codigo}] Aplicando multiplicador (${multiplier}x) do Manifesto. Pontos por kill: ${finalPointsForKill}`);
+          }
+
+          participanteAtacante.score = (participanteAtacante.score || 0) + finalPointsForKill;
           participanteAtacante.kills = (participanteAtacante.kills || 0) + 1;
           // LOG: Log após modificar score/kills do atacante
           console.log(`[DEBUG ${codigo}] Updated attacker score/kills: Score=${participanteAtacante.score}, Kills=${participanteAtacante.kills}`);
@@ -397,8 +423,18 @@ app.prepare().then(() => {
       for (const participante of sala.participantes.values()) {
         // Pontua apenas quem efetivamente votou nesta rodada
         if (participante.jaVotou) {
-          participante.score = (participante.score || 0) + GAME_CONFIG.POINTS.VOTE_REVEALED;
-          console.log(`[${codigo}] Score de ${participante.nome} atualizado para: ${participante.score} (+${GAME_CONFIG.POINTS.VOTE_REVEALED} voto revelado)`);
+          const pointsForVote = GAME_CONFIG.POINTS.VOTE_REVEALED || 0;
+          let finalPointsForVote = pointsForVote;
+
+          // Verificar se o participante possui o Manifesto Comunista
+          if (participante.inventory?.includes(MANIFESTO_ID)) {
+            const multiplier = ITEMS_DATA[MANIFESTO_ID]?.scoreMultiplier || 1;
+            finalPointsForVote *= multiplier;
+            console.log(`[${codigo}] Aplicando multiplicador (${multiplier}x) do Manifesto para ${participante.nome}. Pontos por voto: ${finalPointsForVote}`);
+          }
+
+          participante.score = (participante.score || 0) + finalPointsForVote; // Usar constante
+          console.log(`[${codigo}] Score de ${participante.nome} atualizado para: ${participante.score} (+${finalPointsForVote} voto revelado)`);
           participantesAtualizados = true;
         }
       }

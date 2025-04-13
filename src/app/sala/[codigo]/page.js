@@ -287,7 +287,11 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
             <Title order={1}>Sala {codigoSala}</Title>
             <CopyButton value={salaURL}>
               {({ copied, copy }) => (
-                <Tooltip label={copied ? 'Link copiado!' : 'Copiar link da sala'}>
+                <Tooltip 
+                  label={<Text size="xs">{copied ? 'Link copiado!' : 'Copiar link da sala'}</Text>}
+                  position="bottom"
+                  withArrow
+                >
                   <ActionIcon color={copied ? 'teal' : 'blue'} onClick={copy}>
                     {copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
                   </ActionIcon>

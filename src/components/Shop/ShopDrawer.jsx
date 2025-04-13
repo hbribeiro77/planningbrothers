@@ -1,5 +1,6 @@
+import React, { useState } from 'react';
 import { Drawer, Text, Title, Card, Group, Button, Badge, SimpleGrid, ActionIcon, Tooltip } from '@mantine/core';
-import { IconShoppingCart, IconCoin, IconKeyboard, IconShirt, IconStar, IconMask } from '@tabler/icons-react';
+import { IconShoppingCart, IconCoin, IconKeyboard, IconShirt, IconStar, IconMask, IconBook, IconMedal } from '@tabler/icons-react';
 import { COLETE_DPE_ID, COLETE_BLUE_ID, ITEMS_DATA } from '@/constants/itemsData';
 import { useMantineTheme } from '@mantine/core';
 
@@ -9,6 +10,8 @@ const iconMap = {
   IconKeyboard: IconKeyboard,
   IconStar: IconStar,
   IconMask: IconMask,
+  IconBook: IconBook,
+  IconMedal: IconMedal,
 };
 
 // Obter itens da loja, adicionar ID e ORDENAR por displayOrder
@@ -102,9 +105,20 @@ export default function ShopDrawer({ opened, onClose, currentUser, onBuyItem }) 
                   radius="md"
                   onClick={() => handleBuyClick(item.id, item.price)}
                   disabled={item.id === 'keyboard' || hasItem || !canAfford}
-                  title={item.id === 'keyboard' ? "Arma padrão" : hasItem ? "Você já possui este item" : !canAfford ? "Moedas insuficientes" : "Comprar item"}
+                  title=""
                 >
-                  {item.id === 'keyboard' ? "Padrão" : (hasItem ? "Adquirido" : "Comprar")} 
+                  <Tooltip 
+                    label={(
+                      <Text size="xs">
+                        {item.id === 'keyboard' ? "Arma padrão" : hasItem ? "Você já possui este item" : !canAfford ? "Moedas insuficientes" : "Comprar item"}
+                      </Text>
+                    )}
+                    disabled={!(item.id === 'keyboard' || hasItem || !canAfford)}
+                    position="bottom"
+                    withArrow
+                  >
+                    <span>{item.id === 'keyboard' ? "Padrão" : (hasItem ? "Adquirido" : "Comprar")}</span>
+                  </Tooltip>
                 </Button>
               </Group>
             </Card>

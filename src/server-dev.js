@@ -309,7 +309,11 @@ app.prepare().then(() => {
         
         const isKill = vidaDepois <= GAME_CONFIG.LIFE.MIN && vidaAntes > GAME_CONFIG.LIFE.MIN;
 
+        // >>> ADICIONAR ID ÚNICO AO EVENTO <<<
+        const eventId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
         const payload = {
+          eventId: eventId, // <<< Incluir ID no payload
           targetId: targetId,
           damage: finalDamage, 
           currentLife: vidaDepois,

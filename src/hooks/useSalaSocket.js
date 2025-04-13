@@ -24,6 +24,9 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
     nomeUsuarioRef.current = nomeUsuario;
   }, [nomeUsuario]);
 
+  // >>> REGISTRO DE IDs DE EVENTOS PROCESSADOS <<<
+  const processedDamageEventIds = useRef(new Set());
+
   // Conectar à sala quando o componente montar
   useEffect(() => {
     if (!socket) return;
@@ -115,9 +118,22 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
     if (!socket) return;
 
     const handleDamageReceived = (data) => {
-      console.log('Evento damageReceived recebido no HOOK:', data);
-      // Desestruturar payload, incluindo weaponType e killTitle
-      const { targetId, damage, currentLife, isCritical, isDodge, attackerName, targetName, weaponType, killTitle } = data;
+      // >>> VERIFICAR SE EVENTO JÁ FOI PROCESSADO <<<
+      if (!data.eventId || processedDamageEventIds.current.has(data.eventId)) {
+        console.log('[DEBUG Client Hook] Ignorando evento damageReceived duplicado ou sem ID:', data.eventId);
+        return; // Ignora evento duplicado ou sem ID
+      }
+      // >>> ADICIONAR ID AO REGISTRO <<<
+      processedDamageEventIds.current.add(data.eventId);
+      // Limpeza periódica do Set para não crescer indefinidamente (opcional mas bom)
+      if (processedDamageEventIds.current.size > 100) {
+          const oldIds = Array.from(processedDamageEventIds.current).slice(0, 50);
+          oldIds.forEach(id => processedDamageEventIds.current.delete(id));
+      }
+
+      console.log('Evento damageReceived recebido no HOOK:', data); // Log movido para depois da verificação
+      // Desestruturar payload
+      const { eventId, targetId, damage, currentLife, isCritical, isDodge, attackerName, targetName, weaponType, killTitle } = data; // Incluir eventId na desestruturação (embora não usado diretamente abaixo)
       
       let currentUserWasTarget = false;
 
@@ -155,6 +171,7 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
       
       // ATUALIZA O NOVO ESTADO para acionar a animação no componente
       setLastDamageInfoForAnimation({ 
+          eventId: eventId, // <<< Passar eventId para o estado de animação (para debug)
           targetId, 
           damage, 
           isCritical, 
@@ -169,7 +186,7 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
       socket.off('damageReceived', handleDamageReceived);
     };
 
-  }, [socket]); // <<< REMOVIDO nomeUsuario das dependências
+  }, [socket]); // Dependência apenas no socket
 
   // Funções de manipulação de eventos
   const handleVotar = useCallback((valor) => {

@@ -570,3 +570,35 @@ useEffect(() => {
 ### 5. Responsabilidade Clara dos Componentes
 - **Lição:** A decisão de onde colocar estados e lógicas (ex: intervalo do minerador no `GameController`, formatação do feed no `page.js`) deve considerar quais componentes têm acesso aos dados necessários (props, contexto) e qual é a responsabilidade primária de cada um (controle de jogo vs. orquestração da página).
 - **Benefício:** Mantém o código organizado e facilita o rastreamento do fluxo de dados e lógica.
+
+## Gerenciamento de Timers para Animações Assíncronas de UI
+
+### Problema: Notificações "Presas" no KillFeedDisplay
+- **Contexto:** O componente `KillFeedDisplay` mostrava notificações que deveriam aparecer com animação, ficar visíveis por `NOTIFICATION_DURATION` e depois desaparecer com outra animação.
+- **Bug:** Quando novas notificações chegavam rapidamente, as notificações anteriores frequentemente ficavam "presas" na tela, sem executar a animação de saída ou serem removidas do DOM.
+
+### Causa Raiz: Limpeza Prematura de Timers pelo `useEffect`
+- A lógica original usava um `useEffect` que dependia da prop `lastFeedEvent`.
+- Este `useEffect` era responsável por adicionar a nova notificação e configurar `setTimeout`s (`exitTimer`, `removeTimer`) para eventualmente escondê-la e removê-la.
+- **O problema:** A função de *limpeza* (`return () => { ... }`) desse `useEffect` era executada *antes* da próxima execução (quando um novo `lastFeedEvent` chegava). Essa limpeza cancelaria os `setTimeout`s da notificação *anterior* se eles ainda não tivessem disparado. Como resultado, a notificação anterior nunca era marcada como `isExiting` nem removida do estado `killFeed`.
+
+### Solução: Decouplar Ciclo de Vida da Notificação e Usar `useRef` para Timers
+1.  **Estado e Refs:** Manter o array de notificações visíveis (`killFeed`) no estado. Usar `useRef` para criar objetos (`removalTimers`, `finalRemovalTimers`) que mapeiam o `uniqueId` de cada notificação aos IDs de seus respectivos timers (`setTimeout`). Refs persistem entre renders e não são afetados por closures como variáveis comuns.
+2.  **`useEffect` de Adição:** O `useEffect` que depende de `[lastFeedEvent]` agora tem a única responsabilidade de:
+    - Adicionar a `newNotification` ao estado `killFeed`.
+    - Limpar quaisquer *timers antigos* associados ao *mesmo `uniqueId`* (caso raro, mas seguro).
+    - Agendar o **primeiro** `setTimeout` (`removalTimers.current[uniqueId]`) para disparar após `NOTIFICATION_DURATION`.
+    - **Importante:** Este `useEffect` *não* retorna mais uma função de limpeza que cancelaria timers de *outras* notificações.
+3.  **Processo de Remoção em Duas Etapas (Dentro dos Callbacks):**
+    - O callback do primeiro `setTimeout` (`removalTimers`) faz duas coisas:
+        - Atualiza o estado `killFeed` marcando a notificação específica como `isExiting = true` (isso dispara a animação CSS de saída).
+        - Agenda o **segundo** `setTimeout` (`finalRemovalTimers.current[uniqueId]`) para disparar após `EXIT_ANIMATION_DURATION`.
+    - O callback do segundo `setTimeout` (`finalRemovalTimers`) faz a remoção final:
+        - Filtra a notificação do estado `killFeed`.
+        - Remove as entradas correspondentes dos refs `removalTimers` e `finalRemovalTimers` para limpar a memória.
+4.  **Limpeza Global:** Um `useEffect` separado com dependência vazia (`[]`) retorna uma função de limpeza que itera sobre *todos* os timers armazenados nos refs (`Object.values(...)`) e os limpa (`clearTimeout`). Isso garante que nenhum timer fique pendente se o componente `KillFeedDisplay` for desmontado.
+
+### Benefício:
+- Cada notificação gerencia seu próprio ciclo de vida de timers, independentemente da chegada de novas notificações.
+- Evita cancelamentos prematuros de timers, garantindo que todas as animações de saída e remoções ocorram corretamente.
+- Usa `useRef` para gerenciar de forma confiável os IDs dos timers associados a cada notificação.

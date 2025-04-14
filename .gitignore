@@ -159,3 +159,6 @@ Logs/
 Paks/
 Saves/
 ScreenShots/
+
+# Configuration files not meant for repo
+config-next-mantine.md

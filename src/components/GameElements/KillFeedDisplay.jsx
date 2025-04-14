@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Box, Notification, useMantineTheme } from '@mantine/core';
 import { IconSkull } from '@tabler/icons-react';
 
@@ -9,8 +9,10 @@ const ENTRANCE_ANIMATION_DURATION = 300; // ms
 const EXIT_ANIMATION_DURATION = 600; // ms
 
 export function KillFeedDisplay({ lastFeedEvent }) {
-  const theme = useMantineTheme(); // Hook para acessar o tema
-  const [killFeed, setKillFeed] = useState([]); // Array de { id, title, message, icon, color, isExiting }
+  const theme = useMantineTheme();
+  const [killFeed, setKillFeed] = useState([]);
+  const removalTimers = useRef({});
+  const finalRemovalTimers = useRef({});
 
   useEffect(() => {
     if (lastFeedEvent) {
@@ -33,22 +35,34 @@ export function KillFeedDisplay({ lastFeedEvent }) {
       console.log(`[KillFeedDisplay] Adicionando: ${uniqueId}, Tipo: ${lastFeedEvent.type}`);
       setKillFeed(prevFeed => [...prevFeed, newNotification]);
 
-      const exitTimer = setTimeout(() => {
-        setKillFeed(prevFeed => 
-          prevFeed.map(n => n.id === uniqueId ? { ...n, isExiting: true } : n)
-        );
-      }, NOTIFICATION_DURATION - EXIT_ANIMATION_DURATION);
+      clearTimeout(removalTimers.current[uniqueId]);
+      clearTimeout(finalRemovalTimers.current[uniqueId]);
 
-      const removeTimer = setTimeout(() => {
-        setKillFeed(prevFeed => prevFeed.filter(n => n.id !== uniqueId)); 
+      removalTimers.current[uniqueId] = setTimeout(() => {
+        console.log(`[KillFeedDisplay] Iniciando processo de saída para ${uniqueId}`);
+        setKillFeed(prev =>
+          prev.map(n => n.id === uniqueId ? { ...n, isExiting: true } : n)
+        );
+
+        finalRemovalTimers.current[uniqueId] = setTimeout(() => {
+          console.log(`[KillFeedDisplay] Removendo ${uniqueId} do estado`);
+          setKillFeed(prev => prev.filter(n => n.id !== uniqueId));
+          delete removalTimers.current[uniqueId];
+          delete finalRemovalTimers.current[uniqueId];
+        }, EXIT_ANIMATION_DURATION);
+
       }, NOTIFICATION_DURATION);
-      
-      return () => {
-          clearTimeout(exitTimer);
-          clearTimeout(removeTimer);
-      }
+
     }
   }, [lastFeedEvent]);
+
+  useEffect(() => {
+      return () => {
+          console.log("[KillFeedDisplay] Limpando todos os timers ao desmontar.");
+          Object.values(removalTimers.current).forEach(clearTimeout);
+          Object.values(finalRemovalTimers.current).forEach(clearTimeout);
+      };
+  }, []);
 
   return (
     <Box
@@ -64,8 +78,21 @@ export function KillFeedDisplay({ lastFeedEvent }) {
       }}
     >
       {killFeed.map((notification) => {
-        const titleColor = theme.colors[notification.color] ? theme.colors[notification.color][8] : theme.colors.blue[8];
-        
+        let titleColor, iconColor, descriptionColor, bgColor, borderColor;
+        if (notification.color === 'green') {
+          titleColor = theme.colors.green[8];
+          iconColor = theme.colors.green[8];
+          descriptionColor = theme.colors.gray[8];
+          bgColor = theme.white;
+          borderColor = theme.colors.gray[2];
+        } else {
+          titleColor = theme.colors.blue[8];
+          iconColor = titleColor;
+          descriptionColor = theme.colors.gray[8];
+          bgColor = theme.white;
+          borderColor = theme.colors.gray[2];
+        }
+
         return (
           <div 
             key={notification.id}
@@ -81,18 +108,18 @@ export function KillFeedDisplay({ lastFeedEvent }) {
               padding="xs" 
               styles={(theme) => ({
                 root: {
-                  backgroundColor: theme.white,
-                  border: `1px solid ${theme.colors.gray[2]}`, 
+                  backgroundColor: bgColor,
+                  border: `1px solid ${borderColor}`, 
                   minWidth: '250px',
                 },
                 title: {
                    color: titleColor, 
                 },
                  description: {
-                   color: theme.colors.gray[8], 
+                   color: descriptionColor, 
                  },
                  icon: {
-                    color: titleColor,
+                    color: iconColor,
                  }
               })}
             >

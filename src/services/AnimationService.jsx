@@ -123,19 +123,20 @@ export class AnimationService {
 
     let displayTime = 800; // Tempo padrão
 
-    // *** RESTAURAR LÓGICA ORIGINAL ***
-    if (isDodge) { // Verificar esquiva primeiro
+    if (isDodge) { 
       damageNumber.textContent = 'Errou!';
-      damageNumber.className = 'damage-number damage-dodge'; // Classe específica para esquiva
-    } else if (isCritical) { // Senão, verificar crítico
+      damageNumber.className = 'damage-number damage-dodge';
+    } else if (isCritical) { 
       damageNumber.textContent = 'CRITICAL!';
       damageNumber.className = 'damage-number damage-critical';
-      displayTime = 1200; // Tempo maior para crítico
-    } else { // Senão, exibir dano normal
-      damageNumber.textContent = `-${damage}`;
+      displayTime = 1200;
+    } else { // Dano normal (incluindo 0)
+      damageNumber.textContent = damage === 0 ? '0' : `-${damage}`;
       damageNumber.className = 'damage-number';
+      if (damage === 0) {
+          damageNumber.classList.add('damage-zero'); // Opcional: classe para estilizar o zero
+      }
     }
-    // *** FIM DA RESTAURAÇÃO ***
     
     element.appendChild(damageNumber);
 

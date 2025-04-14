@@ -15,7 +15,7 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
   const [conectado, setConectado] = useState(false);
   const [erroEntrada, setErroEntrada] = useState(null);
   const [lastDamageTimestamp, setLastDamageTimestamp] = useState(null);
-  const [lastKillInfo, setLastKillInfo] = useState(null);
+  const [lastFeedEvent, setLastFeedEvent] = useState(null);
   const [lastDamageInfoForAnimation, setLastDamageInfoForAnimation] = useState(null);
 
   // NOVO: Ref para nomeUsuario para usar no listener sem adicionar como dependência do useEffect
@@ -113,10 +113,11 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
     };
   }, [socket, codigoSala, nomeUsuario]);
 
-  // useEffect para gerenciar o listener de damageReceived
+  // useEffect para gerenciar listeners de eventos de JOGO (Damage, Lucky Strike)
   useEffect(() => {
     if (!socket) return;
 
+    // --- Listener Damage Received ---
     const handleDamageReceived = (data) => {
       // >>> VERIFICAR SE EVENTO JÁ FOI PROCESSADO <<<
       if (!data.eventId || processedDamageEventIds.current.has(data.eventId)) {
@@ -131,8 +132,8 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
           oldIds.forEach(id => processedDamageEventIds.current.delete(id));
       }
 
-      console.log('Evento damageReceived recebido no HOOK:', data); 
-      const { eventId, targetId, damage, currentLife, isCritical, isDodge, attackerName, targetName, weaponType, killTitle } = data; 
+      // console.log('Evento damageReceived recebido no HOOK:', data); // Manter? É útil.
+      const { eventId, targetId, damage, currentLife, isCritical, isDodge, attackerName, targetName, weaponType, killTitle } = data;
       
       let currentUserWasTarget = false;
 
@@ -156,37 +157,51 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
         setLastDamageTimestamp(Date.now());
       }
 
-      // Se for um evento de kill (tem attackerName e targetName)
-      if (attackerName && targetName && killTitle) { 
+      // Se for um evento de kill (tem killTitle)
+      if (killTitle && attackerName && targetName) { // Adicionada verificação de attacker/targetName aqui também
         console.log(`KILL registrado: ${killTitle} - ${attackerName} -> ${targetName} com ${weaponType}`);
-        setLastKillInfo({ 
+        // RENOMEADO e ADICIONADO TIPO: Define o evento do feed como tipo 'kill'
+        setLastFeedEvent({
+          type: 'kill', // <<< TIPO
+          eventId: eventId, // Passar eventId também
           attackerName,
           targetName,
-          weaponType, 
+          weaponType,
           killTitle,
-          timestamp: Date.now() 
+          timestamp: Date.now()
         });
       }
-      
-      // <<< ADICIONAR LOG ANTES DO SETSTATE >>>
-      console.log(`[DEBUG useSalaSocket] Atualizando lastDamageInfoForAnimation com: eventId=${eventId}, targetId=${targetId}, damage=${damage}, isCrit=${isCritical}, isDodge=${isDodge}`);
-      // <<< FIM DO LOG >>>
 
-      // ATUALIZA O NOVO ESTADO para acionar a animação no componente
-      setLastDamageInfoForAnimation({ 
-          eventId: eventId, 
-          targetId, 
-          damage, 
-          isCritical, 
-          isDodge, 
-          timestamp: Date.now() 
+      // Atualiza estado para animação de dano
+      setLastDamageInfoForAnimation({
+          eventId: eventId,
+          targetId,
+          damage,
+          isCritical,
+          isDodge,
+          timestamp: Date.now()
       });
     };
 
-    socket.on('damageReceived', handleDamageReceived);
+    // --- Listener Lucky Strike Notification ---
+    const handleLuckyStrike = (data) => {
+        // Poderíamos adicionar verificação de ID de evento aqui também se necessário
+        console.log(`LUCKY STRIKE recebido: Jogador ${data.playerName} ganhou ${data.reward}`);
+        // RENOMEADO e ADICIONADO TIPO: Define o evento do feed como tipo 'luckyStrike'
+        setLastFeedEvent({
+            type: 'luckyStrike', // <<< TIPO
+            ...data // Inclui eventId, playerName, reward, timestamp
+        });
+    };
 
+    // Registrar listeners
+    socket.on('damageReceived', handleDamageReceived);
+    socket.on('luckyStrikeNotification', handleLuckyStrike); // <<< REGISTRA NOVO LISTENER
+
+    // Limpeza
     return () => {
       socket.off('damageReceived', handleDamageReceived);
+      socket.off('luckyStrikeNotification', handleLuckyStrike); // <<< LIMPA NOVO LISTENER
     };
 
   }, [socket]); // Dependência apenas no socket
@@ -255,7 +270,7 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
     toggleModoObservador,
     socket,
     lastDamageTimestamp,
-    lastKillInfo,
+    lastFeedEvent,
     lastDamageInfoForAnimation
   };
 } 

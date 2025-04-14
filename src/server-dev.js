@@ -3,7 +3,7 @@ const { createServer } = require('http');
 const next = require('next');
 const { Server } = require('socket.io');
 const { GAME_CONFIG } = require('./constants/gameConfig');
-const { ITEMS_DATA, KEYBOARD_ID, MANIFESTO_ID, MEDALHA_ID } = require('./constants/itemsData');
+const { ITEMS_DATA, KEYBOARD_ID, MANIFESTO_ID, MEDALHA_ID, BITCOIN_MINER_ID } = require('./constants/itemsData');
 
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
@@ -673,7 +673,86 @@ app.prepare().then(() => {
         console.error(`[Server] Erro ao processar compra para ${userId}:`, error);
       }
     });
-    // -------------------------------------
+    // --- Fim do Listener Compra de Item ---
+
+    // <<< NEW LISTENER FOR BITCOIN MINER >>>
+    // --- Listener para Geração Passiva de Renda (Minerador) ---
+    socket.on('generate_passive_income', ({ userId, codigoSala }) => {
+      // Validações Iniciais
+      if (!salas.has(codigoSala)) {
+        // console.warn(`[Minerador][${codigoSala}] Sala não encontrada para generate_passive_income.`);
+        return; // Silenciosamente ignora se a sala não existe mais
+      }
+      const sala = salas.get(codigoSala);
+      const participante = Array.from(sala.participantes.values()).find(p => p.id === userId);
+
+      if (!participante) {
+        // console.warn(`[Minerador][${codigoSala}] Participante ${userId} não encontrado para generate_passive_income.`);
+        return; // Silenciosamente ignora se o participante não está mais na sala
+      }
+
+      // Validação Crucial: O participante realmente tem o minerador EQUIPADO?
+      const minerData = ITEMS_DATA[BITCOIN_MINER_ID];
+      if (!minerData) {
+        console.error(`[CRITICAL][Minerador][${codigoSala}] Dados do BITCOIN_MINER_ID não encontrados em ITEMS_DATA! Geração de pontos falhou.`);
+        return; // Não pode gerar pontos sem dados
+      }
+
+      if (!participante.equippedAccessories?.includes(BITCOIN_MINER_ID)) {
+        // console.warn(`[Minerador][${codigoSala}] Participante ${participante.nome} (${userId}) recebeu evento generate_passive_income, mas NÃO tem o minerador equipado. Ignorando.`);
+        // Isso pode acontecer se o usuário desequipou o item, mas o intervalo no frontend
+        // ainda não foi limpo ou enviou uma última vez. Ignorar é seguro.
+        return;
+      }
+
+      // 1. Determinar recompensa ANTES do Manifesto (Normal ou Lucky Strike)
+      const pontosGeradosBase = minerData.pontosPorIntervalo || 1;
+      const luckyStrikeChance = minerData.luckyStrikeChance || 0;
+      const luckyStrikeReward = minerData.luckyStrikeReward || 0;
+      let rewardBeforeManifesto = pontosGeradosBase; // Assume normal
+      let wasLuckyStrike = false;
+
+      if (luckyStrikeChance > 0 && luckyStrikeReward > 0 && Math.random() < luckyStrikeChance) {
+          rewardBeforeManifesto = luckyStrikeReward; // É um Lucky Strike!
+          wasLuckyStrike = true;
+      }
+
+      // 2. Aplicar multiplicador do Manifesto, se equipado
+      let finalReward = rewardBeforeManifesto; // Começa com o valor base (normal ou lucky)
+      let manifestoMultiplier = 1; // Multiplicador padrão
+
+      if (participante.equippedAccessories?.includes(MANIFESTO_ID)) {
+          const manifestoData = ITEMS_DATA[MANIFESTO_ID];
+          manifestoMultiplier = manifestoData?.scoreMultiplier || 1;
+          if (manifestoMultiplier !== 1) {
+              finalReward *= manifestoMultiplier;
+              console.log(`[Minerador][${codigoSala}] Aplicando multiplicador (${manifestoMultiplier}x) do Manifesto. Recompensa antes: ${rewardBeforeManifesto}, Depois: ${finalReward}`);
+          }
+      }
+
+      // 3. Adicionar recompensa final ao score
+      participante.score = (participante.score || 0) + finalReward;
+
+      // 4. Emitir notificação de Lucky Strike (SE ocorreu) com valor FINAL
+      if (wasLuckyStrike) {
+          console.log(`[Minerador][${codigoSala}] *** LUCKY STRIKE! *** ${participante.nome} ganhou ${finalReward} pontos! (Base: ${luckyStrikeReward}, Multiplier: ${manifestoMultiplier}, Chance: ${luckyStrikeChance * 100}%)`);
+          // Emitir notificação com o valor final
+          io.to(codigoSala).emit('luckyStrikeNotification', {
+              eventId: `${Date.now()}-lucky-${participante.id}`,
+              playerName: participante.nome,
+              reward: finalReward, // <<< Envia o valor final
+              timestamp: Date.now()
+          });
+      } else {
+         // Log normal (opcional)
+         // console.log(`[Minerador][${codigoSala}] ${participante.nome} gerou ${finalReward} ponto(s) (Base: ${pontosGeradosBase}, Multiplier: ${manifestoMultiplier}). Novo score: ${participante.score}`);
+      }
+
+      // 5. Notificar todos sobre a atualização geral dos participantes
+      io.to(codigoSala).emit('atualizarParticipantes', Array.from(sala.participantes.values()));
+    });
+    // --- Fim Listener Minerador ---
+    // <<< END NEW LISTENER >>>
 
     // Desconexão
     socket.on('disconnect', () => {

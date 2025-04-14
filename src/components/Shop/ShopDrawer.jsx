@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Drawer, Text, Title, Card, Group, Button, Badge, SimpleGrid, ActionIcon, Tooltip } from '@mantine/core';
-import { IconShoppingCart, IconCoin, IconKeyboard, IconShirt, IconStar, IconMask, IconBook, IconMedal } from '@tabler/icons-react';
+import { IconShoppingCart, IconCoin, IconKeyboard, IconShirt, IconStar, IconMask, IconBook, IconMedal, IconCurrencyBitcoin } from '@tabler/icons-react';
 import { COLETE_DPE_ID, COLETE_BLUE_ID, ITEMS_DATA } from '@/constants/itemsData';
 import { useMantineTheme } from '@mantine/core';
 
@@ -12,6 +12,7 @@ const iconMap = {
   IconMask: IconMask,
   IconBook: IconBook,
   IconMedal: IconMedal,
+  IconCurrencyBitcoin: IconCurrencyBitcoin,
 };
 
 // Obter itens da loja, adicionar ID e ORDENAR por displayOrder

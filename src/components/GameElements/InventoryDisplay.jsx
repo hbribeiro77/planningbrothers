@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Stack, Group, Text, Tooltip, ActionIcon, Divider, Box } from '@mantine/core';
-import { IconKeyboard, IconShirt, IconStar, IconMask, IconBook, IconMedal } from '@tabler/icons-react';
+import { IconKeyboard, IconShirt, IconStar, IconMask, IconBook, IconMedal, IconCurrencyBitcoin } from '@tabler/icons-react';
 import { usePvpStatus } from '@/contexts/PvpContext';
 import { COLETE_DPE_ID, COLETE_BLUE_ID, ITEMS_DATA, KEYBOARD_ID } from '@/constants/itemsData';
 
@@ -12,6 +12,7 @@ const accessoryIconMap = {
   IconMask: IconMask,
   IconBook: IconBook,
   IconMedal: IconMedal,
+  IconCurrencyBitcoin: IconCurrencyBitcoin,
   // Adicionar outros mapeamentos aqui conforme necessário
 };
 

@@ -19,7 +19,7 @@ import {
   Badge,
   Drawer
 } from '@mantine/core';
-import { IconCopy, IconCheck, IconX, IconKeyboard, IconCoin, IconSkull, IconShoppingCart, IconSettings, IconKeyboardOff, IconEye, IconEyeOff, IconVolume, IconVolumeOff, IconMessageCircle, IconColorSwatch, IconShirt } from '@tabler/icons-react';
+import { IconCopy, IconCheck, IconX, IconKeyboard, IconCoin, IconSkull, IconShoppingCart, IconSettings, IconKeyboardOff, IconEye, IconEyeOff, IconVolume, IconVolumeOff, IconMessageCircle, IconColorSwatch, IconShirt, IconStar } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 
 import Mesa from '@/components/Mesa/Mesa';
@@ -89,7 +89,8 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     socket,
     lastDamageTimestamp,
     lastKillInfo,
-    lastDamageInfoForAnimation
+    lastDamageInfoForAnimation,
+    lastFeedEvent
   } = useSalaSocket(codigoSala, nomeUsuario);
 
   const currentUser = participantes.find(p => p.nome === nomeUsuario) || { id: '', nome: nomeUsuario, score: 0, kills: 0, inventory: [], equippedAccessory: null };
@@ -114,27 +115,57 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
   );
 
   // --- Lógica de formatação da mensagem do Kill Feed --- 
-  // Movido para cá para passar a mensagem formatada como prop
-  const formattedLastKillInfo = useMemo(() => {
-    if (!lastKillInfo) return null;
+  // RENOMEADO e MODIFICADO para lidar com diferentes tipos de evento
+  const formattedLastFeedEvent = useMemo(() => {
+    if (!lastFeedEvent) return null;
 
-    let weaponIcon = null;
-    if (lastKillInfo.weaponType === 'keyboard') {
-      weaponIcon = <IconKeyboard size="1.1rem" style={{ marginRight: '5px' }} />;
+    const { type, timestamp, eventId } = lastFeedEvent;
+    let title = 'Evento';
+    let message = '';
+    let icon = null;
+    let color = 'blue'; // Cor padrão
+
+    if (type === 'kill') {
+        const { attackerName, targetName, weaponType, killTitle } = lastFeedEvent;
+        title = killTitle || DEFAULT_KILL_TITLE; // Usa o título recebido ou padrão
+        color = 'red'; // Cor para kills
+        let weaponIcon = null;
+        if (weaponType === 'keyboard') {
+          weaponIcon = <IconKeyboard size="1.1rem" style={{ marginRight: '5px' }} />;
+        }
+        // Adicionar mais ícones de armas aqui...
+        message = (
+          <>
+            {attackerName} {weaponIcon} {targetName}!
+          </>
+        );
+        icon = <IconSkull size="1.2rem" />; // Ícone para kill
+    } else if (type === 'luckyStrike') {
+        const { playerName, reward } = lastFeedEvent;
+        title = 'Lucky Strike!';
+        color = 'yellow'; // Cor para sorte
+        message = (
+          <>
+            {playerName} minerou {reward} pontos!
+          </>
+        );
+        icon = <IconStar size="1.2rem" />; // Ícone para lucky strike (Ex: estrela)
     }
-    // Adicionar mais ícones aqui...
+    // Adicionar mais tipos de evento aqui (ex: 'itemBought', 'levelUp', etc.)
 
-    const body = (
-      <>
-        {lastKillInfo.attackerName} {weaponIcon} {lastKillInfo.targetName}!
-      </>
-    );
+    // Retorna null se não for um tipo conhecido ou não tiver mensagem
+    if (!message) return null;
 
     return {
-      ...lastKillInfo,
-      message: body // Substitui a mensagem original pela formatada
+      type,
+      eventId, // Passa o eventId para a key
+      timestamp,
+      title,
+      message, // Corpo da mensagem já formatado com JSX
+      icon, // Ícone JSX
+      color // Cor da notificação
     };
-  }, [lastKillInfo]);
+  }, [lastFeedEvent]);
   // -----------------------------------------------------
 
   const handleNovaRodadaComAnimacao = () => {
@@ -203,30 +234,23 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     if (!lastDamageInfoForAnimation) return;
 
     const { targetId, damage, isCritical, isDodge } = lastDamageInfoForAnimation;
-    console.log(`[DEBUG useEffect Start] targetId=${targetId}, damage=${damage}, isCritical=${isCritical} (type: ${typeof isCritical}), isDodge=${isDodge} (type: ${typeof isDodge})`);
-
+    
     const targetElement = document.querySelector(`.carta-participante[data-user-id="${targetId}"]`);
 
-    // *** CORREÇÃO/DEPURAÇÃO DA CONDIÇÃO ***
+    // *** CONDIÇÃO AJUSTADA PARA INCLUIR DANO ZERO ***
     let shouldShowAnimation = false;
-    if (damage > 0) {
-        console.log(`[DEBUG Condição] Dano > 0 (${damage})`);
-        shouldShowAnimation = true;
-    } else if (isCritical) {
-        console.log(`[DEBUG Condição] Crítico = true`);
+    // Mostrar animação se: Dano > 0 OU Crítico OU Esquiva OU Dano == 0 (e não crítico/esquiva)
+    if (isCritical) {
         shouldShowAnimation = true;
     } else if (isDodge) {
-        console.log(`[DEBUG Condição] Esquiva = true`);
         shouldShowAnimation = true;
-    } else {
-        console.log(`[DEBUG Condição] Nenhuma condição atendida (Dano=${damage}, Crit=${isCritical}, Dodge=${isDodge})`);
-    }
+    } else if (damage >= 0) { // <<< Inclui dano 0 aqui
+        shouldShowAnimation = true;
+    } 
 
     if (targetElement && shouldShowAnimation) {
-      console.log(`[Cliente/Animation] Condição VERDADEIRA. Chamando showDamageNumber para ${targetId} (damage=${damage}, isCrit=${isCritical}, isDodge=${isDodge})`);
       AnimationService.showDamageNumber(targetElement, damage, isCritical, isDodge);
     } else if (targetElement) {
-      console.log(`[Cliente/Animation] Alvo ${targetId} encontrado, mas animação NÃO será mostrada (Condição: ${shouldShowAnimation})`);
     } else {
       console.warn(`[Cliente/Animation] Avatar para targetId=${targetId} não encontrado.`);
     }
@@ -422,7 +446,7 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
         )}
 
         {/* --- Renderiza o componente KillFeedDisplay --- */}
-        <KillFeedDisplay lastKillInfo={formattedLastKillInfo} />
+        <KillFeedDisplay lastFeedEvent={formattedLastFeedEvent} />
         {/* --- FIM KillFeedDisplay --- */}
 
         {/* Renderizar o Drawer da Loja, passando currentUser e onBuyItem */}

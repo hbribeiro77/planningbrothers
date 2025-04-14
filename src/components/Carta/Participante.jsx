@@ -38,6 +38,10 @@ export default function CartaParticipante({
     equippedAccessories = []
   } = participante || {};
 
+  // <<< COMBINAR ITENS PARA RENDERIZAÇÃO VISUAL >>>
+  // Pegar IDs únicos do inventário e dos equipados
+  const itemsComPotencialVisual = [...new Set([...inventory, ...equippedAccessories])];
+
   const isDead = life <= 0;
 
   return (
@@ -87,30 +91,46 @@ export default function CartaParticipante({
         />
       )}
 
-      {/* Renderização dinâmica de MÚLTIPLOS acessórios (position: absolute) */}
-      {equippedAccessories.map(accessoryId => {
-        const itemData = ITEMS_DATA[accessoryId];
+      {/* Renderização dinâmica de visuais (APENAS EQUIPADOS) */}
+      {(equippedAccessories || []).map(itemId => {
+        const itemData = ITEMS_DATA[itemId];
         const visualConfig = itemData?.avatarVisual;
-        if (!visualConfig) return null; // Pula se não houver config visual
+        if (!visualConfig) return null; // Pula se o item equipado não tiver visual
         
-        // Retorna o elemento visual para este acessório
         return (
-          <React.Fragment key={accessoryId}> {/* Usar Fragment com key */}
-            {/* Caso 1: Componente React */} 
+          <React.Fragment key={itemId}>
+            {/* Caso 1: Componente React - Envolver com Tooltip */}
             {visualConfig.type === 'component' && visualConfig.componentName && AVATAR_COMPONENTS[visualConfig.componentName] && (
-              React.createElement(AVATAR_COMPONENTS[visualConfig.componentName], {
-                ...(visualConfig.props || {}),
-                style: visualConfig.style 
-              })
+              <Tooltip
+                label={<Text size="xs">{itemData?.name || 'Item Visual'}</Text>}
+                position="top"
+                withArrow
+                openDelay={300}
+              >
+                {/* Manter um span ou div wrapper para o Tooltip funcionar corretamente com certos componentes */}
+                <span> 
+                  {React.createElement(AVATAR_COMPONENTS[visualConfig.componentName], {
+                    ...(visualConfig.props || {}),
+                    style: visualConfig.style
+                  })}
+                </span>
+              </Tooltip>
             )}
 
-            {/* Caso 2: Imagem SVG */} 
+            {/* Caso 2: Imagem SVG - Já envolvido com Tooltip */}
             {visualConfig.type === 'svg' && visualConfig.path && (
-              <img
-                src={visualConfig.path}
-                alt={itemData?.name || 'Acessório'}
-                style={visualConfig.style}
-              />
+              <Tooltip
+                label={<Text size="xs">{itemData?.name || 'Item Visual'}</Text>}
+                position="top"
+                withArrow
+                openDelay={300}
+              >
+                <img
+                  src={visualConfig.path}
+                  alt={itemData?.name || 'Acessório'}
+                  style={visualConfig.style}
+                />
+              </Tooltip>
             )}
           </React.Fragment>
         );

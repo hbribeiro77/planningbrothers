@@ -7,6 +7,7 @@ const KEYBOARD_ID = 'keyboard'; // << ID para a arma padrão
 const NINJA_TRAINING_ID = 'ninja_training'; // <<< NOVO ID
 const MANIFESTO_ID = 'manifesto_comunista'; // <<< ID para o novo item
 const MEDALHA_ID = 'medalha_5_anos'; // <<< ID para a medalha
+const BITCOIN_MINER_ID = 'bitcoin_miner'; // <<< ID para o minerador
 
 // Definir cores principais e escuras
 const DPE_GREEN = '#2e8b57';
@@ -66,7 +67,6 @@ const ITEMS_DATA = {
         width: '145%',
         height: 'auto',
         opacity: 1,
-        pointerEvents: 'none',
         zIndex: 5,
       }
     }
@@ -101,7 +101,6 @@ const ITEMS_DATA = {
         width: '145%',
         height: 'auto',
         opacity: 1,
-        pointerEvents: 'none',
         zIndex: 5,
       }
     }
@@ -130,7 +129,6 @@ const ITEMS_DATA = {
         width: '120%', // Ajustar conforme necessário
         height: 'auto',
         opacity: 0.9,
-        pointerEvents: 'none',
         zIndex: 4, // Acima do colete
       }
     }
@@ -179,18 +177,53 @@ const ITEMS_DATA = {
     attackBonusDice: null,
     defenseDice: null,
     scoreMultiplier: 1,
-    avatarVisual: { // <<< Adicionar configuração visual
+    avatarVisual: { 
       type: 'svg',
-      path: '/images/game-objects/medalha.svg', // <<< Caminho para o SVG da medalha
-      style: { // Estilo para posicionar o SVG (ex: canto superior direito)
+      path: '/images/game-objects/medalha.svg',
+      style: { 
         position: 'absolute',
-        top: '2%', 
+        top: '2%',
         right: '25%',
-        width: '45%', // Tamanho pequeno para um ícone de medalha
+        width: '45%',
         height: 'auto',
         opacity: 1,
-        pointerEvents: 'none',
-        zIndex: 8, // Acima da maioria dos outros elementos visuais
+        zIndex: 8,
+      }
+    }
+  },
+
+  [BITCOIN_MINER_ID]: {
+    name: 'Minerador de Bitcoin',
+    price: 10,
+    type: 'accessory',
+    equipSlot: 'passive',
+    displayOrder: 120,
+    description: 'Gere renda passiva automaticamente! +1 Ponto a cada 10 segundos.',
+    iconName: 'IconCurrencyBitcoin',
+    iconColor: 'orange',
+    // Atributos de geração
+    pontosPorIntervalo: 1,
+    intervaloGeracaoMs: 10000,
+    luckyStrikeChance: 0.01, // <<< CHANCE AQUI (1%)
+    luckyStrikeReward: 100,  // <<< RECOMPENSA AQUI
+    // Sem atributos de combate diretos
+    scoreMultiplier: 1,
+    criticalChanceBonus: 0,
+    dodgeChanceBonus: 0,
+    attackBonusFixed: 0,
+    defenseFixed: 0,
+    // Adicionar configuração visual
+    avatarVisual: {
+      type: 'svg',
+      path: '/images/game-objects/minerador.svg',
+      style: { 
+        position: 'absolute',
+        bottom: '-20%',
+        left: '90%',
+        width: '150%',
+        height: 'auto',
+        opacity: 1,
+        zIndex: 8, 
       }
     }
   },
@@ -208,6 +241,7 @@ module.exports = {
   NINJA_TRAINING_ID,
   MANIFESTO_ID, // <<< Exportar o novo ID
   MEDALHA_ID, // <<< Exportar novo ID
+  BITCOIN_MINER_ID, // <<< Exportar novo ID
   ITEMS_DATA,
   // Remover export do mapeamento
   // AVATAR_COMPONENTS: AVATAR_COMPONENTS 

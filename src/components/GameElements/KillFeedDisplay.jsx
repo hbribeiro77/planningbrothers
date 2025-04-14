@@ -8,50 +8,47 @@ const NOTIFICATION_DURATION = 5000; // ms
 const ENTRANCE_ANIMATION_DURATION = 300; // ms
 const EXIT_ANIMATION_DURATION = 600; // ms
 
-export function KillFeedDisplay({ lastKillInfo }) {
+export function KillFeedDisplay({ lastFeedEvent }) {
   const theme = useMantineTheme(); // Hook para acessar o tema
-  const [killFeed, setKillFeed] = useState([]); // Array de { id, title, message, isExiting }
+  const [killFeed, setKillFeed] = useState([]); // Array de { id, title, message, icon, color, isExiting }
 
   useEffect(() => {
-    if (lastKillInfo) {
-      const uniqueId = `${lastKillInfo.timestamp}-${Math.random().toString(36).substring(2, 9)}`;
+    if (lastFeedEvent) {
+      const uniqueId = lastFeedEvent.eventId;
+      
+      if (killFeed.some(n => n.id === uniqueId)) {
+          console.warn(`[KillFeedDisplay] Tentativa de adicionar evento duplicado: ${uniqueId}`);
+          return;
+      }
       
       const newNotification = {
         id: uniqueId, 
-        title: lastKillInfo.killTitle, 
-        message: lastKillInfo.message, 
-        isExiting: false // Inicia sem estado de saída
+        title: lastFeedEvent.title, 
+        message: lastFeedEvent.message, 
+        icon: lastFeedEvent.icon,
+        color: lastFeedEvent.color,
+        isExiting: false
       };
       
-      console.log("[KillFeedDisplay] Adicionando:", newNotification.id);
+      console.log(`[KillFeedDisplay] Adicionando: ${uniqueId}, Tipo: ${lastFeedEvent.type}`);
       setKillFeed(prevFeed => [...prevFeed, newNotification]);
 
-      // 1. Agenda o início da animação de SAÍDA (definindo isExiting = true)
       const exitTimer = setTimeout(() => {
-        console.log("[KillFeedDisplay] Iniciando saída de:", uniqueId);
         setKillFeed(prevFeed => 
           prevFeed.map(n => n.id === uniqueId ? { ...n, isExiting: true } : n)
         );
-      // Usar a duração CORRETA para iniciar a animação de saída
       }, NOTIFICATION_DURATION - EXIT_ANIMATION_DURATION);
 
-      // 2. Agenda a REMOÇÃO COMPLETA do item do array
       const removeTimer = setTimeout(() => {
-        console.log("[KillFeedDisplay] Removendo completamente:", uniqueId);
         setKillFeed(prevFeed => prevFeed.filter(n => n.id !== uniqueId)); 
       }, NOTIFICATION_DURATION);
       
-      // IMPORTANTE: NÃO ter limpeza neste useEffect
+      return () => {
+          clearTimeout(exitTimer);
+          clearTimeout(removeTimer);
+      }
     }
-  }, [lastKillInfo]); 
-
-  // Efeito para limpeza geral ao desmontar (opcional, mas boa prática)
-  useEffect(() => {
-    return () => {
-      // Se houvesse timers para limpar explicitamente, seria aqui.
-      // console.log("KillFeedDisplay desmontando.");
-    };
-  }, []);
+  }, [lastFeedEvent]);
 
   return (
     <Box
@@ -61,13 +58,14 @@ export function KillFeedDisplay({ lastKillInfo }) {
         right: '20px',
         zIndex: 1050, 
         display: 'flex',
-        flexDirection: 'column-reverse', // Empilha de baixo para cima
+        flexDirection: 'column-reverse',
         alignItems: 'flex-end',
-        gap: '10px' // Espaço entre notificações
+        gap: '10px'
       }}
     >
-      {/* Mapeia o array killFeed e usa DIV wrapper para animação CSS */}
       {killFeed.map((notification) => {
+        const titleColor = theme.colors[notification.color] ? theme.colors[notification.color][8] : theme.colors.blue[8];
+        
         return (
           <div 
             key={notification.id}
@@ -77,7 +75,7 @@ export function KillFeedDisplay({ lastKillInfo }) {
             }}
           >
             <Notification 
-              icon={<IconSkull size="1.2rem" />} 
+              icon={notification.icon || <IconSkull size="1.2rem" />}
               title={notification.title} 
               withCloseButton={false}
               padding="xs" 
@@ -85,14 +83,17 @@ export function KillFeedDisplay({ lastKillInfo }) {
                 root: {
                   backgroundColor: theme.white,
                   border: `1px solid ${theme.colors.gray[2]}`, 
-                  minWidth: '300px',
+                  minWidth: '250px',
                 },
                 title: {
-                   color: theme.colors.blue[8], 
+                   color: titleColor, 
                 },
                  description: {
                    color: theme.colors.gray[8], 
                  },
+                 icon: {
+                    color: titleColor,
+                 }
               })}
             >
               {notification.message}

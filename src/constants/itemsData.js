@@ -204,7 +204,7 @@ const ITEMS_DATA = {
     // Atributos de geração
     pontosPorIntervalo: 1,
     intervaloGeracaoMs: 10000,
-    luckyStrikeChance: 100, // <<< CHANCE AQUI (1%)
+    luckyStrikeChance: 0.01, // <<< CHANCE AQUI (1%)
     luckyStrikeReward: 100,  // <<< RECOMPENSA AQUI
     // Sem atributos de combate diretos
     scoreMultiplier: 1,

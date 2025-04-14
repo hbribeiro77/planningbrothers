@@ -545,3 +545,28 @@ useEffect(() => {
     2.  **Fonte Única para Eventos Lógicos:** Eventos que modificam o estado do jogo ou disparam cálculos no servidor devem ser emitidos **apenas uma vez** e pela fonte correta (geralmente, o cliente que iniciou a ação).
     3.  **Rastreamento Cuidadoso:** Depurar problemas em tempo real pode exigir rastrear o fluxo completo de eventos, desde a interação inicial do usuário até a resposta final do servidor e a reação do cliente, para identificar onde a lógica está divergindo.
     4.  **Sincronização de Timing:** Ao usar `setTimeout` para alinhar animações e lógica, certifique-se de que apenas o processo relevante (o atacante, neste caso) dispare o evento lógico após o delay. 
+
+## Gamificação e Interação de Features (Minerador, Itens Passivos)
+
+### 1. Centralização de Configurações é Crucial
+- **Lição:** Evitar valores "mágicos" (hardcoded) no código. Configurações de itens (stats, chances, recompensas como do Lucky Strike) devem residir em `src/constants/itemsData.js`, enquanto configurações gerais do jogo (volume padrão, pontos por ação) devem estar em `src/constants/gameConfig.js`.
+- **Benefício:** Facilita manutenção, balanceamento e testes. Permite ajustar o comportamento do jogo sem modificar a lógica principal.
+
+### 2. Validação Crítica no Server-Side
+- **Lição:** Embora o cliente possa iniciar lógicas (como o intervalo do Minerador), a validação final e a modificação do estado compartilhado (score, vida) *devem* ocorrer no servidor.
+- **Exemplo:** O servidor *precisa* verificar se o `BITCOIN_MINER_ID` está em `participante.equippedAccessories` ao receber o evento `generate_passive_income`, mesmo que o cliente já tenha feito essa verificação.
+- **Benefício:** Previne trapaças e garante a integridade do estado do jogo.
+
+### 3. Interação entre Features Requer Cuidado
+- **Lição:** Ao adicionar novas mecânicas (Lucky Strike) que interagem com existentes (Manifesto Comunista, geração base do Minerador), a ordem das operações e as interdependências devem ser cuidadosamente analisadas e implementadas.
+- **Exemplo:** A refatoração da lógica `generate_passive_income` foi necessária para garantir que o multiplicador do Manifesto fosse aplicado corretamente *após* determinar se a recompensa era normal ou Lucky Strike.
+- **Benefício:** Garante que as mecânicas funcionem juntas como esperado, evitando bugs de lógica.
+
+### 4. Flexibilidade no Estado da UI para Eventos Múltiplos
+- **Lição:** Componentes de UI que exibem informações de diferentes tipos de eventos (como o `KillFeedDisplay` mostrando Kills e Lucky Strikes) podem precisar de uma estrutura de estado mais genérica.
+- **Exemplo:** A refatoração de `lastKillInfo` para `lastFeedEvent` (com um campo `type`) no hook `useSalaSocket` e a adaptação dos componentes consumidores (`page.js`, `KillFeedDisplay.jsx`) foram necessárias para acomodar o novo tipo de notificação.
+- **Benefício:** Torna a UI mais extensível para futuros tipos de eventos sem exigir refatorações massivas a cada nova adição.
+
+### 5. Responsabilidade Clara dos Componentes
+- **Lição:** A decisão de onde colocar estados e lógicas (ex: intervalo do minerador no `GameController`, formatação do feed no `page.js`) deve considerar quais componentes têm acesso aos dados necessários (props, contexto) e qual é a responsabilidade primária de cada um (controle de jogo vs. orquestração da página).
+- **Benefício:** Mantém o código organizado e facilita o rastreamento do fluxo de dados e lógica.

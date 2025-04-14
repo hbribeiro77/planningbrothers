@@ -38,7 +38,7 @@ planningbrothers/
 │   │   │   ├── KeyboardThrower.jsx # Sistema de arremesso de teclado
 │   │   │   ├── GameController.jsx # Controlador de elementos de gamificação e configurações
 │   │   │   ├── LifeBar.jsx   # Barra de vida dos participantes
-│   │   │   ├── KillFeedDisplay.jsx # Exibe as notificações de eliminação
+│   │   │   ├── KillFeedDisplay.jsx # Exibe notificações de eliminação e eventos (Lucky Strike)
 │   │   │   └── InventoryDisplay.jsx # Exibe inventário de armas e acessórios (com tooltips)
 │   │   ├── Mesa/             # Componentes da mesa de Planning Poker
 │   │   │   └── Mesa.jsx      # Componente principal da mesa (com tooltip de status no nome)
@@ -55,8 +55,8 @@ planningbrothers/
 │   │   └── useSalaUiEffects.js # Lógica de efeitos visuais da sala (animações, piscada)
 │   ├── constants/            # Constantes e configurações
 │   │   ├── socketEvents.js   # Eventos do Socket.io (idealmente)
-│   │   ├── gameConfig.js     # Configurações GERAIS do jogo (vida, PONTOS, tempos)
-│   │   └── itemsData.js      # Dados dos ITENS (armas, acessórios) com stats e bônus
+│   │   ├── gameConfig.js     # Configurações GERAIS do jogo (vida, PONTOS, tempos, som)
+│   │   └── itemsData.js      # Dados dos ITENS (armas, acessórios) com stats, bônus e geração passiva
 │   ├── services/             # Serviços da aplicação
 │   │   └── AnimationService.jsx # Serviço de animações centralizado (agora .jsx)
 │   ├── styles/               # Estilos CSS
@@ -75,7 +75,8 @@ planningbrothers/
 │   │       ├── keyboard.svg # Ícone de teclado para arremesso
 │   │       ├── collision.svg # Efeito de explosão
 │   │       ├── vest.svg      # Ícone do Colete DPE
-│   │       └── medalha.svg   # Ícone da Medalha de 5 Anos (NOVO)
+│   │       ├── medalha.svg   # Ícone da Medalha de 5 Anos
+│   │       └── minerador.svg # Ícone do Minerador de Bitcoin (NOVO)
 ├── .env.example             # Template de variáveis de ambiente
 ├── render.yaml              # Configuração de deploy no Render
 └── package.json             # Dependências e scripts
@@ -116,8 +117,9 @@ planningbrothers/
    - **Sistema de Itens e Combate:**
      - **Definição Centralizada (`itemsData.js`):** 
        - Armas (`type: 'weapon'`) e Acessórios (`type: 'accessory'`) definidos com atributos (dano, crítico, bônus, defesa, esquiva, **preço**).
-       - **ATUALIZADO:** Acessórios possuem `equipSlot` (ex: 'body', 'headband', 'passive') para definir grupos de equipamentos e comportamento. Slots nomeados ('body', 'headband', etc.) são mutuamente exclusivos. Slots 'passive' indicam bônus aplicados a partir do inventário, sem visual no avatar (a menos que `avatarVisual` seja definido).
+       - **ATUALIZADO:** Acessórios possuem `equipSlot` (ex: 'body', 'headband', 'passive') para definir grupos de equipamentos e comportamento. Slots nomeados ('body', 'headband', etc.) são mutuamente exclusivos. Slots 'passive' indicam bônus aplicados a partir do inventário ou se equipados, dependendo do bônus.
        - **ATUALIZADO:** Novos atributos foram adicionados: `scoreMultiplier` (multiplica ganhos de pontos, ex: "Manifesto Comunista"), `criticalChanceBonus` e `dodgeChanceBonus` (bônus fixos adicionados à chance final, ex: "Medalha de 5 Anos").
+       - **NOVO: Minerador de Bitcoin (`BITCOIN_MINER_ID`):** Item passivo (`equipSlot: 'passive'`) com atributos para geração de renda: `pontosPorIntervalo`, `intervaloGeracaoMs`, `luckyStrikeChance` (chance de 0 a 1), `luckyStrikeReward` (recompensa).
      - **Cálculo de Dano/Efeitos no Servidor:**
        - Servidor recebe `attack` (com `objectType` da arma).
        - Ataque Total: Soma do dano base da arma (fixo + dado) e dos bônus de ataque fixos/dados (`attackBonusFixed`, `attackBonusDice`) de **todos** os acessórios **EQUIPADOS** pelo atacante.
@@ -137,19 +139,23 @@ planningbrothers/
      - Acessórios com `equipSlot` diferente de `'passive'` podem ser equipados/desequipados via inventário (`InventoryDisplay`).
      - Estado no servidor `equippedAccessories: string[]` armazena IDs dos itens equipados.
      - Lógica `toggleEquipAccessory` no servidor gerencia o array, respeitando os `equipSlot` exclusivos.
-     - Visuais dos acessórios (definidos em `avatarVisual` no `itemsData.js`) são renderizados no avatar (`CartaParticipante`) para itens em `equippedAccessories`. **ATUALIZADO:** Adicionado visual SVG para "Medalha de 5 Anos".
-     - **ATUALIZADO:** Itens com `equipSlot: 'passive'` não precisam ser equipados; seus bônus (`scoreMultiplier`, `criticalChanceBonus`, `dodgeChanceBonus`) são aplicados diretamente do inventário pela lógica do servidor.
+     - Visuais dos acessórios (definidos em `avatarVisual` no `itemsData.js`) são renderizados no avatar (`CartaParticipante`) para itens em `equippedAccessories`. Adicionado visual SVG para "Medalha de 5 Anos" e "Minerador".
+     - **ATUALIZADO:** Itens com `equipSlot: 'passive'` aplicam bônus de forma mista: `scoreMultiplier`, `criticalChanceBonus`, `dodgeChanceBonus` são aplicados do **inventário**; atributos de geração passiva (como do Minerador) requerem que o item esteja **equipado**.
    - **Controles e Configurações (`GameController`):**
      - Ativação/desativação do Modo PVP.
-     - Configuração de efeitos visuais/sonoros: Mute, Volume, Piscada de Dano.
+     - Configuração de efeitos visuais/sonoros: Mute, **ATUALIZADO:** Volume (com valor inicial de `GAME_CONFIG.SOUND.DEFAULT_VOLUME`), Piscada de Dano.
      - Configuração de assinaturas de eliminação.
-   - **Kill Feed (Notificação de Eliminação):**
-     - Notificações visuais com pontuação e estatísticas (kills) atualizadas.
-     - Usa `GAME_CONFIG.POINTS.KILL` para pontuação base.
-     - Exibe mensagens personalizadas (assinaturas) e o tipo de arma usada.
+   - **Kill Feed e Notificações:**
+     - Notificações visuais de eliminações (`damageReceived` com `killTitle`) e **NOVO:** Lucky Strikes (`luckyStrikeNotification`).
+     - Usa `GAME_CONFIG.POINTS.KILL` para pontuação base de kill.
+     - Exibe mensagens personalizadas (assinaturas) e o tipo de arma usada para kills.
+     - **NOVO:** Notificações de Lucky Strike exibem o jogador e os pontos ganhos, com ícone de Bitcoin e cor verde.
+     - O componente `KillFeedDisplay` renderiza as notificações com estilos diferenciados por tipo.
    - **Sistema de Pontuação (Score/Dinheiro):**
      - **ATUALIZADO:** Pontos ganhos por kill e por voto revelado são definidos em `src/constants/gameConfig.js` (`POINTS.KILL`, `POINTS.VOTE_REVEALED`).
-     - **ATUALIZADO:** Ao ganhar pontos, o servidor verifica o inventário do jogador por itens com `scoreMultiplier` (ex: "Manifesto Comunista") e aplica o multiplicador aos pontos base.
+     - **ATUALIZADO:** Ao ganhar pontos (kill, voto), o servidor verifica o inventário do jogador por itens com `scoreMultiplier` (ex: "Manifesto Comunista") e aplica o multiplicador aos pontos base.
+     - **NOVO: Geração Passiva:** Quando o Minerador de Bitcoin está equipado, o cliente (`GameController`) envia um evento `generate_passive_income` ao servidor a cada `intervaloGeracaoMs`. O servidor valida, adiciona `pontosPorIntervalo` ao score, considerando a mecânica de Lucky Strike e o `scoreMultiplier` do Manifesto Comunista.
+     - **NOVO: Lucky Strike:** Na geração passiva, há uma chance (`luckyStrikeChance` do item) de ganhar `luckyStrikeReward` pontos em vez da recompensa normal. Essa recompensa maior também é afetada pelo `scoreMultiplier`.
      - Score não é resetado entre rodadas.
 
 ## Fluxo de Dados
@@ -167,17 +173,19 @@ planningbrothers/
    - Interações de gamificação:
      - Arremesso de objeto (`throwObject`) - Apenas para sincronizar animação inicial.
      - Aplicação de ataque (`attack`) - Enviado pelo atacante com o tipo de arma.
-     - Resposta de dano (`damageReceived`) - Enviado pelo servidor com dano final e flag de crítico.
+     - Resposta de dano (`damageReceived`) - Enviado pelo servidor com dano final e flags (crítico, esquiva, kill).
      - Compra de item (`buyItem`)
      - Equipar/Desequipar acessório (`toggleEquipAccessory`)
      - Mudança de modo PvP (`funModeChanged`)
      - Definição de assinaturas (`setCustomKillSignatures`)
+     - **NOVO:** Geração de renda passiva (`generate_passive_income`) - Cliente -> Servidor.
+     - **NOVO:** Notificação de Lucky Strike (`luckyStrikeNotification`) - Servidor -> Cliente.
 
 3. **Estado da Aplicação**
    - **Servidor:** Fonte única da verdade. Mantém estado da sala e dos participantes, incluindo:
      - `life`, `score`, `kills`, `inventory`, `equippedAccessories`.
-     - **ATUALIZADO:** Realiza cálculos de combate e pontuação considerando bônus e multiplicadores de itens no `inventory` ou `equippedAccessories` conforme a nova lógica.
-   - **Cliente:** Reflete estado do servidor. Exibe informações, itens, tooltips e animações. **ATUALIZADO:** A função `formatConsolidatedBonus` em `Mesa.jsx` recalcula status para o tooltip do nome.
+     - **ATUALIZADO:** Realiza cálculos de combate e pontuação considerando bônus e multiplicadores de itens no `inventory` ou `equippedAccessories` conforme a lógica definida. Processa geração passiva, Lucky Strike e multiplicadores.
+   - **Cliente:** Reflete estado do servidor. Exibe informações, itens, tooltips e animações. **ATUALIZADO:** A função `formatConsolidatedBonus` em `Mesa.jsx` recalcula status para o tooltip do nome. O `KillFeedDisplay` mostra notificações formatadas de Kills e Lucky Strikes.
 
 ## Segurança
 1. **Variáveis de Ambiente**
@@ -187,7 +195,7 @@ planningbrothers/
 
 2. **Boas Práticas**
    - CORS configurado para produção
-   - Validação de entrada de dados
+   - Validação de entrada de dados (preço, posse de item, etc.)
    - Sanitização de parâmetros
    - Gerenciamento de token por navegador
 

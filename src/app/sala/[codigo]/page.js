@@ -146,7 +146,7 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
         color = 'yellow'; // Cor para sorte
         message = (
           <>
-            {playerName} minerou {reward} pontos!
+            {playerName} minerou {reward} moedas!
           </>
         );
         icon = <IconStar size="1.2rem" />; // Ícone para lucky strike (Ex: estrela)

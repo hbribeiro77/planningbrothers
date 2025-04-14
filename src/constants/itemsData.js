@@ -22,7 +22,7 @@ const ITEMS_DATA = {
     price: 0, // Arma inicial
     type: 'weapon', // << Tipo Arma
     displayOrder: 1, // << Ordem de exibição
-    description: 'Ataque base: 1d6. Chance de Crítico: 5%.',
+    description: 'A ferramenta padrão do guerreiro moderno. E se pegar de quina, mata!',
     iconName: 'IconKeyboard', // << Adicionar nome do ícone
     iconColor: 'blue', // << Adicionar cor (exemplo)
     baseDamageFixed: 0, // << Dano base fixo
@@ -43,7 +43,7 @@ const ITEMS_DATA = {
     type: 'accessory', // << Tipo Acessório
     equipSlot: 'body', // << Slot Exclusivo para Corpo
     displayOrder: 10, // << Ordem de exibição
-    description: 'Defesa Fixa: +1.',
+    description: 'Feito com o melhor tecido... disponível no último pregão. Defesa Fixa: +1.',
     iconName: 'IconShirt', 
     iconColor: DPE_GREEN,
     mainColor: DPE_GREEN,
@@ -77,7 +77,7 @@ const ITEMS_DATA = {
     type: 'accessory',
     equipSlot: 'body', // << Slot Exclusivo para Corpo
     displayOrder: 11, // << Ordem de exibição
-    description: 'Defesa Fixa: +1.',
+    description: "Tecido similar ao verde, mas em um tom azul que grita 'trabalho sério'. Defesa Fixa: +1.",
     iconName: 'IconShirt', 
     iconColor: BLUE_MAIN,
     mainColor: BLUE_MAIN,
@@ -193,18 +193,18 @@ const ITEMS_DATA = {
   },
 
   [BITCOIN_MINER_ID]: {
-    name: 'Minerador de Bitcoin',
+    name: 'Minerador',
     price: 10,
     type: 'accessory',
     equipSlot: 'passive',
     displayOrder: 120,
-    description: 'Gere renda passiva automaticamente! +1 Ponto a cada 10 segundos.',
+    description: 'Gere renda passiva automaticamente! +1 moeda a cada 10 segundos.',
     iconName: 'IconCurrencyBitcoin',
     iconColor: 'orange',
     // Atributos de geração
     pontosPorIntervalo: 1,
     intervaloGeracaoMs: 10000,
-    luckyStrikeChance: 0.01, // <<< CHANCE AQUI (1%)
+    luckyStrikeChance: 100, // <<< CHANCE AQUI (1%)
     luckyStrikeReward: 100,  // <<< RECOMPENSA AQUI
     // Sem atributos de combate diretos
     scoreMultiplier: 1,

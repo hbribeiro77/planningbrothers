@@ -21,6 +21,11 @@ const GAME_CONFIG = {
   ANIMATION: {
     LIFE_BAR_FADE_DURATION: 300, // Tempo em ms da animação de fade da barra de vida
   },
+
+  // Configurações de som
+  SOUND: {
+    DEFAULT_VOLUME: 0.3, // Volume padrão inicial (0 a 1)
+  },
 };
 
 module.exports = { GAME_CONFIG }; 

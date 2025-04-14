@@ -4,6 +4,7 @@ import { IconSettings, IconKeyboard, IconVolume, IconVolumeOff, IconBellRinging,
 import { KeyboardThrower } from './KeyboardThrower';
 import { usePvpStatus } from '@/contexts/PvpContext';
 import { ITEMS_DATA, BITCOIN_MINER_ID } from '@/constants/itemsData.js';
+import { GAME_CONFIG } from '@/constants/gameConfig.js';
 
 const MAX_KILL_MESSAGE_LENGTH = 50;
 const MAX_SIGNATURES = 3;
@@ -25,7 +26,7 @@ export function GameController({
   const { pvpStatus, togglePvpStatus } = usePvpStatus();
   const [drawerOpened, setDrawerOpened] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [volumeLevel, setVolumeLevel] = useState(0.5);
+  const [volumeLevel, setVolumeLevel] = useState(GAME_CONFIG.SOUND.DEFAULT_VOLUME);
   const [flashEnabled, setFlashEnabled] = useState(true);
   const [signatures, setSignatures] = useState(Array(MAX_SIGNATURES).fill(''));
   const [originalSignatures, setOriginalSignatures] = useState(Array(MAX_SIGNATURES).fill(''));
@@ -79,7 +80,7 @@ export function GameController({
     console.log(`[GameController] handleToggleSound: Setting soundEnabled to ${isEnabled}`);
     setSoundEnabled(isEnabled);
     if (isEnabled && volumeLevel === 0) {
-      setVolumeLevel(0.5);
+      setVolumeLevel(GAME_CONFIG.SOUND.DEFAULT_VOLUME);
     }
   };
 

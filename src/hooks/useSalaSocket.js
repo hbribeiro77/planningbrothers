@@ -27,9 +27,11 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
   // >>> REGISTRO DE IDs DE EVENTOS PROCESSADOS <<<
   const processedDamageEventIds = useRef(new Set());
 
-  // Conectar à sala quando o componente montar
-  useEffect(() => {
+  // ✅ Função para entrar na sala (reutilizável)
+  const entrarNaSala = useCallback(() => {
     if (!socket) return;
+
+    console.log('🚪 Entrando na sala:', codigoSala, 'como:', nomeUsuario);
 
     // Configurar URL da sala
     setSalaURL(`${window.location.origin}/sala/${codigoSala}?convite=true`);
@@ -44,9 +46,17 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
         nome: nomeUsuario,
         isObservador: modoObservador,
         token,
-        browserName
+        browserName,
+        isReconnection: socket.recovered || false // ✅ Indica se é reconexão
       }
     });
+  }, [socket, codigoSala, nomeUsuario, modoObservador]);
+
+  // Conectar à sala quando o componente montar
+  useEffect(() => {
+    if (!socket) return;
+
+    entrarNaSala();
 
     // Receber erro de entrada
     socket.on('erroEntrada', ({ mensagem }) => {
@@ -204,7 +214,34 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
       socket.off('luckyStrikeNotification', handleLuckyStrike); // <<< LIMPA NOVO LISTENER
     };
 
-  }, [socket]); // Dependência apenas no socket
+    // ✅ Listener para reconexão automática
+    const handleSocketReconnected = () => {
+      console.log('🔄 Socket reconectado! Re-entrando na sala...');
+      setTimeout(() => {
+        entrarNaSala();
+      }, 1000); // Aguardar 1s para estabilizar
+    };
+
+    // ✅ Adicionar listener para evento customizado de reconexão
+    window.addEventListener('socket-reconnected', handleSocketReconnected);
+
+    // Cleanup
+    return () => {
+      // Remover todos os listeners
+      socket.off('erroEntrada');
+      socket.off(SOCKET_EVENTS.ATUALIZAR_PARTICIPANTES);
+      socket.off(SOCKET_EVENTS.VOTO_RECEBIDO);
+      socket.off(SOCKET_EVENTS.VOTOS_REVELADOS);
+      socket.off(SOCKET_EVENTS.VOTACAO_REINICIADA);
+      socket.off(SOCKET_EVENTS.MODO_OBSERVADOR_ALTERADO);
+      socket.off('throwObjectAnimation');
+      socket.off('damageReceived');
+      socket.off('funModeChanged');
+      socket.off('luckyStrikeNotification');
+      window.removeEventListener('socket-reconnected', handleSocketReconnected);
+    };
+
+  }, [socket, entrarNaSala]); // ✅ Adicionar entrarNaSala nas dependências
 
   // Funções de manipulação de eventos
   const handleVotar = useCallback((valor) => {

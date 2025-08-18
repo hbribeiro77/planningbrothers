@@ -26,6 +26,7 @@ import Mesa from '@/components/Mesa/Mesa';
 import OpcoesVotacao from '@/components/Sala/OpcoesVotacao';
 import { useSalaSocket } from '@/hooks/useSalaSocket';
 import { useSalaUiEffects } from '@/hooks/useSalaUiEffects';
+import { useKeepAlive } from '@/hooks/useKeepAlive';
 import FormularioEntrada, { LOCALSTORAGE_NOME_KEY } from '@/components/Auth/FormularioEntrada';
 import { GameController } from '@/components/GameElements/GameController';
 import { InventoryDisplay } from '@/components/GameElements/InventoryDisplay';
@@ -34,6 +35,7 @@ import { LifeBarProvider } from '@/contexts/LifeBarContext';
 import { PvpProvider, PvpContext } from '@/contexts/PvpContext';
 import ShopDrawer from '@/components/Shop/ShopDrawer';
 import { AnimationService } from '@/services/AnimationService';
+import ConnectionIndicator from '@/components/ConnectionStatus/ConnectionIndicator';
 
 // Mover a definição para fora para poder usar no useEffect
 const accessoryIcons = {
@@ -113,6 +115,14 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     isFlashEffectEnabled,
     shouldShowAttentionOverlay
   );
+
+  // ✅ Sistema de keep-alive para manter conexão ativa (otimizado para Render)
+  const { isActive, forcePing } = useKeepAlive({
+    enabled: conectado, // Só ativar quando conectado à sala
+    pingInterval: 20000,     // ✅ 20s quando ativo (bem menor que 50s do Render)
+    inactiveInterval: 30000, // ✅ 30s quando inativo (ainda menor que 50s)
+    activityTimeout: 120000  // 2min para considerar inativo
+  });
 
   // --- Lógica de formatação da mensagem do Kill Feed --- 
   // RENOMEADO e MODIFICADO para lidar com diferentes tipos de evento
@@ -336,6 +346,9 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
                 </Tooltip>
               )}
             </CopyButton>
+            
+            {/* ✅ Indicador de Status de Conexão */}
+            <ConnectionIndicator isActive={isActive} onForcePing={forcePing} />
             <Button 
               variant={modoObservador ? 'light' : 'filled'}
               onClick={toggleModoObservadorComAnimacao}

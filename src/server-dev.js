@@ -49,11 +49,25 @@ function rollDice(diceString) {
 app.prepare().then(() => {
   const server = express();
   const httpServer = createServer(server);
+  
+  // ✅ Configurar keep-alive HTTP para Render (50s timeout)
+  httpServer.keepAliveTimeout = 45000; // ✅ 45s (menor que 50s do Render)
+  httpServer.headersTimeout = 46000;   // ✅ 46s (maior que keepAliveTimeout)
+  
   const io = new Server(httpServer, {
     cors: {
       origin: '*',
       methods: ['GET', 'POST']
-    }
+    },
+    // ✅ Configurações de ping/pong do Socket.io para Render
+    pingTimeout: 45000,          // ✅ 45s timeout para ping (menor que 50s)
+    pingInterval: 20000,         // ✅ 20s intervalo entre pings automáticos
+    upgradeTimeout: 30000,       // 30s timeout para upgrade
+    allowUpgrades: true,
+    transports: ['websocket', 'polling'],
+    // ✅ Configurações adicionais para estabilidade
+    connectTimeout: 45000,       // 45s timeout para conexão inicial
+    serveClient: false           // Não servir cliente Socket.io (economiza recursos)
   });
 
   // Gerenciamento de salas
@@ -61,6 +75,19 @@ app.prepare().then(() => {
 
   io.on('connection', (socket) => {
     console.log('Cliente conectado:', socket.id);
+    
+    // ✅ Handler para ping/pong keep-alive
+    socket.on('ping', (data) => {
+      const { timestamp, manual } = data || {};
+      console.log(`💓 Ping recebido de ${socket.id}${manual ? ' (manual)' : ''}`);
+      
+      // Responder com pong
+      socket.emit('pong', { 
+        timestamp, 
+        serverTime: Date.now(),
+        socketId: socket.id 
+      });
+    });
 
     // Entrar em uma sala
     socket.on('entrarSala', ({ codigo, usuario }) => {
@@ -85,6 +112,7 @@ app.prepare().then(() => {
       if (!salas.has(codigo)) {
         salas.set(codigo, {
           participantes: new Map(),
+          participantesDesconectados: new Map(), // ✅ Grace period para reconexão
           moderadorId: null,
           revelarVotos: false,
           pvpAtivo: false, // Adiciona estado PVP inicial para a sala
@@ -96,24 +124,46 @@ app.prepare().then(() => {
       const salaAtual = salas.get(codigo);
       const isModerador = salaAtual.participantes.size === 0;
 
-      // Verifica se o usuário já está na sala (reconexão?)
+      // ✅ Verifica se o usuário já está na sala ou foi desconectado recentemente
       let participanteExistente = null;
+      let isReconnection = false;
+      
+      // Verificar nos participantes ativos
       if (salaAtual.participantes) {
-          participanteExistente = Array.from(salaAtual.participantes.values()).find(p => p.browserToken === usuario.browserToken && p.nome === usuario.nome);
+          participanteExistente = Array.from(salaAtual.participantes.values()).find(p => p.token === usuario.token && p.browserName === usuario.browserName && p.nome === usuario.nome);
+      }
+      
+      // ✅ Se não encontrou nos ativos, verificar nos desconectados (grace period)
+      if (!participanteExistente && salaAtual.participantesDesconectados) {
+          for (let [oldSocketId, p] of salaAtual.participantesDesconectados.entries()) {
+              if (p.token === usuario.token && p.browserName === usuario.browserName && p.nome === usuario.nome) {
+                  participanteExistente = p;
+                  isReconnection = true;
+                  salaAtual.participantesDesconectados.delete(oldSocketId);
+                  console.log(`✅ [${codigo}] Usuário ${usuario.nome} reconectou após desconexão! Restaurando estado...`);
+                  break;
+              }
+          }
       }
       
       if (participanteExistente) {
           // Atualizar o socket ID do participante existente
-          // Remover a entrada antiga pelo socket.id antigo (se houver)
-          for (let [oldSocketId, p] of salaAtual.participantes.entries()) {
-              if (p.browserToken === usuario.browserToken && p.nome === usuario.nome && oldSocketId !== socket.id) {
-                  salaAtual.participantes.delete(oldSocketId);
-                  break;
+          // Remover a entrada antiga pelo socket.id antigo (se houver e não for reconexão)
+          if (!isReconnection) {
+              for (let [oldSocketId, p] of salaAtual.participantes.entries()) {
+                  if (p.token === usuario.token && p.browserName === usuario.browserName && p.nome === usuario.nome && oldSocketId !== socket.id) {
+                      salaAtual.participantes.delete(oldSocketId);
+                      break;
+                  }
               }
           }
           // Adiciona com o novo socket.id, mantendo o estado
-          salaAtual.participantes.set(socket.id, { ...participanteExistente, id: socket.id });
-          console.log(`[${codigo}] Usuário ${usuario.nome} reconectou com socket ID ${socket.id}`);
+          salaAtual.participantes.set(socket.id, { 
+              ...participanteExistente, 
+              id: socket.id,
+              lastConnectedAt: Date.now() // ✅ Timestamp da última conexão
+          });
+          console.log(`🔄 [${codigo}] Usuário ${usuario.nome} ${isReconnection ? 'reconectou' : 'atualizou socket'} com ID ${socket.id}`);
           
       } else {
           // Primeiro adiciona o usuário à sala (Novo Participante)
@@ -754,34 +804,81 @@ app.prepare().then(() => {
     // --- Fim Listener Minerador ---
     // <<< END NEW LISTENER >>>
 
-    // Desconexão
+    // ✅ Desconexão com Grace Period
     socket.on('disconnect', () => {
-      console.log('Cliente desconectado:', socket.id);
+      console.log('🔌 Cliente desconectado:', socket.id);
       
       for (const [codigo, sala] of salas.entries()) {
         if (sala.participantes.has(socket.id)) {
           const participante = sala.participantes.get(socket.id);
           const eraModerador = participante.isModerador;
           
+          // ✅ Mover para lista de desconectados ao invés de remover imediatamente
+          participante.disconnectedAt = Date.now();
+          sala.participantesDesconectados.set(socket.id, participante);
           sala.participantes.delete(socket.id);
           
-          if (sala.participantes.size === 0) {
-            salas.delete(codigo);
-            continue;
-          }
+          console.log(`⏳ [${codigo}] ${participante.nome} desconectado. Grace period de 30s iniciado...`);
           
-          if (eraModerador) {
-            const novoModerador = sala.participantes.values().next().value;
-            if (novoModerador) {
-              novoModerador.isModerador = true;
+          // ✅ Grace period de 30 segundos
+          setTimeout(() => {
+            // Verificar se ainda está desconectado
+            if (sala.participantesDesconectados.has(socket.id)) {
+              const tempoDesconectado = Date.now() - participante.disconnectedAt;
+              if (tempoDesconectado >= 30000) { // 30 segundos
+                sala.participantesDesconectados.delete(socket.id);
+                console.log(`❌ [${codigo}] ${participante.nome} removido após 30s desconectado`);
+                
+                // Se era moderador e ainda há participantes, escolher novo
+                if (eraModerador && sala.participantes.size > 0) {
+                  const novoModerador = sala.participantes.values().next().value;
+                  if (novoModerador) {
+                    novoModerador.isModerador = true;
+                    console.log(`👑 [${codigo}] ${novoModerador.nome} é o novo moderador`);
+                  }
+                }
+                
+                // Notificar sobre mudança apenas se ainda há participantes
+                if (sala.participantes.size > 0) {
+                  io.to(codigo).emit('atualizarParticipantes', 
+                    Array.from(sala.participantes.values())
+                  );
+                }
+              }
             }
-          }
+            
+            // ✅ Limpar sala vazia
+            if (sala.participantes.size === 0 && sala.participantesDesconectados.size === 0) {
+              salas.delete(codigo);
+              console.log(`🗑️ Sala ${codigo} removida (vazia)`);
+            }
+          }, 30000);
           
+          // ✅ Notificar imediatamente sobre a saída (sem o usuário desconectado)
           io.to(codigo).emit('atualizarParticipantes', 
             Array.from(sala.participantes.values())
           );
         }
       }
+    });
+  });
+
+  // ✅ Health check endpoint para manter servidor ativo
+  server.get('/api/health', (req, res) => {
+    res.status(200).json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      salas: salas.size
+    });
+  });
+
+  // ✅ Endpoint para forçar keep-alive
+  server.get('/api/ping', (req, res) => {
+    res.status(200).json({ 
+      pong: true, 
+      timestamp: new Date().toISOString() 
     });
   });
 

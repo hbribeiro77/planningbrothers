@@ -1,0 +1,8 @@
+warning: in the working copy of 'src/app/sala/[codigo]/page.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/contexts/SocketContext.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/hooks/useSalaSocket.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/server-dev.js', LF will be replaced by CRLF the next time Git touches it
+src/app/sala/[codigo]/page.js
+src/contexts/SocketContext.js
+src/hooks/useSalaSocket.js
+src/server-dev.js

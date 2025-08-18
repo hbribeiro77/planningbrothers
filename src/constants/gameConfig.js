@@ -24,7 +24,7 @@ const GAME_CONFIG = {
 
   // Configurações de som
   SOUND: {
-    DEFAULT_VOLUME: 0.3, // Volume padrão inicial (0 a 1)
+    DEFAULT_VOLUME: 0.03, // Volume padrão inicial (0 a 1)
   },
 };
 

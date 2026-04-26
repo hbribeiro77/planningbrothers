@@ -41,3 +41,4 @@ git push origin main
 - Sempre verificar se não há conflitos antes do push
 - Usar mensagens de commit descritivas seguindo padrão conventional commits
 - Testar localmente antes de fazer push
+

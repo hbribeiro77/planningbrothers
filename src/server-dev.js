@@ -59,105 +59,238 @@ app.prepare().then(() => {
   // Gerenciamento de salas
   const salas = new Map();
 
+  // Tempo que um participante desconectado fica "guardado" esperando reconexão (F5, queda de rede)
+  const RECONNECT_GRACE_MS = 60 * 1000;
+  // Timers de remoção pendentes, chave `${codigo}:${socketId}` (fora do participante p/ não serializar)
+  const remocoesPendentes = new Map();
+
+  // Campos que nunca devem ir para os outros clientes
+  const CAMPOS_PRIVADOS = ['token', 'tabId', 'proximaMineracao'];
+
+  function sanitizarParticipante(p, esconderVoto) {
+    const copia = { ...p };
+    for (const campo of CAMPOS_PRIVADOS) delete copia[campo];
+    if (esconderVoto) copia.valorVotado = null;
+    return copia;
+  }
+
+  /**
+   * Envia a lista de participantes para a sala.
+   * Antes da revelação, cada cliente só recebe o PRÓPRIO valorVotado (os outros vêm null),
+   * para ninguém espiar os votos pelo DevTools.
+   */
+  function emitirParticipantes(codigo) {
+    const sala = salas.get(codigo);
+    if (!sala) return;
+    const lista = Array.from(sala.participantes.values());
+
+    if (sala.revelarVotos) {
+      io.to(codigo).emit('atualizarParticipantes', lista.map(p => sanitizarParticipante(p, false)));
+      return;
+    }
+
+    for (const destinatario of lista) {
+      if (destinatario.desconectado) continue;
+      const visao = lista.map(p => sanitizarParticipante(p, p.id !== destinatario.id));
+      io.to(destinatario.id).emit('atualizarParticipantes', visao);
+    }
+  }
+
+  function removerParticipanteDefinitivo(codigo, socketId) {
+    remocoesPendentes.delete(`${codigo}:${socketId}`);
+    const sala = salas.get(codigo);
+    if (!sala) return;
+    const participante = sala.participantes.get(socketId);
+    if (!participante || !participante.desconectado) return; // já reconectou
+
+    sala.participantes.delete(socketId);
+    console.log(`[${codigo}] ${participante.nome} removido após ${RECONNECT_GRACE_MS / 1000}s sem reconectar.`);
+
+    if (sala.participantes.size === 0) {
+      salas.delete(codigo);
+      return;
+    }
+
+    if (participante.isModerador) {
+      const novoModerador = Array.from(sala.participantes.values()).find(p => !p.desconectado)
+        || sala.participantes.values().next().value;
+      if (novoModerador) novoModerador.isModerador = true;
+    }
+
+    emitirParticipantes(codigo);
+  }
+
+  // Calcula e aplica a renda do Minerador para um participante (chamado pelo loop do servidor)
+  function minerarPara(codigo, participante) {
+    const minerData = ITEMS_DATA[BITCOIN_MINER_ID];
+    if (!minerData) return;
+
+    const pontosGeradosBase = minerData.pontosPorIntervalo || 1;
+    const luckyStrikeChance = minerData.luckyStrikeChance || 0;
+    const luckyStrikeReward = minerData.luckyStrikeReward || 0;
+    let recompensa = pontosGeradosBase;
+    let wasLuckyStrike = false;
+
+    if (luckyStrikeChance > 0 && luckyStrikeReward > 0 && Math.random() < luckyStrikeChance) {
+      recompensa = luckyStrikeReward;
+      wasLuckyStrike = true;
+    }
+
+    let manifestoMultiplier = 1;
+    if (participante.equippedAccessories?.includes(MANIFESTO_ID)) {
+      manifestoMultiplier = ITEMS_DATA[MANIFESTO_ID]?.scoreMultiplier || 1;
+      recompensa *= manifestoMultiplier;
+    }
+
+    participante.score = (participante.score || 0) + recompensa;
+
+    if (wasLuckyStrike) {
+      console.log(`[Minerador][${codigo}] *** LUCKY STRIKE! *** ${participante.nome} ganhou ${recompensa} pontos! (Base: ${luckyStrikeReward}, Multiplier: ${manifestoMultiplier})`);
+      io.to(codigo).emit('luckyStrikeNotification', {
+        eventId: `${Date.now()}-lucky-${participante.id}`,
+        playerName: participante.nome,
+        reward: recompensa,
+        timestamp: Date.now()
+      });
+    }
+  }
+
+  // Loop do Minerador: roda no servidor, então o cliente não consegue "acelerar" a mineração
+  setInterval(() => {
+    const minerData = ITEMS_DATA[BITCOIN_MINER_ID];
+    const intervalo = minerData?.intervaloGeracaoMs || 10000;
+    const agora = Date.now();
+
+    for (const [codigo, sala] of salas.entries()) {
+      let mudou = false;
+      for (const p of sala.participantes.values()) {
+        const temMinerador = p.equippedAccessories?.includes(BITCOIN_MINER_ID);
+        if (!temMinerador || p.desconectado) {
+          p.proximaMineracao = null; // reinicia o ciclo ao equipar/reconectar
+          continue;
+        }
+        if (!p.proximaMineracao) {
+          p.proximaMineracao = agora + intervalo;
+          continue;
+        }
+        if (agora >= p.proximaMineracao) {
+          p.proximaMineracao = agora + intervalo;
+          minerarPara(codigo, p);
+          mudou = true;
+        }
+      }
+      if (mudou) emitirParticipantes(codigo);
+    }
+  }, 1000);
+
   io.on('connection', (socket) => {
     console.log('Cliente conectado:', socket.id);
 
     // Entrar em uma sala
     socket.on('entrarSala', ({ codigo, usuario }) => {
-      // Verifica se já existe alguém com este token/browser na sala
-      const sala = salas.get(codigo);
-      if (sala) {
-        const participanteExistente = Array.from(sala.participantes.values())
-          .find(p => p.token === usuario.token && p.browserName === usuario.browserName);
-          
-        if (participanteExistente) {
-          // Se já existe uma sessão deste navegador na sala, rejeita a conexão
-          socket.emit('erroEntrada', {
-            mensagem: 'Você já está conectado nesta sala em outra aba/janela deste navegador'
-          });
-          return;
-        }
-      }
-      
-      // Se não existe, permite a entrada
-      socket.join(codigo);
-      
+      if (!codigo || !usuario) return;
+
       if (!salas.has(codigo)) {
         salas.set(codigo, {
           participantes: new Map(),
           moderadorId: null,
           revelarVotos: false,
-          pvpAtivo: false, // Adiciona estado PVP inicial para a sala
-          // Adiciona mais estados da sala se necessário
+          pvpAtivo: false,
         });
         console.log(`Sala ${codigo} criada por ${usuario.nome}`);
       }
-      
       const salaAtual = salas.get(codigo);
-      const isModerador = salaAtual.participantes.size === 0;
 
-      // Verifica se o usuário já está na sala (reconexão?)
-      let participanteExistente = null;
-      if (salaAtual.participantes) {
-          participanteExistente = Array.from(salaAtual.participantes.values()).find(p => p.browserToken === usuario.browserToken && p.nome === usuario.nome);
-      }
-      
-      if (participanteExistente) {
-          // Atualizar o socket ID do participante existente
-          // Remover a entrada antiga pelo socket.id antigo (se houver)
-          for (let [oldSocketId, p] of salaAtual.participantes.entries()) {
-              if (p.browserToken === usuario.browserToken && p.nome === usuario.nome && oldSocketId !== socket.id) {
-                  salaAtual.participantes.delete(oldSocketId);
-                  break;
-              }
-          }
-          // Adiciona com o novo socket.id, mantendo o estado
-          salaAtual.participantes.set(socket.id, { ...participanteExistente, id: socket.id });
-          console.log(`[${codigo}] Usuário ${usuario.nome} reconectou com socket ID ${socket.id}`);
-          
-      } else {
-          // Primeiro adiciona o usuário à sala (Novo Participante)
-          salaAtual.participantes.set(socket.id, {
-              ...usuario,
-              id: socket.id,
-              jaVotou: false,
-              valorVotado: null,
-              isModerador,
-              keyboardMode: isModerador ? true : false,
-              life: GAME_CONFIG.LIFE.MAX, 
-              customKillSignatures: [],
-              score: 0,
-              kills: 0, 
-              inventory: [KEYBOARD_ID], 
-              // ALTERADO: Usar array para múltiplos acessórios
-              equippedAccessories: [], 
+      // Já existe alguém deste navegador (mesmo token) na sala?
+      const existente = Array.from(salaAtual.participantes.values())
+        .find(p => p.token && p.token === usuario.token && p.browserName === usuario.browserName);
+
+      if (existente) {
+        const socketAntigo = existente.id !== socket.id ? io.sockets.sockets.get(existente.id) : null;
+        const antigoAindaAtivo = !!(socketAntigo && socketAntigo.connected && !existente.desconectado);
+        const mesmaAba = !!usuario.tabId && existente.tabId === usuario.tabId;
+
+        if (antigoAindaAtivo && !mesmaAba) {
+          // Outra aba de verdade
+          socket.emit('erroEntrada', {
+            mensagem: 'Você já está conectado nesta sala em outra aba/janela deste navegador'
           });
-          console.log(`[${codigo}] Usuário ${usuario.nome} entrou na sala com socket ID ${socket.id}`);
+          return;
+        }
 
-          // Se não for o primeiro, copia o modo PVP do moderador
-          if (!isModerador) {
-              const moderador = Array.from(salaAtual.participantes.values()).find(p => p.isModerador);
-              if (moderador) {
-                  const participanteNovo = salaAtual.participantes.get(socket.id);
-                  participanteNovo.keyboardMode = moderador.keyboardMode;
-              }
-          }
+        // Reconexão (F5, queda de rede, ou a mesma aba voltando antes do servidor perceber a queda):
+        // transfere o estado completo para o novo socket.
+        const chave = `${codigo}:${existente.id}`;
+        if (remocoesPendentes.has(chave)) {
+          clearTimeout(remocoesPendentes.get(chave));
+          remocoesPendentes.delete(chave);
+        }
+
+        const idAntigo = existente.id;
+        salaAtual.participantes.delete(idAntigo);
+        salaAtual.participantes.set(socket.id, {
+          ...existente,
+          id: socket.id,
+          nome: usuario.nome || existente.nome,
+          tabId: usuario.tabId || existente.tabId,
+          desconectado: false,
+        });
+        socket.join(codigo);
+
+        if (socketAntigo && idAntigo !== socket.id) {
+          // O socket velho sai da sala mas não é derrubado (evita briga entre abas duplicadas)
+          socketAntigo.leave(codigo);
+        }
+
+        console.log(`[${codigo}] ${usuario.nome} reconectou (socket ${idAntigo} -> ${socket.id}) mantendo score/itens.`);
+        if (salaAtual.revelarVotos) socket.emit('votosRevelados');
+        emitirParticipantes(codigo);
+        return;
       }
-      
-      io.to(codigo).emit('atualizarParticipantes', 
-        Array.from(salaAtual.participantes.values())
-      );
+
+      // Novo participante
+      socket.join(codigo);
+      const participantesAtuais = Array.from(salaAtual.participantes.values());
+      const isModerador = !participantesAtuais.some(p => p.isModerador);
+      const moderador = participantesAtuais.find(p => p.isModerador);
+
+      salaAtual.participantes.set(socket.id, {
+        nome: usuario.nome,
+        isObservador: !!usuario.isObservador,
+        token: usuario.token,
+        browserName: usuario.browserName,
+        tabId: usuario.tabId,
+        id: socket.id,
+        jaVotou: false,
+        valorVotado: null,
+        isModerador,
+        keyboardMode: isModerador ? true : (moderador ? moderador.keyboardMode : false),
+        life: GAME_CONFIG.LIFE.MAX,
+        customKillSignatures: [],
+        score: 0,
+        kills: 0,
+        inventory: [KEYBOARD_ID],
+        equippedAccessories: [],
+        desconectado: false,
+      });
+      console.log(`[${codigo}] Usuário ${usuario.nome} entrou na sala com socket ID ${socket.id}`);
+
+      if (salaAtual.revelarVotos) socket.emit('votosRevelados');
+      emitirParticipantes(codigo);
     });
-    
+
     // Arremessar objeto (eventos de gamificação)
     socket.on('throwObject', (data) => {
-      const { codigo, fromUser, toUser, objectType } = data;
-      
+      const { codigo, toUser, objectType } = data;
+
       if (!salas.has(codigo)) return;
+      const atacante = salas.get(codigo).participantes.get(socket.id);
+      // Só participante vivo da sala pode arremessar
+      if (!atacante || atacante.life <= GAME_CONFIG.LIFE.MIN) return;
 
       // Apenas repassa o evento para iniciar a animação
       io.to(codigo).emit('throwObject', {
-        fromUser,
+        fromUser: socket.id,
         toUser,
         objectType
       });
@@ -165,7 +298,8 @@ app.prepare().then(() => {
 
     // Aplicar dano após a animação
     socket.on('attack', (data) => {
-      const { codigo, fromUserId, targetId, objectType } = data;
+      const { codigo, targetId, objectType } = data;
+      const fromUserId = socket.id; // Nunca confiar no ID enviado pelo cliente
       
       if (!salas.has(codigo)) {
         console.warn(`[${codigo}] Sala não encontrada para o evento attack. Abortando.`);
@@ -177,8 +311,29 @@ app.prepare().then(() => {
         .find(p => p.id === targetId);
       const participanteAtacante = sala.participantes.get(fromUserId);
 
+      // Morto não ataca
+      if (participanteAtacante && participanteAtacante.life <= GAME_CONFIG.LIFE.MIN) {
+        console.log(`[${codigo}] ${participanteAtacante.nome} tentou atacar morto. Ignorado.`);
+        return;
+      }
+
       if (participanteAlvo && participanteAtacante && fromUserId !== targetId) {
         
+        // --- Cutucão em defunto: sem dano, crítico, esquiva ou kill ---
+        // Continua emitindo o evento para manter a piscada/tremida (chamar atenção de quem não votou).
+        if (participanteAlvo.life <= GAME_CONFIG.LIFE.MIN) {
+          io.to(codigo).emit('damageReceived', {
+            eventId: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            targetId: targetId,
+            damage: 0,
+            currentLife: participanteAlvo.life,
+            isCritical: false,
+            isDodge: false,
+            isCorpseHit: true
+          });
+          return;
+        }
+
         // --- INÍCIO: Verificação de Esquiva (Dodge) --- CORRECTED ---
         let highestDodgeChance = 0;
         let dodgingItemName = null;
@@ -350,14 +505,14 @@ app.prepare().then(() => {
 
         io.to(codigo).emit('damageReceived', payload);
         
-        io.to(codigo).emit('atualizarParticipantes', Array.from(sala.participantes.values()));
+        emitirParticipantes(codigo);
 
       } else {
           // Log caso atacante seja igual ao alvo ou participantes não encontrados
           if (fromUserId === targetId) {
               console.warn(`[${codigo}] Tentativa de dano onde atacante (${fromUserId}) é igual ao alvo (${targetId}). Evento ignorado.`);
           } else {
-              console.warn(`[${codigo}] Atacante (${fromUserId}, Nome=${participanteAtacante.nome}) ou Alvo (${targetId}, Nome=${participanteAlvo.nome}) não encontrado(s) ou inválido. Evento ignorado.`);
+              console.warn(`[${codigo}] Atacante (${fromUserId}, Nome=${participanteAtacante?.nome}) ou Alvo (${targetId}, Nome=${participanteAlvo?.nome}) não encontrado(s) ou inválido. Evento ignorado.`);
           }
           // Não faz nada se o atacante for igual ao alvo ou se algum participante não foi encontrado
       }
@@ -376,9 +531,7 @@ app.prepare().then(() => {
         participante.valorVotado = voto;
         
         // Manter atualização completa para garantir consistência da UI
-        io.to(codigo).emit('atualizarParticipantes', 
-          Array.from(sala.participantes.values())
-        );
+        emitirParticipantes(codigo);
       }
     });
 
@@ -393,9 +546,7 @@ app.prepare().then(() => {
         participante.jaVotou = false;
         participante.valorVotado = null;
         
-        io.to(codigo).emit('atualizarParticipantes', 
-          Array.from(sala.participantes.values())
-        );
+        emitirParticipantes(codigo);
       }
     });
 
@@ -430,9 +581,8 @@ app.prepare().then(() => {
       // ------------------------------------
 
       // Emitir atualização de participantes PRIMEIRO (com scores atualizados)
-      if (participantesAtualizados) {
-          io.to(codigo).emit('atualizarParticipantes', Array.from(sala.participantes.values()));
-      }
+      // Sempre emite: é aqui que os votos dos outros passam a ser visíveis
+      emitirParticipantes(codigo);
 
       // Depois, emitir evento específico de votos revelados
       io.to(codigo).emit('votosRevelados');
@@ -455,9 +605,7 @@ app.prepare().then(() => {
       
       io.to(codigo).emit('votacaoReiniciada');
       // Atualiza participantes com vida/voto resetado, mas score mantido
-      io.to(codigo).emit('atualizarParticipantes', 
-        Array.from(sala.participantes.values())
-      );
+      emitirParticipantes(codigo);
     });
 
     // Alternar modo observador
@@ -487,9 +635,7 @@ app.prepare().then(() => {
           isObservador 
         });
         
-        io.to(codigo).emit('atualizarParticipantes', 
-          Array.from(sala.participantes.values())
-        );
+        emitirParticipantes(codigo);
       } else {
         console.log('Participante não encontrado no servidor:', socket.id);
       }
@@ -510,9 +656,7 @@ app.prepare().then(() => {
         io.to(codigo).emit('funModeChanged', { enabled });
         
         // Atualiza todos os participantes para refletir a mudança
-        io.to(codigo).emit('atualizarParticipantes', 
-          Array.from(sala.participantes.values())
-        );
+        emitirParticipantes(codigo);
       }
     });
 
@@ -533,7 +677,7 @@ app.prepare().then(() => {
         console.log(`[${codigo}] Usuário ${participante.nome} (${socket.id}) definiu customKillSignatures para:`, validatedSignatures);
         
         // Informar todos da atualização para consistência (importante para o GameController)
-        io.to(codigo).emit('atualizarParticipantes', Array.from(sala.participantes.values()));
+        emitirParticipantes(codigo);
       } else {
          console.warn(`[${codigo}] Dados inválidos ou participante não encontrado para setCustomKillSignatures.`);
       }
@@ -591,12 +735,13 @@ app.prepare().then(() => {
       participante.equippedAccessories = updatedEquipped;
       
       // Notifica todos sobre a mudança
-      io.to(codigo).emit('atualizarParticipantes', Array.from(sala.participantes.values()));
+      emitirParticipantes(codigo);
     });
     // --- Fim do Listener Equipar/Desequipar ---
 
     // --- Listener para Compra de Item ---
-    socket.on('buyItem', ({ codigo, userId, itemId, itemPrice }) => {
+    socket.on('buyItem', ({ codigo, itemId, itemPrice }) => {
+      const userId = socket.id; // Compra sempre com o próprio saldo
       console.log(`[Server] Recebido buyItem: user=${userId}, item=${itemId}, price=${itemPrice}, sala=${codigo}`);
       if (!salas.has(codigo)) {
         console.log(`[Server] buyItem falhou: Sala ${codigo} não encontrada.`);
@@ -604,7 +749,7 @@ app.prepare().then(() => {
       }
 
       const sala = salas.get(codigo);
-      const participante = Array.from(sala.participantes.values()).find(p => p.id === userId);
+      const participante = sala.participantes.get(userId);
 
       if (!participante) {
         console.log(`[Server] buyItem falhou: Participante ${userId} não encontrado na sala ${codigo}.`);
@@ -666,7 +811,7 @@ app.prepare().then(() => {
         console.log(`[Server] Compra bem-sucedida: ${userId} comprou ${itemId} por ${item.price}. Novo score: ${participante.score}. Inventário:`, participante.inventory);
 
         // Notificar todos na sala sobre a atualização dos participantes (novo score e inventário)
-        io.to(codigo).emit('atualizarParticipantes', Array.from(sala.participantes.values()));
+        emitirParticipantes(codigo);
         console.log(`[Server] Emitido atualizarParticipantes para sala ${codigo} após compra.`);
 
       } catch (error) {
@@ -675,112 +820,23 @@ app.prepare().then(() => {
     });
     // --- Fim do Listener Compra de Item ---
 
-    // <<< NEW LISTENER FOR BITCOIN MINER >>>
-    // --- Listener para Geração Passiva de Renda (Minerador) ---
-    socket.on('generate_passive_income', ({ userId, codigoSala }) => {
-      // Validações Iniciais
-      if (!salas.has(codigoSala)) {
-        // console.warn(`[Minerador][${codigoSala}] Sala não encontrada para generate_passive_income.`);
-        return; // Silenciosamente ignora se a sala não existe mais
-      }
-      const sala = salas.get(codigoSala);
-      const participante = Array.from(sala.participantes.values()).find(p => p.id === userId);
+    // Minerador: a geração agora é feita pelo loop no servidor (ver minerarPara).
 
-      if (!participante) {
-        // console.warn(`[Minerador][${codigoSala}] Participante ${userId} não encontrado para generate_passive_income.`);
-        return; // Silenciosamente ignora se o participante não está mais na sala
-      }
-
-      // Validação Crucial: O participante realmente tem o minerador EQUIPADO?
-      const minerData = ITEMS_DATA[BITCOIN_MINER_ID];
-      if (!minerData) {
-        console.error(`[CRITICAL][Minerador][${codigoSala}] Dados do BITCOIN_MINER_ID não encontrados em ITEMS_DATA! Geração de pontos falhou.`);
-        return; // Não pode gerar pontos sem dados
-      }
-
-      if (!participante.equippedAccessories?.includes(BITCOIN_MINER_ID)) {
-        // console.warn(`[Minerador][${codigoSala}] Participante ${participante.nome} (${userId}) recebeu evento generate_passive_income, mas NÃO tem o minerador equipado. Ignorando.`);
-        // Isso pode acontecer se o usuário desequipou o item, mas o intervalo no frontend
-        // ainda não foi limpo ou enviou uma última vez. Ignorar é seguro.
-        return;
-      }
-
-      // 1. Determinar recompensa ANTES do Manifesto (Normal ou Lucky Strike)
-      const pontosGeradosBase = minerData.pontosPorIntervalo || 1;
-      const luckyStrikeChance = minerData.luckyStrikeChance || 0;
-      const luckyStrikeReward = minerData.luckyStrikeReward || 0;
-      let rewardBeforeManifesto = pontosGeradosBase; // Assume normal
-      let wasLuckyStrike = false;
-
-      if (luckyStrikeChance > 0 && luckyStrikeReward > 0 && Math.random() < luckyStrikeChance) {
-          rewardBeforeManifesto = luckyStrikeReward; // É um Lucky Strike!
-          wasLuckyStrike = true;
-      }
-
-      // 2. Aplicar multiplicador do Manifesto, se equipado
-      let finalReward = rewardBeforeManifesto; // Começa com o valor base (normal ou lucky)
-      let manifestoMultiplier = 1; // Multiplicador padrão
-
-      if (participante.equippedAccessories?.includes(MANIFESTO_ID)) {
-          const manifestoData = ITEMS_DATA[MANIFESTO_ID];
-          manifestoMultiplier = manifestoData?.scoreMultiplier || 1;
-          if (manifestoMultiplier !== 1) {
-              finalReward *= manifestoMultiplier;
-              console.log(`[Minerador][${codigoSala}] Aplicando multiplicador (${manifestoMultiplier}x) do Manifesto. Recompensa antes: ${rewardBeforeManifesto}, Depois: ${finalReward}`);
-          }
-      }
-
-      // 3. Adicionar recompensa final ao score
-      participante.score = (participante.score || 0) + finalReward;
-
-      // 4. Emitir notificação de Lucky Strike (SE ocorreu) com valor FINAL
-      if (wasLuckyStrike) {
-          console.log(`[Minerador][${codigoSala}] *** LUCKY STRIKE! *** ${participante.nome} ganhou ${finalReward} pontos! (Base: ${luckyStrikeReward}, Multiplier: ${manifestoMultiplier}, Chance: ${luckyStrikeChance * 100}%)`);
-          // Emitir notificação com o valor final
-          io.to(codigoSala).emit('luckyStrikeNotification', {
-              eventId: `${Date.now()}-lucky-${participante.id}`,
-              playerName: participante.nome,
-              reward: finalReward, // <<< Envia o valor final
-              timestamp: Date.now()
-          });
-      } else {
-         // Log normal (opcional)
-         // console.log(`[Minerador][${codigoSala}] ${participante.nome} gerou ${finalReward} ponto(s) (Base: ${pontosGeradosBase}, Multiplier: ${manifestoMultiplier}). Novo score: ${participante.score}`);
-      }
-
-      // 5. Notificar todos sobre a atualização geral dos participantes
-      io.to(codigoSala).emit('atualizarParticipantes', Array.from(sala.participantes.values()));
-    });
-    // --- Fim Listener Minerador ---
-    // <<< END NEW LISTENER >>>
-
-    // Desconexão
+    // Desconexão: não remove na hora, guarda o participante esperando reconexão
     socket.on('disconnect', () => {
       console.log('Cliente desconectado:', socket.id);
-      
+
       for (const [codigo, sala] of salas.entries()) {
-        if (sala.participantes.has(socket.id)) {
-          const participante = sala.participantes.get(socket.id);
-          const eraModerador = participante.isModerador;
-          
-          sala.participantes.delete(socket.id);
-          
-          if (sala.participantes.size === 0) {
-            salas.delete(codigo);
-            continue;
-          }
-          
-          if (eraModerador) {
-            const novoModerador = sala.participantes.values().next().value;
-            if (novoModerador) {
-              novoModerador.isModerador = true;
-            }
-          }
-          
-          io.to(codigo).emit('atualizarParticipantes', 
-            Array.from(sala.participantes.values())
-          );
-        }
+        const participante = sala.participantes.get(socket.id);
+        if (!participante) continue;
+
+        participante.desconectado = true;
+        const chave = `${codigo}:${socket.id}`;
+        if (remocoesPendentes.has(chave)) clearTimeout(remocoesPendentes.get(chave));
+        remocoesPendentes.set(chave, setTimeout(() => removerParticipanteDefinitivo(codigo, socket.id), RECONNECT_GRACE_MS));
+
+        console.log(`[${codigo}] ${participante.nome} desconectou. Aguardando reconexão por ${RECONNECT_GRACE_MS / 1000}s.`);
+        emitirParticipantes(codigo);
       }
     });
   });

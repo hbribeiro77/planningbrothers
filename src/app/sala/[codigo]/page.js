@@ -230,7 +230,6 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     console.log(`[UI] Emitindo evento buyItem: { userId: ${currentUser.id}, itemId: ${itemId}, itemPrice: ${itemPrice} }`);
     socket.emit('buyItem', { 
       codigo: codigoSala, // Lembre-se de usar 'codigo'
-      userId: currentUser.id, // ID do usuário que está comprando
       itemId: itemId,      // ID do item
       itemPrice: itemPrice // Preço (para validação no backend)
     });
@@ -243,8 +242,11 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
   useEffect(() => {
     if (!lastDamageInfoForAnimation) return;
 
-    const { targetId, damage, isCritical, isDodge } = lastDamageInfoForAnimation;
-    
+    const { targetId, damage, isCritical, isDodge, isCorpseHit } = lastDamageInfoForAnimation;
+
+    // Cutucão em defunto: sem número de dano (a piscada/tremida já acontecem por outros caminhos)
+    if (isCorpseHit) return;
+
     const targetElement = document.querySelector(`.carta-participante[data-user-id="${targetId}"]`);
 
     // *** CONDIÇÃO AJUSTADA PARA INCLUIR DANO ZERO ***

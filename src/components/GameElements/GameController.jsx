@@ -3,7 +3,6 @@ import { Switch, Tooltip, ActionIcon, Drawer, Stack, Text, Group, TextInput, But
 import { IconSettings, IconKeyboard, IconVolume, IconVolumeOff, IconBellRinging, IconMessageChatbot } from '@tabler/icons-react';
 import { KeyboardThrower } from './KeyboardThrower';
 import { usePvpStatus } from '@/contexts/PvpContext';
-import { ITEMS_DATA, BITCOIN_MINER_ID } from '@/constants/itemsData.js';
 import { GAME_CONFIG } from '@/constants/gameConfig.js';
 
 const MAX_KILL_MESSAGE_LENGTH = 50;
@@ -137,70 +136,7 @@ export function GameController({
   const effectiveVolume = soundEnabled ? volumeLevel : 0;
   console.log(`[GameController] Render: soundEnabled=${soundEnabled}, volumeLevel=${volumeLevel}, effectiveVolume=${effectiveVolume}`);
 
-  // <<< INÍCIO: LÓGICA DO MINERADOR DE BITCOIN >>>
-  useEffect(() => {
-    let intervalId = null;
-
-    const startMinerInterval = () => {
-      // Verifica se currentUser, equippedAccessories e o socket existem e estão conectados
-      if (!currentUser || !currentUser.equippedAccessories || !socket || !socket.connected) {
-        // console.log('[Minerador] Condições não atendidas para iniciar (usuário, acessórios equipados ou socket).');
-        return; // Não inicia se faltar algo
-      }
-
-      // Verifica se o minerador está na lista de acessórios equipados
-      const hasMiner = currentUser.equippedAccessories.includes(BITCOIN_MINER_ID);
-      // console.log(`[Minerador] Usuário ${currentUser.id} tem minerador equipado? ${hasMiner}`);
-
-      if (hasMiner) {
-        const minerData = ITEMS_DATA[BITCOIN_MINER_ID];
-        const intervalMs = minerData?.intervaloGeracaoMs || 10000; // Padrão de 10s
-        const pontos = minerData?.pontosPorIntervalo || 1; // Padrão de 1 ponto
-
-        console.log(`[Minerador] Iniciando intervalo para ${currentUser.id} a cada ${intervalMs}ms para gerar ${pontos} ponto(s).`);
-
-        intervalId = setInterval(() => {
-          console.log(`[Minerador] Emitindo generate_passive_income para ${currentUser.id}`);
-          // Envia evento para o servidor gerar os pontos
-          socket.emit('generate_passive_income', {
-            userId: currentUser.id,
-            codigoSala: codigoSala
-          });
-        }, intervalMs);
-
-      } else {
-         // console.log(`[Minerador] Usuário ${currentUser.id} não tem o minerador equipado.`);
-         // Limpa o intervalo se o minerador foi desequipado
-         if (intervalId) {
-            console.log(`[Minerador] Limpando intervalo ${intervalId} porque o minerador foi desequipado.`);
-            clearInterval(intervalId);
-            intervalId = null;
-         }
-      }
-    };
-
-    // Limpa o intervalo anterior ao iniciar um novo ciclo do useEffect
-    if (intervalId) {
-      console.log(`[Minerador] Limpando intervalo ${intervalId} antes de reavaliar.`);
-      clearInterval(intervalId);
-      intervalId = null;
-    }
-
-    // Inicia a verificação e o intervalo, se aplicável
-    startMinerInterval();
-
-    // Função de limpeza: Limpa o intervalo quando o componente desmonta ou as dependências mudam
-    return () => {
-      if (intervalId) {
-        console.log(`[Minerador] Limpando intervalo ${intervalId} na desmontagem/atualização.`);
-        clearInterval(intervalId);
-        intervalId = null; // Garante que o ID seja zerado
-      }
-    };
-
-    // Dependências: Reavalia quando o usuário (e seus acessórios equipados) ou o socket mudam.
-  }, [currentUser, socket, codigoSala]);
-  // <<< FIM: LÓGICA DO MINERADOR DE BITCOIN >>>
+  // Minerador de Bitcoin: a geração de renda agora roda no servidor (server-dev.js).
 
   return (
     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>

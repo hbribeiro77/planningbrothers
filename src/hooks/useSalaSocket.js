@@ -37,16 +37,17 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
     setSalaURL(`${window.location.origin}/sala/${codigoSala}?convite=true`);
 
     // Obter token e browser
-    const { token, browserName } = getOrCreateToken();
+    const { token, browserName, tabId } = getOrCreateToken();
 
     // Entrar na sala
-    socket.emit(SOCKET_EVENTS.ENTRAR_SALA, { 
-      codigo: codigoSala, 
+    socket.emit(SOCKET_EVENTS.ENTRAR_SALA, {
+      codigo: codigoSala,
       usuario: {
         nome: nomeUsuario,
         isObservador: modoObservador,
         token,
         browserName,
+        tabId,
         isReconnection: socket.recovered || false // ✅ Indica se é reconexão
       }
     });
@@ -58,6 +59,14 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
 
     entrarNaSala();
 
+    // Ao reconectar (queda de rede), o socket ganha novo ID: precisa entrar de novo na sala.
+    // O servidor reconhece o token/aba e devolve o mesmo participante (score, itens, voto).
+    const handleReconectar = () => {
+      console.log('🔄 Socket reconectado! Re-entrando na sala...');
+      entrarNaSala();
+    };
+    socket.on('connect', handleReconectar);
+
     // Receber erro de entrada
     socket.on('erroEntrada', ({ mensagem }) => {
       setErroEntrada(mensagem);
@@ -68,6 +77,9 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
     socket.on(SOCKET_EVENTS.ATUALIZAR_PARTICIPANTES, (participantesAtualizados) => {
       console.log('Recebeu atualizarParticipantes:', participantesAtualizados);
       setParticipantes(participantesAtualizados);
+      // Sincroniza o próprio voto com o servidor (ex.: após F5 o estado local se perde)
+      const eu = participantesAtualizados.find(p => p.id === socket.id);
+      if (eu) setMeuVoto(eu.jaVotou ? eu.valorVotado : null);
       setConectado(true);
       setErroEntrada(null);
     });
@@ -114,6 +126,7 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
     });
 
     return () => {
+      socket.off('connect', handleReconectar);
       socket.off('erroEntrada');
       socket.off(SOCKET_EVENTS.ATUALIZAR_PARTICIPANTES);
       socket.off(SOCKET_EVENTS.VOTO_RECEBIDO);
@@ -189,6 +202,7 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
           damage,
           isCritical,
           isDodge,
+          isCorpseHit: !!data.isCorpseHit,
           timestamp: Date.now()
       });
     };

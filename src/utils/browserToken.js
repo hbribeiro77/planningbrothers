@@ -42,8 +42,26 @@ export function getOrCreateToken() {
   
   return {
     token,
-    browserName
+    browserName,
+    tabId: getOrCreateTabId()
   };
+}
+
+// Chave do ID da aba no sessionStorage (sobrevive ao F5, mas é diferente em cada aba)
+const SESSIONSTORAGE_TAB_KEY = 'planningBrothersTabId';
+
+// ID único por aba: permite ao servidor diferenciar "F5 na mesma aba" de "outra aba aberta"
+export function getOrCreateTabId() {
+  try {
+    let tabId = sessionStorage.getItem(SESSIONSTORAGE_TAB_KEY);
+    if (!tabId) {
+      tabId = generateToken();
+      sessionStorage.setItem(SESSIONSTORAGE_TAB_KEY, tabId);
+    }
+    return tabId;
+  } catch {
+    return null;
+  }
 }
 
 // Função para limpar o token

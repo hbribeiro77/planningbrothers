@@ -57,9 +57,60 @@ const playSound = async (soundPath, volume = 1.0) => {
     console.error(`[playSound] Erro ao tocar ${soundPath}:`, error);
   }
 };
+/**
+ * Som sintetizado de "ação negada" (uón-uón descendente), sem precisar de arquivo de áudio.
+ */
+const playDeniedSound = (volume = 1.0) => {
+  if (!audioContext || volume <= 0) return;
+  try {
+    if (audioContext.state === 'suspended') audioContext.resume();
+    const t0 = audioContext.currentTime;
+    // Duas notas descendentes, estilo "trombone triste"
+    [[311, 277, 0], [262, 196, 0.22]].forEach(([freqIni, freqFim, atraso]) => {
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freqIni, t0 + atraso);
+      osc.frequency.exponentialRampToValueAtTime(freqFim, t0 + atraso + 0.2);
+      gain.gain.setValueAtTime(0.0001, t0 + atraso);
+      gain.gain.exponentialRampToValueAtTime(Math.max(volume, 0.0002), t0 + atraso + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + atraso + 0.2);
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      osc.start(t0 + atraso);
+      osc.stop(t0 + atraso + 0.22);
+    });
+  } catch (error) {
+    console.error('[playDeniedSound] Erro:', error);
+  }
+};
 // --- Fim Lógica de Áudio com Volume ---
 
 export class AnimationService {
+  /**
+   * Feedback quando um jogador morto tenta arremessar: som de negação,
+   * mensagem flutuante sobre o alvo e tremida no próprio avatar.
+   */
+  static showDeadAttackFeedback(targetElement, ownElement, volume) {
+    playDeniedSound(volume);
+
+    if (targetElement) {
+      const msg = document.createElement('div');
+      msg.textContent = '💀 Morto não joga teclado!';
+      msg.className = 'damage-number damage-dead-attack';
+      msg.style.position = 'absolute';
+      msg.style.left = '50%';
+      msg.style.top = '10%';
+      msg.style.pointerEvents = 'none';
+      msg.style.zIndex = '10';
+      msg.style.whiteSpace = 'nowrap';
+      targetElement.appendChild(msg);
+      setTimeout(() => msg.remove(), 1200);
+    }
+
+    if (ownElement) AnimationService.makeAvatarShake(ownElement);
+  }
+
   /**
    * Cria e mostra uma explosão em um elemento
    */

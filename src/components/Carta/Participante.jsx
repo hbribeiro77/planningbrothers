@@ -75,7 +75,8 @@ export default function CartaParticipante({
               ? (isDark ? '#2b5580' : '#228be6')
               : undefined),
         transition: 'all 0.3s ease',
-        opacity: isObservador ? 0.85 : 1,
+        opacity: participante?.desconectado ? 0.4 : (isObservador ? 0.85 : 1),
+        filter: participante?.desconectado ? 'grayscale(1)' : undefined,
         minHeight: 'clamp(68px, 5vw, 80px)',
         overflow: 'visible', // Necessário para a barra sair
         padding: 0,

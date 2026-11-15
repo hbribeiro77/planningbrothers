@@ -17,6 +17,11 @@ export function KeyboardThrower({
   const [flyingKeyboards, setFlyingKeyboards] = useState([]);
   const { showLifeBarTemporarily } = useLifeBar();
 
+  // Vida atual sempre fresca para o handler de clique (o listener é registrado só quando o id muda)
+  const currentLifeRef = useRef(currentUser.life);
+  currentLifeRef.current = currentUser.life;
+  const ultimoAvisoMortoRef = useRef(0);
+
   // Criar um ref para armazenar o valor mais recente do volume
   const volumeRef = useRef(volume);
 
@@ -131,6 +136,19 @@ export function KeyboardThrower({
     // Não permitir cliques no próprio usuário
     const targetId = targetElement.getAttribute('data-id');
     if (!targetId || targetId === currentUser.id) return;
+
+    // Morto não ataca (o servidor também bloqueia)
+    if (typeof currentLifeRef.current === 'number' && currentLifeRef.current <= GAME_CONFIG.LIFE.MIN) {
+      e.preventDefault();
+      // Avisa o jogador (com limite para não virar metralhadora de som)
+      const agora = Date.now();
+      if (agora - ultimoAvisoMortoRef.current > 800) {
+        ultimoAvisoMortoRef.current = agora;
+        const ownElement = document.querySelector(`.carta-participante[data-id="${currentUser.id}"]`);
+        AnimationService.showDeadAttackFeedback(targetElement, ownElement, volumeRef.current);
+      }
+      return;
+    }
     
     console.log("Avatar clicado:", targetId);
     

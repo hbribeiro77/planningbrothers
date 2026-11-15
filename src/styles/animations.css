@@ -77,6 +77,20 @@
   color: #4dabf7;
 }
 
+/* Aviso quando um jogador morto tenta arremessar */
+@keyframes dead-attack-msg {
+  0% { transform: translate(-50%, 0) scale(0.9); opacity: 0; }
+  15% { transform: translate(-50%, -10px) scale(1.05); opacity: 1; }
+  75% { transform: translate(-50%, -30px) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -45px) scale(1); opacity: 0; }
+}
+
+.damage-dead-attack {
+  color: #ced4da;
+  font-size: 0.85rem;
+  animation: dead-attack-msg 1.2s ease-out forwards;
+}
+
 .shake-effect {
   animation: avatar-shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
   transform-origin: center;

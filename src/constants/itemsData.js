@@ -259,7 +259,7 @@ const ITEMS_DATA = {
     type: 'accessory',
     equipSlot: 'passive',
     displayOrder: 120,
-    description: 'Gere renda passiva automaticamente! +1 moeda a cada 10 segundos. Tem 80 de vida: os outros podem atacar ele, e quebrado não minera. Clique nele pra consertar (+2 por clique). Se zerar, explode em 5s e mata o dono, a menos que ele conserte a tempo!',
+    description: 'Gere renda passiva automaticamente! +1 moeda a cada 10 segundos.',
     iconName: 'IconCurrencyBitcoin',
     iconColor: 'orange',
     minerLife: 80,

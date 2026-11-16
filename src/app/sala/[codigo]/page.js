@@ -173,11 +173,9 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
         icon = <IconStar size="1.2rem" />; // Ícone para lucky strike (Ex: estrela)
     } else if (type === 'bossMode') {
         const { byName, enabled } = lastFeedEvent;
-        title = enabled ? 'Chefe de fase ligado ⚔️' : 'Chefe de fase desligado';
+        title = 'Chefe de fase';
         color = enabled ? 'green' : 'blue';
-        message = enabled
-          ? <>{byName} ligou o chefe de fase: ele pode aparecer no consenso ou na divergência alta.</>
-          : <>{byName} desligou o chefe de fase.</>;
+        message = <>{byName} {enabled ? 'ligou' : 'desligou'} chefe de fase</>;
         icon = <IconSwords size="1.2rem" />;
     } else if (type === 'bossSpawned') {
         title = 'O EPROC caiu na mesa!';

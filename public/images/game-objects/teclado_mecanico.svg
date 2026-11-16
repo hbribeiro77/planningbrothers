@@ -1,0 +1,38 @@
+<svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Teclado mecânico gamer: corpo escuro, teclas altas e RGB -->
+  <rect x="2" y="12" width="56" height="38" rx="4" fill="#1f1f24" stroke="#000" stroke-width="1"/>
+  <!-- Brilho RGB embaixo -->
+  <rect x="3" y="47" width="54" height="2.5" rx="1.2" fill="url(#rgb)"/>
+  <defs>
+    <linearGradient id="rgb" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ff3b3b"/>
+      <stop offset="0.25" stop-color="#ffd23b"/>
+      <stop offset="0.5" stop-color="#3bff7a"/>
+      <stop offset="0.75" stop-color="#3bb4ff"/>
+      <stop offset="1" stop-color="#c03bff"/>
+    </linearGradient>
+  </defs>
+  <!-- Teclas (com "altura": base escura + topo colorido) -->
+  <g>
+    <rect x="6" y="16" width="7" height="7" rx="1" fill="#000"/><rect x="6.5" y="15.5" width="6" height="5.5" rx="1" fill="#ff5252"/>
+    <rect x="15" y="16" width="7" height="7" rx="1" fill="#000"/><rect x="15.5" y="15.5" width="6" height="5.5" rx="1" fill="#ff9f43"/>
+    <rect x="24" y="16" width="7" height="7" rx="1" fill="#000"/><rect x="24.5" y="15.5" width="6" height="5.5" rx="1" fill="#feca57"/>
+    <rect x="33" y="16" width="7" height="7" rx="1" fill="#000"/><rect x="33.5" y="15.5" width="6" height="5.5" rx="1" fill="#1dd1a1"/>
+    <rect x="42" y="16" width="7" height="7" rx="1" fill="#000"/><rect x="42.5" y="15.5" width="6" height="5.5" rx="1" fill="#54a0ff"/>
+    <rect x="51" y="16" width="4" height="7" rx="1" fill="#000"/><rect x="51.3" y="15.5" width="3.4" height="5.5" rx="1" fill="#a55eea"/>
+
+    <rect x="6" y="25" width="10" height="7" rx="1" fill="#000"/><rect x="6.5" y="24.5" width="9" height="5.5" rx="1" fill="#54a0ff"/>
+    <rect x="18" y="25" width="7" height="7" rx="1" fill="#000"/><rect x="18.5" y="24.5" width="6" height="5.5" rx="1" fill="#a55eea"/>
+    <rect x="27" y="25" width="7" height="7" rx="1" fill="#000"/><rect x="27.5" y="24.5" width="6" height="5.5" rx="1" fill="#ff5252"/>
+    <rect x="36" y="25" width="7" height="7" rx="1" fill="#000"/><rect x="36.5" y="24.5" width="6" height="5.5" rx="1" fill="#ff9f43"/>
+    <rect x="45" y="25" width="10" height="7" rx="1" fill="#000"/><rect x="45.5" y="24.5" width="9" height="5.5" rx="1" fill="#feca57"/>
+
+    <rect x="6" y="34" width="7" height="7" rx="1" fill="#000"/><rect x="6.5" y="33.5" width="6" height="5.5" rx="1" fill="#1dd1a1"/>
+    <rect x="15" y="34" width="30" height="7" rx="1" fill="#000"/><rect x="15.5" y="33.5" width="29" height="5.5" rx="1" fill="#e8e8f0"/>
+    <rect x="47" y="34" width="8" height="7" rx="1" fill="#000"/><rect x="47.5" y="33.5" width="7" height="5.5" rx="1" fill="#ff5252"/>
+  </g>
+  <!-- Linhas de "clack" -->
+  <path d="M1 8 L5 11" stroke="#feca57" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M30 4 L30 9" stroke="#feca57" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M59 8 L55 11" stroke="#feca57" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

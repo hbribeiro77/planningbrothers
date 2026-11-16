@@ -203,6 +203,7 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
           isCritical,
           isDodge,
           isCorpseHit: !!data.isCorpseHit,
+          isPoison: !!data.isPoison,
           timestamp: Date.now()
       });
     };
@@ -218,14 +219,39 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
         });
     };
 
+    // --- Compras na loja (anunciadas pra sala toda) ---
+    const handleItemPurchased = (data) => {
+      setLastFeedEvent({ type: 'purchase', ...data });
+    };
+
     // Registrar listeners
     socket.on('damageReceived', handleDamageReceived);
     socket.on('luckyStrikeNotification', handleLuckyStrike); // <<< REGISTRA NOVO LISTENER
+    socket.on('itemPurchased', handleItemPurchased);
+    const handleMinerDestroyed = (data) => setLastFeedEvent({ type: 'minerDestroyed', ...data });
+    socket.on('minerDestroyed', handleMinerDestroyed);
+    const handleSpoiledFood = (data) => setLastFeedEvent({ type: 'spoiledFood', ...data });
+    socket.on('spoiledFood', handleSpoiledFood);
+    const handleDropPicked = (data) => setLastFeedEvent({ type: 'dropPicked', ...data });
+    socket.on('dropPicked', handleDropPicked);
+    const handleBossSpawned = (data) => setLastFeedEvent({ type: 'bossSpawned', eventId: `boss-${data.bossId}`, ...data });
+    const handleBossDefeated = (data) => setLastFeedEvent({ type: 'bossDefeated', ...data });
+    const handleBossCrashed = (data) => setLastFeedEvent({ type: 'bossCrashed', ...data });
+    socket.on('bossSpawned', handleBossSpawned);
+    socket.on('bossDefeated', handleBossDefeated);
+    socket.on('bossCrashed', handleBossCrashed);
 
     // Limpeza
     return () => {
       socket.off('damageReceived', handleDamageReceived);
       socket.off('luckyStrikeNotification', handleLuckyStrike); // <<< LIMPA NOVO LISTENER
+      socket.off('itemPurchased', handleItemPurchased);
+      socket.off('minerDestroyed', handleMinerDestroyed);
+      socket.off('spoiledFood', handleSpoiledFood);
+      socket.off('dropPicked', handleDropPicked);
+      socket.off('bossSpawned', handleBossSpawned);
+      socket.off('bossDefeated', handleBossDefeated);
+      socket.off('bossCrashed', handleBossCrashed);
     };
 
     // ✅ Listener para reconexão automática

@@ -1,6 +1,7 @@
 import { Group, Paper, Text, Box } from '@mantine/core';
 import CartaVotacao from '../Carta/Votacao';
 import { useState, useEffect } from 'react';
+import { useMediaQuery } from '@mantine/hooks';
 import { InventoryDisplay } from '../GameElements/InventoryDisplay';
 
 export default function OpcoesVotacao({ 
@@ -8,9 +9,14 @@ export default function OpcoesVotacao({
   onCancelarVoto, 
   meuVoto = null,
   currentUser,
-  onToggleEquip
+  onToggleEquip,
+  onSelectWeapon,
+  onUseItem,
+  onReloadWeapon,
+  onSelectCounter
 }) {
   const [valorSelecionado, setValorSelecionado] = useState(null);
+  const isMobile = useMediaQuery('(max-width: 48em)');
   const opcoesDeVoto = ['1', '2', '3', '4', '5', '?'];
   
   // Atualiza o valor selecionado quando o voto mudar
@@ -33,31 +39,20 @@ export default function OpcoesVotacao({
   
   return (
     <Paper withBorder p="md" radius="md" mt="xl">
-      <Group 
-        position="apart" 
-        align="baseline" 
-        spacing="lg"
-        sx={(theme) => ({
-          [`@media (max-width: ${theme.breakpoints.sm})`]: {
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: theme.spacing.xl,
-          },
-        })}
+      {/* Computador: cartas e inventário lado a lado. Celular: um embaixo do outro. */}
+      <Group
+        justify={isMobile ? 'center' : 'flex-start'}
+        align="flex-start"
+        gap="lg"
+        wrap={isMobile ? 'wrap' : 'nowrap'}
       >
-        <Box sx={{ flexGrow: 1, width: '100%' }}>
-          <Text size="sm" weight={500} c="dimmed" ta="center" mb="xs">Sua Estimativa:</Text>
-          <Group 
-            position="center" 
-            spacing="xs"
-            sx={(theme) => ({
-              [`@media (max-width: ${theme.breakpoints.sm})`]: {
-                flexWrap: 'nowrap',
-                overflowX: 'auto',
-                paddingBottom: `calc(${theme.spacing.xs} / 2)`,
-                alignItems: 'center',
-              },
-            })}
+        <Box style={{ flex: isMobile ? '1 1 100%' : '0 0 auto', minWidth: 0 }}>
+          <Text size="sm" fw={500} c="dimmed" ta="center" mb="xs">Sua Estimativa:</Text>
+          <Group
+            justify="center"
+            gap="xs"
+            wrap={isMobile ? 'nowrap' : 'wrap'}
+            style={isMobile ? { overflowX: 'auto', paddingBottom: 4 } : undefined}
           >
             {opcoesDeVoto.map((valor) => (
               <CartaVotacao
@@ -70,10 +65,17 @@ export default function OpcoesVotacao({
           </Group>
         </Box>
 
-        <InventoryDisplay 
-          currentUser={currentUser} 
-          onToggleEquip={onToggleEquip}
-        />
+        {/* O inventário vem logo depois das cartas */}
+        <Box style={{ flex: '0 1 auto', minWidth: 0, display: 'flex', justifyContent: isMobile ? 'center' : 'flex-start' }}>
+          <InventoryDisplay 
+            currentUser={currentUser} 
+            onToggleEquip={onToggleEquip}
+            onSelectWeapon={onSelectWeapon}
+            onUseItem={onUseItem}
+            onReloadWeapon={onReloadWeapon}
+            onSelectCounter={onSelectCounter}
+          />
+        </Box>
       </Group>
     </Paper>
   );

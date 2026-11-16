@@ -1,0 +1,64 @@
+<svg width="120" height="160" viewBox="0 0 120 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- EPROC: robô com cabeça de monitor de tubo velho, pesado e sempre travando -->
+  <style>
+    .perna-esq { transform-box: fill-box; transform-origin: 50% 0%; animation: passo 0.7s ease-in-out infinite; }
+    .perna-dir { transform-box: fill-box; transform-origin: 50% 0%; animation: passo 0.7s ease-in-out infinite reverse; }
+    .braco-esq { transform-box: fill-box; transform-origin: 50% 0%; animation: balanco 0.7s ease-in-out infinite reverse; }
+    .braco-dir { transform-box: fill-box; transform-origin: 50% 0%; animation: balanco 0.7s ease-in-out infinite; }
+    .barra { animation: carrega 2.4s steps(6) infinite; }
+    .led { animation: pisca 1s steps(2) infinite; }
+    @keyframes passo { 0%, 100% { transform: rotate(14deg); } 50% { transform: rotate(-14deg); } }
+    @keyframes balanco { 0%, 100% { transform: rotate(10deg); } 50% { transform: rotate(-10deg); } }
+    @keyframes carrega { 0% { width: 4px; } 70% { width: 20px; } 100% { width: 20px; } }
+    @keyframes pisca { 0% { opacity: 1; } 100% { opacity: 0.2; } }
+  </style>
+
+  <!-- Sombra -->
+  <ellipse cx="60" cy="155" rx="30" ry="4" fill="#000" opacity="0.25"/>
+
+  <!-- Pernas -->
+  <g class="perna-esq">
+    <rect x="44" y="118" width="10" height="26" rx="3" fill="#8a8a7e" stroke="#4f4f46" stroke-width="1.5"/>
+    <rect x="40" y="141" width="17" height="8" rx="3" fill="#5c5c52"/>
+  </g>
+  <g class="perna-dir">
+    <rect x="66" y="118" width="10" height="26" rx="3" fill="#8a8a7e" stroke="#4f4f46" stroke-width="1.5"/>
+    <rect x="63" y="141" width="17" height="8" rx="3" fill="#5c5c52"/>
+  </g>
+
+  <!-- Braços -->
+  <g class="braco-esq">
+    <rect x="22" y="86" width="9" height="28" rx="4" fill="#9a9a8e" stroke="#4f4f46" stroke-width="1.5"/>
+    <circle cx="26.5" cy="116" r="5" fill="#6b685a"/>
+  </g>
+  <g class="braco-dir">
+    <rect x="89" y="86" width="9" height="28" rx="4" fill="#9a9a8e" stroke="#4f4f46" stroke-width="1.5"/>
+    <circle cx="93.5" cy="116" r="5" fill="#6b685a"/>
+  </g>
+
+  <!-- Corpo: gabinete de computador velho -->
+  <rect x="30" y="82" width="60" height="40" rx="5" fill="#d8d4bf" stroke="#6b685a" stroke-width="2"/>
+  <rect x="36" y="88" width="30" height="5" rx="1.5" fill="#8a8a7e"/>
+  <rect x="36" y="96" width="30" height="5" rx="1.5" fill="#8a8a7e"/>
+  <rect x="36" y="106" width="22" height="3" rx="1.5" fill="#b5b19c"/>
+  <circle class="led" cx="80" cy="91" r="2.5" fill="#40c057"/>
+  <circle cx="80" cy="112" r="4" fill="#b5b19c" stroke="#6b685a" stroke-width="1"/>
+
+  <!-- Pescoço -->
+  <rect x="52" y="74" width="16" height="10" fill="#8a8a7e" stroke="#4f4f46" stroke-width="1.2"/>
+
+  <!-- Cabeça: monitor de tubo -->
+  <path d="M24 10 H96 L101 70 H19 Z" fill="#c9c6b4" stroke="#6b685a" stroke-width="2"/>
+  <rect x="14" y="4" width="92" height="70" rx="8" fill="#e3dfca" stroke="#6b685a" stroke-width="2.5"/>
+  <rect x="22" y="11" width="76" height="50" rx="5" fill="#1d3f8a" stroke="#2b2b25" stroke-width="2"/>
+  <path d="M26 15 Q40 13 52 15 L29 34 Q25 25 26 15 Z" fill="#ffffff" opacity="0.12"/>
+  <!-- Rosto na tela: olhos de ampulheta e boca "carregando" -->
+  <path d="M38 22 H48 L43 28 L48 34 H38 L43 28 Z" fill="#ffd43b"/>
+  <path d="M72 22 H82 L77 28 L82 34 H72 L77 28 Z" fill="#ffd43b"/>
+  <text x="60" y="47" font-family="Verdana, Arial, sans-serif" font-size="9" font-weight="bold" fill="#ffffff" text-anchor="middle">eproc</text>
+  <rect x="45" y="51" width="30" height="6" rx="2" fill="#0d1f48" stroke="#8fa8e0" stroke-width="1"/>
+  <rect class="barra" x="46" y="52.5" width="10" height="3" rx="1" fill="#74c0fc"/>
+  <!-- Moldura: LED e rachadura -->
+  <circle cx="96" cy="68" r="2.2" fill="#fa5252"/>
+  <path d="M88 11 L84 19 L88 24 L83 31" stroke="#0b1a3d" stroke-width="1.2" fill="none" opacity="0.7"/>
+</svg>

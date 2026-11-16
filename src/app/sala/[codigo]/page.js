@@ -20,7 +20,8 @@ import {
   Drawer
 } from '@mantine/core';
 import { IconCopy, IconCheck, IconX, IconKeyboard, IconCoin, IconSkull, IconShoppingCart, IconSettings, IconKeyboardOff, IconEye, IconEyeOff, IconVolume, IconVolumeOff, IconMessageCircle, IconColorSwatch, IconShirt, IconStar } from '@tabler/icons-react';
-import { useDisclosure } from '@mantine/hooks';
+import { useDisclosure, useMediaQuery } from '@mantine/hooks';
+import { ITEMS_DATA } from '@/constants/itemsData';
 
 import Mesa from '@/components/Mesa/Mesa';
 import OpcoesVotacao from '@/components/Sala/OpcoesVotacao';
@@ -142,6 +143,16 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
         let weaponIcon = null;
         if (weaponType === 'keyboard') {
           weaponIcon = <IconKeyboard size="1.1rem" style={{ marginRight: '5px' }} />;
+        } else if (weaponType === 'eproc') {
+          weaponIcon = <img src="/images/game-objects/eproc.svg" alt="EPROC" style={{ width: 18, height: 18, marginRight: 5, verticalAlign: 'middle' }} />;
+        } else if (ITEMS_DATA[weaponType]?.iconSvgPath) {
+          weaponIcon = (
+            <img
+              src={ITEMS_DATA[weaponType].iconSvgPath}
+              alt={ITEMS_DATA[weaponType].name}
+              style={{ width: 18, height: 18, marginRight: 5, verticalAlign: 'middle' }}
+            />
+          );
         }
         // Adicionar mais ícones de armas aqui...
         message = (
@@ -160,6 +171,72 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
           </>
         );
         icon = <IconStar size="1.2rem" />; // Ícone para lucky strike (Ex: estrela)
+    } else if (type === 'bossSpawned') {
+        title = 'O EPROC caiu na mesa!';
+        color = 'red';
+        message = <>{lastFeedEvent.motivo === 'consenso' ? 'Consenso' : 'Divergência'} demais travou o sistema. Derruba ele antes que ele caia sozinho!</>;
+        icon = <img src="/images/game-objects/eproc.svg" alt="" style={{ width: 22, height: 22 }} />;
+    } else if (type === 'bossDefeated') {
+        const { mvpName, mvpDano, lastHitName, recompensas = [] } = lastFeedEvent;
+        title = 'EPROC derrubado! 🏆';
+        color = 'green';
+        message = (
+          <>
+            MVP: <b>{mvpName}</b> ({mvpDano} de dano) · último golpe: <b>{lastHitName}</b>
+            <br />
+            {recompensas.map(r => `${r.nome} +${r.moedas}`).join(' · ')}
+          </>
+        );
+        icon = <img src="/images/game-objects/eproc.svg" alt="" style={{ width: 22, height: 22 }} />;
+    } else if (type === 'bossCrashed') {
+        title = 'O EPROC caiu sozinho 💤';
+        color = 'blue';
+        message = <>Como sempre. Ninguém ganhou moeda, só sobrou 1 item na mesa.</>;
+        icon = <img src="/images/game-objects/eproc.svg" alt="" style={{ width: 22, height: 22 }} />;
+    } else if (type === 'dropPicked') {
+        const { pickerName, ownerName, itemId, quantidade, moedas } = lastFeedEvent;
+        const item = ITEMS_DATA[itemId];
+        if (item) {
+          const deQuem = pickerName === ownerName ? 'que tinha deixado cair' : `de ${ownerName}`;
+          title = 'Achado não é roubado!';
+          color = 'green';
+          const nomeItem = <b>{quantidade > 1 ? `${quantidade}x ` : ''}{item.name}</b>;
+          message = quantidade > 0
+            ? <>{pickerName} embolsou {nomeItem} {deQuem}{moedas > 0 ? ` (+${moedas} moedas do que não cabia)` : ''}</>
+            : <>{pickerName} pegou <b>{item.name}</b> {deQuem}, mas já tinha: vendeu por {moedas} moedas</>;
+          icon = item.iconSvgPath
+            ? <img src={item.iconSvgPath} alt="" style={{ width: 20, height: 20 }} />
+            : <IconShoppingCart size="1.2rem" />;
+        }
+    } else if (type === 'spoiledFood') {
+        const { playerName } = lastFeedEvent;
+        title = 'Maionese estragada! 🤢';
+        color = 'green';
+        message = <>{playerName} comeu um xis com maionese estragada e tá passando mal!</>;
+        icon = <img src="/images/game-objects/xis.svg" alt="" style={{ width: 20, height: 20 }} />;
+    } else if (type === 'minerDestroyed') {
+        const { attackerName, ownerName } = lastFeedEvent;
+        title = 'Minerador quebrado!';
+        color = 'red';
+        message = <>{attackerName} quebrou o minerador de {ownerName} ⛏️💥</>;
+        icon = <IconSkull size="1.2rem" />;
+    } else if (type === 'purchase') {
+        const { playerName, itemId, quantidade } = lastFeedEvent;
+        const item = ITEMS_DATA[itemId];
+        if (item) {
+          title = 'Compra na lojinha!';
+          color = 'green';
+          message = (
+            <>
+              {playerName} comprou{' '}
+              {item.iconSvgPath && (
+                <img src={item.iconSvgPath} alt="" style={{ width: 18, height: 18, verticalAlign: 'middle', margin: '0 3px' }} />
+              )}
+              <b>{quantidade > 1 ? `${quantidade}x ` : ''}{item.name}</b>
+            </>
+          );
+          icon = <IconShoppingCart size="1.2rem" />;
+        }
     }
     // Adicionar mais tipos de evento aqui (ex: 'itemBought', 'levelUp', etc.)
 
@@ -178,11 +255,19 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
   }, [lastFeedEvent]);
   // -----------------------------------------------------
 
+  const telaEstreita = useMediaQuery('(max-width: 48em)');
+
   const handleNovaRodadaComAnimacao = () => {
     console.log("PULSE: Nova Rodada");
     triggerPulse();
     handleNovaRodada(); 
   };
+
+  const botaoNovaRodada = (
+    <Button color="blue" size="sm" onClick={handleNovaRodadaComAnimacao} className="nova-rodada-transition">
+      Nova Rodada
+    </Button>
+  );
 
   const toggleModoObservadorComAnimacao = () => {
     console.log("PULSE: Toggle Modo Observador");
@@ -211,13 +296,37 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     }
     
     console.log(`[UI] Emitindo toggleEquipAccessory: { itemId: ${itemId} }`);
+    // Zíper subindo (equipar) ou descendo (tirar)
+    AnimationService.sfx(currentUser?.equippedAccessories?.includes(itemId) ? 'desequipar' : 'acessorio');
     socket.emit('toggleEquipAccessory', { 
       codigo: codigoSala,
       itemId: itemId
     });
+  }, [socket, codigoSala, currentUser?.equippedAccessories]);
+
+  // Trocar a arma ativa
+  const handleSelectWeapon = useCallback((weaponId) => {
+    AnimationService.sfx('arma');
+    socket?.emit('selectWeapon', { codigo: codigoSala, weaponId });
   }, [socket, codigoSala]);
 
-  // --- Função para lidar com a compra de itens --- 
+  // Usar consumível (ex.: comer um xis)
+  const handleUseItem = useCallback((itemId) => {
+    socket?.emit('useItem', { codigo: codigoSala, itemId });
+  }, [socket, codigoSala]);
+
+  // Escolher o contra-ataque ativo (só um por vez)
+  const handleSelectCounter = useCallback((itemId) => {
+    AnimationService.sfx('troca');
+    socket?.emit('selectCounter', { codigo: codigoSala, itemId });
+  }, [socket, codigoSala]);
+
+  // Fazer carga no cartório (recarregar arma com munição)
+  const handleReloadWeapon = useCallback((weaponId) => {
+    socket?.emit('reloadWeapon', { codigo: codigoSala, weaponId });
+  }, [socket, codigoSala]);
+
+  // --- Função para lidar com a compra de itens ---
   const handleBuyItem = useCallback((itemId, itemPrice) => {
     if (!socket) {
       console.error("Socket não conectado, não é possível comprar.");
@@ -242,7 +351,7 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
   useEffect(() => {
     if (!lastDamageInfoForAnimation) return;
 
-    const { targetId, damage, isCritical, isDodge, isCorpseHit } = lastDamageInfoForAnimation;
+    const { targetId, damage, isCritical, isDodge, isCorpseHit, isPoison } = lastDamageInfoForAnimation;
 
     // Cutucão em defunto: sem número de dano (a piscada/tremida já acontecem por outros caminhos)
     if (isCorpseHit) return;
@@ -259,6 +368,12 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
     } else if (damage >= 0) { // <<< Inclui dano 0 aqui
         shouldShowAnimation = true;
     } 
+
+    // Enjoo da maionese: número verde, todo mundo vê
+    if (targetElement && isPoison) {
+      AnimationService.showFloatingText(targetElement, `-${damage} 🤢`, 'damage-poison', 900);
+      return;
+    }
 
     if (targetElement && shouldShowAnimation) {
       AnimationService.showDamageNumber(targetElement, damage, isCritical, isDodge);
@@ -333,7 +448,7 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
             }
           `}</style>
           
-          <Group justify="flex-start" align="center" mb="md" gap="xs">
+          <Group justify="flex-start" align="center" mb="md" gap="xs" style={{ position: 'relative' }}>
             <Title order={1}>Sala {codigoSala}</Title>
             <CopyButton value={salaURL}>
               {({ copied, copy }) => (
@@ -349,15 +464,40 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
               )}
             </CopyButton>
             
+            {/* --- Modo Observador (destacado quando ligado) --- */}
+            <Tooltip
+              label={modoObservador ? 'Sair do modo observador (voltar a votar)' : 'Modo observador (só assistir, sem votar)'}
+              position="bottom"
+              withArrow
+            >
+              <ActionIcon
+                variant={modoObservador ? 'light' : 'default'}
+                color="blue"
+                onClick={toggleModoObservadorComAnimacao}
+                aria-label={modoObservador ? 'Sair do modo observador' : 'Modo observador'}
+              >
+                {modoObservador ? <IconEyeOff size={16} /> : <IconEye size={16} />}
+              </ActionIcon>
+            </Tooltip>
+
             {/* ✅ Indicador de Status de Conexão */}
             <ConnectionIndicator isActive={isActive} onForcePing={forcePing} />
-            <Button 
-              variant={modoObservador ? 'light' : 'filled'}
-              onClick={toggleModoObservadorComAnimacao}
-            >
-              {modoObservador ? 'Sair do Modo Observador' : 'Modo Observador'}
-            </Button>
-            
+            {/* Nova Rodada centralizada na linha do topo (só aparece depois de revelar os votos) */}
+            {!telaEstreita && (
+              <Box
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  visibility: revelarVotos ? 'visible' : 'hidden',
+                  zIndex: 1,
+                }}
+              >
+                {botaoNovaRodada}
+              </Box>
+            )}
+
             {/* Controles à direita (Placar Pessoal + Configurações) */}
             <Group ml="auto" spacing="xs" align="center" wrap="nowrap">
               {/* --- Botão da Loja --- */}
@@ -400,17 +540,12 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
             </Group>
           </Group>
 
-          {/* Botão de Nova Rodada - sempre presente mas só visível quando necessário */}
-          <Box mb={0} style={{ display: 'flex', justifyContent: 'center', visibility: revelarVotos ? 'visible' : 'hidden' }}>
-            <Button
-              color="blue"
-              size="sm"
-              onClick={handleNovaRodadaComAnimacao}
-              className="nova-rodada-transition"
-            >
-              Nova Rodada
-            </Button>
-          </Box>
+          {/* Celular: Nova Rodada fica numa linha própria (no topo não cabe) */}
+          {telaEstreita && (
+            <Box mb={0} style={{ display: 'flex', justifyContent: 'center', visibility: revelarVotos ? 'visible' : 'hidden' }}>
+              {botaoNovaRodada}
+            </Box>
+          )}
 
           <Paper 
             shadow="sm" 
@@ -423,6 +558,7 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
               participantes={participantes}
               revelarVotos={revelarVotos}
               currentUser={currentUser}
+              socket={socket}
               onRevelarVotos={handleRevelarVotos}
               onNovaRodada={handleNovaRodadaComAnimacao}
             />
@@ -436,6 +572,10 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
               onCancelarVoto={handleCancelarVoto}
               currentUser={currentUser}
               onToggleEquip={handleToggleEquipAccessory}
+              onSelectWeapon={handleSelectWeapon}
+              onUseItem={handleUseItem}
+              onReloadWeapon={handleReloadWeapon}
+              onSelectCounter={handleSelectCounter}
               style={{
                 opacity: entradaAnimada ? 1 : 0,
                 transform: entradaAnimada ? 'translateY(0)' : 'translateY(20px)',

@@ -8,6 +8,15 @@ const NINJA_TRAINING_ID = 'ninja_training'; // <<< NOVO ID
 const MANIFESTO_ID = 'manifesto_comunista'; // <<< ID para o novo item
 const MEDALHA_ID = 'medalha_5_anos'; // <<< ID para a medalha
 const BITCOIN_MINER_ID = 'bitcoin_miner'; // <<< ID para o minerador
+const PROCESSO_ID = 'processo_fisico';
+const TECLADO_MECANICO_ID = 'teclado_mecanico';
+const XIS_ID = 'xis_phade';
+const AGUA_ID = 'garrafa_agua';
+const CARIMBO_ID = 'carimbo_indeferido';
+const NOTE7_ID = 'galaxy_note7';
+const FIREWALL_ID = 'firewall_minerador';
+const ANTIVIRUS_ID = 'antivirus_minerador';
+const PLACA_VIDEO_ID = 'placa_video_minerador';
 
 // Definir cores principais e escuras
 const DPE_GREEN = '#2e8b57';
@@ -33,6 +42,58 @@ const ITEMS_DATA = {
     attackBonusDice: null,
     defenseFixed: 0,
     defenseDice: null,
+    // Arremesso
+    cooldownMs: 150,           // intervalo mínimo entre arremessos (validado no servidor)
+    flightMs: 400,             // tempo de voo até o impacto (o servidor resolve o dano ao final)
+    projectileSvg: '/images/game-objects/keyboard.svg',
+  },
+  [PROCESSO_ID]: {
+    name: 'Processo Físico',
+    price: 10,
+    type: 'weapon',
+    displayOrder: 2,
+    description: 'Três volumes de autos amarrados com barbante. Quando acerta, dói. 25 processos por carga; acabou, tem que fazer carga no cartório.',
+    iconSvgPath: '/images/game-objects/processo.svg',
+    iconName: 'IconBook2',
+    iconColor: 'orange',
+    baseDamageFixed: 0,
+    baseDamageDice: '2d20',
+    criticalChance: 0.05,
+    attackBonusFixed: 0,
+    attackBonusDice: null,
+    defenseFixed: 0,
+    defenseDice: null,
+    cooldownMs: 250,
+    flightMs: 400,
+    // Munição: acabou, tem que fazer carga no cartório
+    ammo: 25,
+    reloadMs: 6000,
+    reloadFailChance: 0.15,    // "Eproc tá fora": a carga demora o dobro
+    projectileSvg: '/images/game-objects/processo.svg',
+    projectileSize: 46,
+  },
+  [TECLADO_MECANICO_ID]: {
+    name: 'Teclado Mecânico',
+    price: 10,
+    type: 'weapon',
+    displayOrder: 3,
+    description: 'Clack clack clack! Segure o clique (ou o dedo) no alvo para disparar sem parar.',
+    iconSvgPath: '/images/game-objects/teclado_mecanico.svg',
+    iconName: 'IconKeyboardShow',
+    iconColor: 'grape',
+    baseDamageFixed: 0,
+    baseDamageDice: '1d4',
+    criticalChance: 0,
+    allowCritical: false,      // metralhadora não dá crítico (crítico = morte instantânea)
+    attackBonusFixed: 0,
+    attackBonusDice: null,
+    defenseFixed: 0,
+    defenseDice: null,
+    autoFire: true,
+    cooldownMs: 150,
+    flightMs: 300,
+    projectileSvg: '/images/game-objects/teclado_mecanico.svg',
+    projectileSize: 28,
   },
   // Adicionar outras armas aqui (ex: mouse, caneta...)
 
@@ -198,9 +259,12 @@ const ITEMS_DATA = {
     type: 'accessory',
     equipSlot: 'passive',
     displayOrder: 120,
-    description: 'Gere renda passiva automaticamente! +1 moeda a cada 10 segundos.',
+    description: 'Gere renda passiva automaticamente! +1 moeda a cada 10 segundos. Tem 80 de vida: os outros podem atacar ele, e quebrado não minera. Clique nele pra consertar (+2 por clique). Se zerar, explode em 5s e mata o dono, a menos que ele conserte a tempo!',
     iconName: 'IconCurrencyBitcoin',
     iconColor: 'orange',
+    minerLife: 80,
+    repairPerClick: 2,
+    explodeFuseMs: 5000, // zerou a vida: contagem até explodir (e matar o dono)
     // Atributos de geração
     pontosPorIntervalo: 1,
     intervaloGeracaoMs: 10000,
@@ -223,9 +287,114 @@ const ITEMS_DATA = {
         width: '150%',
         height: 'auto',
         opacity: 1,
-        zIndex: 8, 
+        zIndex: 8,
       }
     }
+  },
+
+  // --- UPGRADES DO MINERADOR (precisa ter o minerador) ---
+  [FIREWALL_ID]: {
+    name: 'Firewall',
+    price: 5,
+    type: 'upgrade',
+    requires: BITCOIN_MINER_ID,
+    displayOrder: 121,
+    description: 'Upgrade do minerador: +2 de defesa contra ataques.',
+    iconName: 'IconShieldLock',
+    iconColor: 'red',
+    minerDefense: 2,
+  },
+  [ANTIVIRUS_ID]: {
+    name: 'Antivírus',
+    price: 5,
+    type: 'upgrade',
+    requires: BITCOIN_MINER_ID,
+    displayOrder: 122,
+    description: 'Upgrade do minerador: 20% de chance de esquivar dos ataques.',
+    iconName: 'IconVirusOff',
+    iconColor: 'green',
+    minerDodge: 0.2,
+  },
+  [PLACA_VIDEO_ID]: {
+    name: 'Placa de Vídeo',
+    price: 10,
+    type: 'upgrade',
+    requires: BITCOIN_MINER_ID,
+    displayOrder: 123,
+    description: 'Upgrade do minerador: gera moeda na metade do tempo (a cada 5s).',
+    iconName: 'IconCpu',
+    iconColor: 'violet',
+    minerIntervalMultiplier: 0.5,
+  },
+
+  // --- CONTRA-ATAQUES (comprados em pacote; cada disparo gasta 1 carga) ---
+  [CARIMBO_ID]: {
+    name: 'Carimbo INDEFERIDO',
+    price: 5,
+    type: 'counter',
+    packSize: 10,
+    maxStack: 30,
+    displayOrder: 130,
+    description: 'Pacote com 10 carimbos. Ao levar dano, 30% de chance de carimbar INDEFERIDO na testa de quem atacou (1d6). Cada carimbo usado gasta 1.',
+    iconSvgPath: '/images/game-objects/carimbo.svg',
+    iconName: 'IconRubberStamp',
+    iconColor: 'red',
+    resumo: '30% de chance de carimbar INDEFERIDO na testa de quem te atacou. Dano 1d6.',
+    piada: 'Sem direito a recurso.',
+    counterType: 'carimbo',
+    counterChance: 0.3,
+    counterDice: '1d6',
+  },
+  [NOTE7_ID]: {
+    name: 'Galaxy Note 7',
+    price: 5,
+    type: 'counter',
+    packSize: 5,
+    maxStack: 15,
+    displayOrder: 140,
+    description: 'Pacote com 5 celulares. Ao levar dano, 30% de chance de mandar um celular com a bateria pegando fogo em quem atacou. O celular tem 25 de vida: se o cara não destruir ele a tempo (3s), explode (3d6, 50% de crítico).',
+    iconSvgPath: '/images/game-objects/note7.svg',
+    iconName: 'Note7Icon',
+    iconColor: '#1a1b1e', // celular preto (fica branco no azul quando ativo, como os outros)
+    resumo: '30% de chance de jogar um Note 7 em quem te atacou. Dano 3d6, 50% de crítico.',
+    piada: 'Proibido em avião, liberado na planning. 🔥',
+    counterType: 'bomba',
+    counterChance: 0.3,
+    bombDice: '3d6',
+    bombLife: 25,
+    criticalChance: 0.5,
+    fuseMs: 3000,
+  },
+
+  // --- CONSUMÍVEIS (somem ao usar; dá pra ter vários) ---
+  [XIS_ID]: {
+    name: 'Xis do P.H.ade',
+    price: 5,
+    type: 'consumable',
+    maxStack: 9,
+    displayOrder: 50,
+    description: 'O xis mais respeitado da firma. Recupera 50 de vida. Mas cuidado, a maionese pode estar estragada... E não esquece: Morto não come.',
+    iconSvgPath: '/images/game-objects/xis.svg',
+    iconName: 'IconBurger',
+    iconColor: 'orange',
+    healAmount: 50,
+    spoilChance: 0.2,
+    poisonDamagePerTick: 10,
+    poisonTicks: 5,
+    poisonTickMs: 1000,
+  },
+  [AGUA_ID]: {
+    name: 'Garrafa de Água',
+    price: 1,
+    type: 'consumable',
+    maxStack: 10,
+    displayOrder: 51,
+    description: 'Recupera 10 de vida. Passando mal com a maionese? 5 garrafas e você fica bom.',
+    iconSvgPath: '/images/game-objects/agua.svg',
+    iconName: 'IconBottle',
+    iconColor: 'blue',
+    healAmount: 10,
+    curesPoisonAfter: 5,
   },
 };
 
@@ -242,6 +411,15 @@ module.exports = {
   MANIFESTO_ID, // <<< Exportar o novo ID
   MEDALHA_ID, // <<< Exportar novo ID
   BITCOIN_MINER_ID, // <<< Exportar novo ID
+  PROCESSO_ID,
+  TECLADO_MECANICO_ID,
+  XIS_ID,
+  AGUA_ID,
+  CARIMBO_ID,
+  NOTE7_ID,
+  FIREWALL_ID,
+  ANTIVIRUS_ID,
+  PLACA_VIDEO_ID,
   ITEMS_DATA,
   // Remover export do mapeamento
   // AVATAR_COMPONENTS: AVATAR_COMPONENTS 

@@ -1,32 +1,43 @@
 import { Box, Paper, Group, Stack, Text, Flex, Badge, Title, Button, Tooltip } from '@mantine/core';
 import { IconCheck, IconEye, IconSkull } from '@tabler/icons-react';
 import CartaParticipante from '../Carta/Participante';
+import { ChefeEproc } from '../GameElements/ChefeEproc';
 import { ITEMS_DATA, KEYBOARD_ID } from '@/constants/itemsData';
 
 const COLETE_DPE_ID = 'vest'; // << Usar ID constante (simulado por enquanto)
 
-// Helper COPIADO de CartaParticipante.jsx para formatar stats consolidados
-function formatConsolidatedBonus(inventory, equippedAccessories, weaponId) {
+// Stats do jogador (tooltip no nome): arma selecionada + acessórios + contra-ataque + lanches
+function formatConsolidatedBonus(participante) {
+  const { inventory, equippedAccessories, consumables = {}, ammo = {}, recargas = {} } = participante;
+  const weaponId = participante.selectedWeapon || KEYBOARD_ID;
   const parts = [];
-  let weaponDescription = null;
-  let accessoryDescription = null;
 
-  // --- Stats Base da Arma ---
+  if (typeof participante.life === 'number') parts.push(`Vida: ${participante.life}/100`);
+  if (participante.envenenado) parts.push(`🤢 Passando mal (águas ${participante.envenenado.aguas || 0}/5)`);
+
+  // --- Arma selecionada ---
   let baseAtkFixed = 0;
   let baseAtkDice = null;
   let baseCrit = 0;
   const weaponData = ITEMS_DATA[weaponId];
+  const armaCrita = weaponData?.allowCritical !== false;
   if (weaponData && weaponData.type === 'weapon') {
     baseAtkFixed = weaponData.baseDamageFixed || 0;
-    baseAtkDice = weaponData.baseDamageDice; // Pode ser null
-    baseCrit = weaponData.criticalChance || 0;
+    baseAtkDice = weaponData.baseDamageDice;
+    baseCrit = armaCrita ? (weaponData.criticalChance || 0) : 0;
+    let linhaArma = `Arma: ${weaponData.name}`;
+    if (weaponData.ammo) {
+      linhaArma += recargas[weaponId] ? ' (no cartório)' : ` (${ammo[weaponId] ?? 0}/${weaponData.ammo})`;
+    }
+    if (weaponData.autoFire) linhaArma += ' · automática';
+    parts.push(linhaArma);
   }
 
-  // --- Bônus Totais dos Acessórios ---
+  // --- Bônus dos acessórios ---
   let totalAccAtkFixed = 0;
-  let totalAccAtkDice = [];
+  const totalAccAtkDice = [];
   let totalAccDefFixed = 0;
-  let totalAccDefDice = [];
+  const totalAccDefDice = [];
   let highestDodge = 0;
   let totalAccCritBonus = 0;
   let totalAccDodgeBonus = 0;
@@ -39,48 +50,70 @@ function formatConsolidatedBonus(inventory, equippedAccessories, weaponId) {
         if (itemData.attackBonusDice) totalAccAtkDice.push(itemData.attackBonusDice);
         totalAccDefFixed += itemData.defenseFixed || 0;
         if (itemData.defenseDice) totalAccDefDice.push(itemData.defenseDice);
+        if (itemData.dodgeChance && itemData.dodgeChance > highestDodge) highestDodge = itemData.dodgeChance;
       }
-      
-      if (equippedAccessories?.includes(itemId) && itemData.dodgeChance && itemData.dodgeChance > highestDodge) {
-        highestDodge = itemData.dodgeChance;
-      }
-
       totalAccCritBonus += itemData.criticalChanceBonus || 0;
       totalAccDodgeBonus += itemData.dodgeChanceBonus || 0;
     }
   });
 
-  const finalCritChance = baseCrit + totalAccCritBonus;
+  // Mesmas regras do servidor: arma sem crítico ignora bônus de crítico
+  const finalCritChance = armaCrita ? baseCrit + totalAccCritBonus : 0;
   const finalDodgeChance = highestDodge + totalAccDodgeBonus;
 
   let attackString = '';
   const finalAtkFixed = baseAtkFixed + totalAccAtkFixed;
-  const finalAtkDice = [baseAtkDice, ...totalAccAtkDice].filter(Boolean); 
-  if (finalAtkFixed > 0) { attackString += finalAtkFixed; }
+  const finalAtkDice = [baseAtkDice, ...totalAccAtkDice].filter(Boolean);
+  if (finalAtkFixed > 0) attackString += finalAtkFixed;
   if (finalAtkDice.length > 0) {
-      if (attackString) attackString += ' + ';
-      attackString += finalAtkDice.join(' + ');
+    if (attackString) attackString += ' + ';
+    attackString += finalAtkDice.join(' + ');
   }
-  if (attackString) { parts.push(`Ataque: ${attackString}`); }
+  if (attackString) parts.push(`Ataque: ${attackString}`);
 
   let defenseString = '';
-  if (totalAccDefFixed > 0) { defenseString += `+${totalAccDefFixed}`; }
+  if (totalAccDefFixed > 0) defenseString += `+${totalAccDefFixed}`;
   if (totalAccDefDice.length > 0) {
-      if (defenseString) defenseString += ' + ';
-      defenseString += totalAccDefDice.join(' + ');
+    if (defenseString) defenseString += ' + ';
+    defenseString += totalAccDefDice.join(' + ');
   }
-  if (defenseString) { parts.push(`Defesa: ${defenseString}`); }
+  if (defenseString) parts.push(`Defesa: ${defenseString}`);
 
-  if (finalCritChance > 0) { parts.push(`Crítico: ${Math.round(finalCritChance * 100)}%`); }
-  if (finalDodgeChance > 0) { parts.push(`Esquiva: ${Math.round(finalDodgeChance * 100)}%`); }
+  parts.push(armaCrita ? `Crítico: ${Math.round(finalCritChance * 100)}%` : 'Crítico: — (arma não crita)');
+  if (finalDodgeChance > 0) parts.push(`Esquiva: ${Math.round(finalDodgeChance * 100)}%`);
 
-  if (parts.length === 0) { return ['Nenhum bônus ativo.']; }
+  // --- Contra-ataque ativo ---
+  const contra = ITEMS_DATA[participante.selectedCounter];
+  if (contra && (consumables[participante.selectedCounter] || 0) > 0) {
+    let linha = `Contra-ataque: ${contra.name} x${consumables[participante.selectedCounter]} (${Math.round((contra.counterChance || 0) * 100)}%`;
+    if (contra.counterDice) linha += `, ${contra.counterDice}`;
+    if (contra.bombDice) linha += `, ${contra.bombDice}`;
+    parts.push(linha + ')');
+  }
+
+  // --- Minerador ---
+  if (inventory?.includes('bitcoin_miner')) {
+    const max = participante.minerador?.max || 80;
+    const vida = participante.minerador?.vida ?? max;
+    const ups = ['firewall_minerador', 'antivirus_minerador', 'placa_video_minerador']
+      .filter(id => inventory.includes(id)).map(id => ITEMS_DATA[id].name);
+    parts.push(`Minerador: ${vida <= 0 ? 'QUEBRADO' : `${vida}/${max}`}${ups.length ? ` (${ups.join(', ')})` : ''}`);
+  }
+
+  // --- Lanches ---
+  const lanches = Object.entries(consumables)
+    .filter(([id, qtd]) => qtd > 0 && ITEMS_DATA[id]?.type === 'consumable')
+    .map(([id, qtd]) => `${ITEMS_DATA[id].name} x${qtd}`);
+  if (lanches.length) parts.push(`Lanches: ${lanches.join(', ')}`);
+
   return parts;
 }
 
 export default function Mesa({ 
   participantes = [], 
   revelarVotos = false,
+  currentUser = null,
+  socket = null,
   onRevelarVotos = () => {}, // Nova prop para receber a função de revelar votos
   onNovaRodada = () => {} // Adicionando a prop que estava faltando
 }) {
@@ -192,6 +225,7 @@ export default function Mesa({
             <div style={{ position: 'relative', width: '100%', height: '100%' }}>
               {/* Mesa */}
               <Box
+                className="mesa-planning"
                 style={{
                   position: 'absolute',
                   top: '50%',
@@ -211,6 +245,7 @@ export default function Mesa({
                   zIndex: 1
                 }}
               >
+                <ChefeEproc socket={socket} />
                 {/* Conteúdo da mesa sempre com a mesma altura */}
                 <Flex direction="column" align="center" justify="center" style={{ width: '100%', height: '100%' }}>
                   {!revelarVotos ? (
@@ -319,7 +354,7 @@ export default function Mesa({
                 }}
               >
                 {lados.superior.map((participante, idx) => {
-                  const consolidatedBonusParts = formatConsolidatedBonus(participante.inventory, participante.equippedAccessories, KEYBOARD_ID);
+                  const consolidatedBonusParts = formatConsolidatedBonus(participante);
                   const isObservador = participante.isObservador;
                   return (
                     <Stack 
@@ -336,7 +371,7 @@ export default function Mesa({
                           </>
                         )}
                         position="bottom"
-                        withArrow openDelay={500} multiline w={200}
+                        withArrow openDelay={500} multiline w={240}
                         disabled={isObservador}
                       >
                         <Text 
@@ -350,6 +385,7 @@ export default function Mesa({
                       <CartaParticipante
                         participante={participante}
                         revelarVotos={revelarVotos}
+                        meuId={currentUser?.id}
                       />
                     </Stack>
                   );
@@ -374,7 +410,7 @@ export default function Mesa({
                 }}
               >
                 {lados.inferior.map((participante, idx) => {
-                  const consolidatedBonusParts = formatConsolidatedBonus(participante.inventory, participante.equippedAccessories, KEYBOARD_ID);
+                  const consolidatedBonusParts = formatConsolidatedBonus(participante);
                   const isObservador = participante.isObservador;
                   return (
                     <Stack 
@@ -391,7 +427,7 @@ export default function Mesa({
                           </>
                         )}
                         position="top" 
-                        withArrow openDelay={500} multiline w={200}
+                        withArrow openDelay={500} multiline w={240}
                         disabled={isObservador}
                       >
                         <Text 
@@ -405,6 +441,7 @@ export default function Mesa({
                       <CartaParticipante
                         participante={participante}
                         revelarVotos={revelarVotos}
+                        meuId={currentUser?.id}
                       />
                     </Stack>
                   );

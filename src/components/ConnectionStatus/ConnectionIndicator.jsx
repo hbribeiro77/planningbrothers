@@ -114,6 +114,9 @@ export default function ConnectionIndicator({ isActive, onForcePing }) {
 
   const config = getStatusConfig();
 
+  // Tudo certo: não precisa ocupar espaço. O selo só aparece quando há problema (offline, reconectando, erro)
+  if (connectionStatus === 'connected') return null;
+
   return (
     <Tooltip 
       label={<Text size="xs">{config.tooltip}</Text>}

@@ -6,6 +6,7 @@ import { LifeBar } from '../GameElements/LifeBar'; // Manter importação
 import { ITEMS_DATA, KEYBOARD_ID } from '@/constants/itemsData';
 // Importar o componente de ícone diretamente aqui
 import VestIcon from '../Icons/VestIcon';
+import { MineradorVisual } from '../GameElements/MineradorVisual';
 
 // Definir o mapeamento de componentes visuais aqui, onde ele é usado
 const AVATAR_COMPONENTS = {
@@ -19,6 +20,7 @@ const AVATAR_COMPONENTS = {
 export default function CartaParticipante({ 
   participante,
   revelarVotos = false,
+  meuId = null,
 }) {
   console.log(`[CartaParticipante] Recebeu participante ${participante?.nome}:`, participante);
 
@@ -52,7 +54,7 @@ export default function CartaParticipante({
       pt={0}
       radius="md"
       withBorder
-      className="carta-participante"
+      className={`carta-participante${participante?.envenenado ? ' carta-envenenada' : ''}`}
       data-id={id}
       data-user-id={id}
       data-votou={jaVotou}
@@ -97,6 +99,9 @@ export default function CartaParticipante({
         const itemData = ITEMS_DATA[itemId];
         const visualConfig = itemData?.avatarVisual;
         if (!visualConfig) return null; // Pula se o item equipado não tiver visual
+        if (itemId === 'bitcoin_miner') {
+          return <MineradorVisual key={itemId} participante={participante} souDono={meuId === id} />;
+        }
         
         return (
           <React.Fragment key={itemId}>

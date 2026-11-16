@@ -240,6 +240,9 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
     socket.on('bossSpawned', handleBossSpawned);
     socket.on('bossDefeated', handleBossDefeated);
     socket.on('bossCrashed', handleBossCrashed);
+    // Só avisa quando alguém mudou (o envio inicial ao entrar não tem byName)
+    const handleBossMode = (data) => { if (data.byName) setLastFeedEvent({ type: 'bossMode', ...data }); };
+    socket.on('bossModeChanged', handleBossMode);
 
     // Limpeza
     return () => {
@@ -252,6 +255,7 @@ export function useSalaSocket(codigoSala, nomeUsuario) {
       socket.off('bossSpawned', handleBossSpawned);
       socket.off('bossDefeated', handleBossDefeated);
       socket.off('bossCrashed', handleBossCrashed);
+      socket.off('bossModeChanged', handleBossMode);
     };
 
     // ✅ Listener para reconexão automática

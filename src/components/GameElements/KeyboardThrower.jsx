@@ -236,7 +236,7 @@ export function KeyboardThrower({
       }, 50);
     };
     const onMinerCountdownCancelled = ({ ownerId }) => {
-      if (ownerId === meuIdRef.current) pararBipe();
+      if (ownerId === meuIdRef.current) { pararBipe(); AnimationService.sfx('alivio'); }
       AnimationService.showFloatingText(getMinerador(ownerId), 'Ufa! 😅', 'damage-dodge', 1200);
     };
     const onMinerExploded = ({ ownerId }) => {
@@ -301,6 +301,7 @@ export function KeyboardThrower({
     };
 
     const onMinerRepaired = ({ ownerId }) => {
+      if (ownerId === meuIdRef.current) AnimationService.sfx('conserto');
       AnimationService.showFloatingText(getMinerador(ownerId), '+2 🔧', 'damage-heal', 700);
     };
 

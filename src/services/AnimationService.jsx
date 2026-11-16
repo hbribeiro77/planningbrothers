@@ -259,6 +259,16 @@ const EFEITOS = {
   },
   // Ação negada (ex.: morto tentando comer)
   negado: (v) => playDeniedSound(v),
+  // Conserto do minerador: chave inglesa batendo no metal (tim-tlec), com leve variação
+  conserto: (v) => {
+    const f = 1700 + Math.random() * 500;
+    ruido(0, 0.03, { volume: v * 1.4, freq: 5000, q: 3 });
+    tom(f, 0, 0.12, { tipo: 'triangle', volume: v * 0.7 });
+    tom(f * 1.5, 0, 0.08, { tipo: 'sine', volume: v * 0.35 });
+    ruido(0.07, 0.04, { volume: v, freq: 2500, q: 4 });
+  },
+  // Salvou o minerador da explosão: acorde subindo
+  alivio: (v) => { [523, 659, 784].forEach((f, i) => tom(f, i * 0.08, 0.25, { tipo: 'sine', volume: v * 0.7 })); },
   // Comprou: ka-ching
   compra: (v) => {
     ruido(0, 0.06, { volume: v * 1.2, freq: 4000, q: 2 });

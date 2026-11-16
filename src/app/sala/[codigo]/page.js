@@ -19,7 +19,7 @@ import {
   Badge,
   Drawer
 } from '@mantine/core';
-import { IconCopy, IconCheck, IconX, IconKeyboard, IconCoin, IconSkull, IconShoppingCart, IconSettings, IconKeyboardOff, IconEye, IconEyeOff, IconVolume, IconVolumeOff, IconMessageCircle, IconColorSwatch, IconShirt, IconStar } from '@tabler/icons-react';
+import { IconCopy, IconCheck, IconX, IconKeyboard, IconCoin, IconSkull, IconShoppingCart, IconSettings, IconKeyboardOff, IconEye, IconEyeOff, IconVolume, IconVolumeOff, IconMessageCircle, IconColorSwatch, IconShirt, IconStar, IconSwords } from '@tabler/icons-react';
 import { useDisclosure, useMediaQuery } from '@mantine/hooks';
 import { ITEMS_DATA } from '@/constants/itemsData';
 
@@ -171,6 +171,14 @@ function SalaConteudo({ codigoSala, nomeUsuario }) {
           </>
         );
         icon = <IconStar size="1.2rem" />; // Ícone para lucky strike (Ex: estrela)
+    } else if (type === 'bossMode') {
+        const { byName, enabled } = lastFeedEvent;
+        title = enabled ? 'Chefe de fase ligado ⚔️' : 'Chefe de fase desligado';
+        color = enabled ? 'green' : 'blue';
+        message = enabled
+          ? <>{byName} ligou o chefe de fase: ele pode aparecer no consenso ou na divergência alta.</>
+          : <>{byName} desligou o chefe de fase.</>;
+        icon = <IconSwords size="1.2rem" />;
     } else if (type === 'bossSpawned') {
         title = 'O EPROC caiu na mesa!';
         color = 'red';

@@ -733,6 +733,9 @@ app.prepare().then(() => {
 
   /** Decide, na revelação, se o EPROC aparece (mesmas regras dos selos da mesa). */
   function talvezChamarChefe(codigo, sala) {
+    if (!sala.chefeAtivo) return; // desligado nas configurações
+    // Sem PvP ninguém consegue atacar: não faz sentido chamar
+    if (![...sala.participantes.values()].some(p => p.keyboardMode)) return;
     if (chefes.has(codigo)) return;
     if (Date.now() - (ultimoChefe.get(codigo) || 0) < CHEFE.intervaloMinMs) return;
     const votos = [...sala.participantes.values()].filter(p => p.jaVotou && p.valorVotado != null).map(p => String(p.valorVotado));
@@ -889,8 +892,18 @@ app.prepare().then(() => {
   }
 
   function enviarChefeAtivo(socket, codigo) {
+    const sala = salas.get(codigo);
+    socket.emit('bossModeChanged', { enabled: !!sala?.chefeAtivo });
     const c = chefes.get(codigo);
     if (c) setTimeout(() => socket.emit('bossSpawned', estadoPublicoChefe(c)), 600);
+  }
+
+  /** Tira o EPROC da mesa sem loot nem moedas (desligaram o chefe ou o PvP). */
+  function removerChefe(codigo) {
+    const c = chefes.get(codigo);
+    if (!c) return;
+    encerrarChefe(c);
+    io.to(codigo).emit('bossRemoved', { bossId: c.id });
   }
   // ==================== FIM CHEFE ====================
 
@@ -925,6 +938,7 @@ app.prepare().then(() => {
           moderadorId: null,
           revelarVotos: false,
           pvpAtivo: false,
+          chefeAtivo: false, // chefe de fase (EPROC): desligado por padrão
         });
         console.log(`Sala ${codigo} criada por ${usuario.nome}`);
       }
@@ -1323,6 +1337,19 @@ app.prepare().then(() => {
       }
     });
 
+    // Liga/desliga o chefe de fase pra sala toda (qualquer um pode, igual ao PvP)
+    socket.on('setBossMode', ({ codigo, enabled } = {}) => {
+      const sala = salas.get(codigo);
+      const p = sala?.participantes.get(socket.id);
+      if (!sala || !p) return;
+      sala.chefeAtivo = !!enabled;
+      if (!sala.chefeAtivo) removerChefe(codigo);
+      console.log(`[${codigo}] ${p.nome} ${sala.chefeAtivo ? 'ligou' : 'desligou'} o chefe de fase`);
+      io.to(codigo).emit('bossModeChanged', {
+        enabled: sala.chefeAtivo, byName: p.nome, eventId: novoEventId(), timestamp: Date.now(),
+      });
+    });
+
     // Modo diversão alterado
     socket.on('funModeChanged', ({ codigo, enabled }) => {
       if (!salas.has(codigo)) return;
@@ -1333,6 +1360,7 @@ app.prepare().then(() => {
       if (participante) {
         // Atualiza o estado do modo PVP no participante
         participante.keyboardMode = enabled;
+        if (!enabled) removerChefe(codigo); // sem PvP não dá pra bater nele
         
         // Repassar o evento para todos os participantes da sala
         io.to(codigo).emit('funModeChanged', { enabled });

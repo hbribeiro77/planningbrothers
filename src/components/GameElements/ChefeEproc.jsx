@@ -33,12 +33,15 @@ export function ChefeEproc({ socket }) {
     socket.on('bossHit', onHit);
     socket.on('bossDefeated', onDefeated);
     socket.on('bossCrashed', onCrashed);
+    const onRemoved = sair('caiu');
+    socket.on('bossRemoved', onRemoved);
     return () => {
       socket.off('bossSpawned', onSpawn);
       socket.off('bossUpdate', aplicarEstado);
       socket.off('bossHit', onHit);
       socket.off('bossDefeated', onDefeated);
       socket.off('bossCrashed', onCrashed);
+      socket.off('bossRemoved', onRemoved);
     };
   }, [socket]);
 

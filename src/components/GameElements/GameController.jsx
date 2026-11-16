@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Switch, Tooltip, ActionIcon, Drawer, Stack, Text, Group, TextInput, Button, SimpleGrid, Slider, ScrollArea } from '@mantine/core';
-import { IconSettings, IconKeyboard, IconVolume, IconVolumeOff, IconBellRinging, IconMessageChatbot } from '@tabler/icons-react';
+import { IconSettings, IconKeyboard, IconVolume, IconVolumeOff, IconBellRinging, IconMessageChatbot, IconSwords } from '@tabler/icons-react';
 import { KeyboardThrower } from './KeyboardThrower';
 import { usePvpStatus } from '@/contexts/PvpContext';
 import { GAME_CONFIG } from '@/constants/gameConfig.js';
@@ -30,6 +30,19 @@ export function GameController({
   const [signatures, setSignatures] = useState(Array(MAX_SIGNATURES).fill(''));
   const [originalSignatures, setOriginalSignatures] = useState(Array(MAX_SIGNATURES).fill(''));
   const isModerator = currentUser?.isModerator;
+  // Chefe de fase (hoje só o EPROC): vale pra sala toda, desligado por padrão
+  const [chefeAtivo, setChefeAtivo] = useState(false);
+  useEffect(() => {
+    if (!socket) return;
+    const onBossMode = ({ enabled }) => setChefeAtivo(!!enabled);
+    socket.on('bossModeChanged', onBossMode);
+    return () => socket.off('bossModeChanged', onBossMode);
+  }, [socket]);
+  const handleToggleChefe = (event) => {
+    const enabled = event.currentTarget.checked;
+    setChefeAtivo(enabled);
+    socket?.emit('setBossMode', { codigo: codigoSala, enabled });
+  };
 
   useEffect(() => {
     const currentSignatures = currentUser?.customKillSignatures;
@@ -183,6 +196,28 @@ export function GameController({
                 onChange={(event) => togglePvpStatus(event.currentTarget.checked)}
               />
             </Group>
+
+            <Tooltip
+              label="Precisa do Modo PVP ligado (sem ele ninguém consegue atacar o chefe)"
+              disabled={!!pvpStatus}
+              position="bottom"
+              withArrow
+              multiline
+              w={240}
+            >
+              <Group position="apart" mt="md">
+                <Text size="sm" c="dimmed">
+                  <IconSwords size={16} style={{ marginRight: 4 }} />
+                  Chefe de fase
+                </Text>
+                <Switch
+                  size="sm"
+                  checked={chefeAtivo && !!pvpStatus}
+                  disabled={!pvpStatus}
+                  onChange={handleToggleChefe}
+                />
+              </Group>
+            </Tooltip>
 
             <Group position="apart" mt="md">
               <Text size="sm" c="dimmed">
